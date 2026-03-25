@@ -1,0 +1,161 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.5.7</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.oyproj</groupId>
+  <artifactId>oy-blog</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>oy-blog</name>
+  <url>http://maven.apache.org</url>
+  <modules>
+    <module>oy-blog-service</module>
+    <module>oy-blog-service</module>
+    <module>oy-log-common</module>
+  </modules>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.version>21</java.version>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+
+    <!-- MyBatis Plus 版本 -->
+    <mybatis-plus.version>3.5.7</mybatis-plus.version>
+    <!-- SaToken 版本 -->
+    <sa-token.version>1.44.0</sa-token.version>
+    <!-- 数据库驱动版本 -->
+    <mysql.version>8.0.33</mysql.version>
+    <!-- Lombok 版本 -->
+    <lombok.version>1.18.34</lombok.version>
+    <!-- jbcrypt 版本 -->
+    <jbcrypt.version>0.4</jbcrypt.version>
+    <!-- Apache Commons Lang3 版本 -->
+    <commons-lang3.version>3.12.0</commons-lang3.version>
+    <!-- pageHelper 分页插件 -->
+    <pagehelper.boot.version>1.3.1</pagehelper.boot.version>
+    <!-- 校验器版本 -->
+    <validation.version>3.0.2</validation.version>
+    <!-- Smart-Doc 版本 -->
+    <springdoc.version>2.7.0</springdoc.version>
+    <!-- Spring Boot AOP 支持 -->
+    <spring-boot-aop.version>3.2.4</spring-boot-aop.version>
+    <!-- Elasticsearch 版本 -->
+    <elasticsearch.version>8.13.2</elasticsearch.version>
+    <!-- Elasticsearch 客户端 -->
+    <elasticsearch.client.version>8.13.2</elasticsearch.client.version>
+    <!-- TransmittableThreadLocal -->
+    <transmittable-thread-local.version>2.14.4</transmittable-thread-local.version>
+    <!-- WebSocket -->
+    <websocket.version>3.2.4</websocket.version>
+  </properties>
+  <dependencyManagement>
+    <dependencies>
+      <!-- MyBatis Plus Starter -->
+      <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        <version>${mybatis-plus.version}</version>
+      </dependency>
+
+      <!-- MyBatis Plus Generator -->
+      <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-generator</artifactId>
+        <version>${mybatis-plus.version}</version>
+      </dependency>
+
+      <!-- MyBatis Plus Extension -->
+      <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-extension</artifactId>
+        <version>${mybatis-plus.version}</version>
+        <scope>compile</scope>
+      </dependency>
+
+      <!-- MySQL 驱动 -->
+      <dependency>
+        <groupId>mysql</groupId>
+        <artifactId>mysql-connector-java</artifactId>
+        <version>${mysql.version}</version>
+      </dependency>
+
+      <!-- Lombok -->
+      <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>${lombok.version}</version>
+      </dependency>
+
+      <!-- jbcrypt -->
+      <dependency>
+        <groupId>org.mindrot</groupId>
+        <artifactId>jbcrypt</artifactId>
+        <version>${jbcrypt.version}</version>
+      </dependency>
+
+      <!-- Apache Commons Lang3 -->
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>${commons-lang3.version}</version>
+      </dependency>
+
+      <!-- pageHelper -->
+      <dependency>
+        <groupId>com.github.pagehelper</groupId>
+        <artifactId>pagehelper-spring-boot-starter</artifactId>
+        <version>${pagehelper.boot.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        <version>${springdoc.version}</version>
+      </dependency>
+
+      <!-- Spring Boot AOP 支持 -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-aop</artifactId>
+        <version>${spring-boot-aop.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>co.elastic.clients</groupId>
+        <artifactId>elasticsearch-java</artifactId>
+        <version>${elasticsearch.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.elasticsearch.client</groupId>
+        <artifactId>elasticsearch-rest-client</artifactId>
+        <version>${elasticsearch.client.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+      </dependency>
+
+      <dependency>
+        <groupId>com.alibaba</groupId>
+        <artifactId>transmittable-thread-local</artifactId>
+        <version>${transmittable-thread-local.version}</version>
+      </dependency>
+      <!-- WebSocket -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-websocket</artifactId>
+        <version>${websocket.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>
