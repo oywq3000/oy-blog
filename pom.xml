@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.5.7</version>
+    <version>3.4.11</version>
     <relativePath/>
   </parent>
 
@@ -17,8 +17,8 @@
   <url>http://maven.apache.org</url>
   <modules>
     <module>oy-blog-service</module>
-    <module>oy-blog-service</module>
-    <module>oy-log-common</module>
+    <module>oy-blog-common</module>
+    <module>oy-blog-gateway</module>
   </modules>
 
   <properties>
@@ -55,6 +55,10 @@
     <transmittable-thread-local.version>2.14.4</transmittable-thread-local.version>
     <!-- WebSocket -->
     <websocket.version>3.2.4</websocket.version>
+    <!--gateway-->
+    <gateway.version>2024.0.0</gateway.version>
+    <jwt.version>0.11.5</jwt.version>
+    <serlet.version>4.0.1</serlet.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -63,6 +67,14 @@
         <groupId>com.baomidou</groupId>
         <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
         <version>${mybatis-plus.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${gateway.version}</version> <!-- 对应 Spring Boot 3.5.x -->
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
 
       <!-- MyBatis Plus Generator -->
@@ -155,6 +167,40 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-websocket</artifactId>
         <version>${websocket.version}</version>
+      </dependency>
+
+      <!-- JWT 依赖 -->
+      <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-api</artifactId>
+        <version>${jwt.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-impl</artifactId>
+        <version>${jwt.version}</version>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-jackson</artifactId>
+        <version>${jwt.version}</version>
+        <scope>runtime</scope>
+      </dependency>
+
+      <!--servlet-->
+      <dependency>
+        <groupId>jakarta.servlet</groupId>
+        <artifactId>jakarta.servlet-api</artifactId>
+        <version>6.0.0</version>
+        <scope>provided</scope>
+      </dependency>
+
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>2.15.2</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

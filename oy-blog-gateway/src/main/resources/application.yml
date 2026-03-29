@@ -1,0 +1,12 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: use-service
+          uri: http://localhost:8090
+          predicates:
+            - Path=/use-service/**
+

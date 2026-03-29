@@ -1,5 +1,6 @@
 package com.oyproj.common.base;
 
+import com.oyproj.common.utils.I18nUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
