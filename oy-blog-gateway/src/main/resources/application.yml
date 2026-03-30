@@ -9,4 +9,13 @@ spring:
           uri: http://localhost:8090
           predicates:
             - Path=/use-service/**
+          filters:
+            - StripPrefix=1
 
+auth:
+  whitelist:
+    - /use-service/auth
+    - /api/public
+    - /health
+    - /swagger-ui
+    - /v3/api-docs

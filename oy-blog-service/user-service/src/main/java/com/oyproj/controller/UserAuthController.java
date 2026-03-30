@@ -1,9 +1,11 @@
 package com.oyproj.controller;
 
 
+import com.oyproj.common.base.Result;
 import com.oyproj.service.UserAuthBizService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -13,7 +15,14 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "UserAuthController", description = "用户登录、注册、信息查询、注销等操作")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/user/auth")
+@RequestMapping("/auth")
 public class UserAuthController {
     private final UserAuthBizService authBiz;
+
+    @GetMapping
+    public Result<String> test(){
+        return Result.ok();
+    }
+
+
 }

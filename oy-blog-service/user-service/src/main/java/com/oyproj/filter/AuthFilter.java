@@ -2,6 +2,7 @@ package com.oyproj.filter;
 import com.oyproj.common.constant.HeaderConstant;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.exception.ForbiddenException;
+import com.oyproj.common.exception.UnAuthorizedException;
 import com.oyproj.common.utils.JsonUtil;
 import com.oyproj.domain.dto.SecurityUser;
 import jakarta.servlet.ServletException;

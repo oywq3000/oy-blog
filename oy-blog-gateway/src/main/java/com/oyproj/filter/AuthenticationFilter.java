@@ -1,6 +1,8 @@
 package com.oyproj.filter;
 
+import com.oyproj.properties.AuthProperties;
 import com.oyproj.utils.JwtUtil;
+import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -11,7 +13,9 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 @Component
+@RequiredArgsConstructor
 public class AuthenticationFilter implements GlobalFilter, Ordered {
+    private final AuthProperties authProperties;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -19,7 +23,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         String path = request.getURI().getPath();
         
         // 跳过认证路径
-        if (path.startsWith("/auth/")) {
+        if (isWhitelisted(path)) {
             return chain.filter(exchange);
         }
         
@@ -53,5 +57,8 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     @Override
     public int getOrder() {
         return -100; // 优先级高于默认过滤器
+    }
+    private boolean isWhitelisted(String path) {
+        return authProperties.getWhitelist().stream().anyMatch(path::startsWith);
     }
 }

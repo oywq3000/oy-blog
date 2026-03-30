@@ -80,7 +80,7 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
     @Override
     public Result<Object> updatePassword(UpdatePasswordDto req) {
 
-        User user = userDao.getById(getUserId());
+        User user = null/* = userDao.getById(getUserId())*/;
         if (user == null) {
             throw new NotFoundException(I18n("user.notfound"));
         }

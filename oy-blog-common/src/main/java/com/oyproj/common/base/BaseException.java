@@ -151,4 +151,5 @@ public class BaseException extends RuntimeException{
         super(String.format(errMsg, args), cause);
         this.errCode = resultCode.getErrCode();
     }
+
 }

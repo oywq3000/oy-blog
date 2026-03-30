@@ -1,7 +1,7 @@
 package com.oyproj.common.service;
 
-import com.github.pagehelper.PageInfo;
 import com.oyproj.common.base.ResultCode;
+import com.oyproj.common.utils.BeanCopyUtils;
 import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.common.utils.UUIDUtils;
 import org.springframework.util.StringUtils;
@@ -28,9 +28,7 @@ public class BaseBiz {
      *
      * @return 当前登录用户ID
      */
-    public String getUserId() {
-        return StpUtil.getLoginIdAsString();
-    }
+     //todo
 
     /**
      * 获取当前语言的国际化信息
@@ -123,7 +121,7 @@ public class BaseBiz {
      * @param <R> 目标数据类型
      * @return 分页结果
      */
-    public <T, R> List<R> getPage(Supplier<List<T>> supplier, Class<R> targetClass) {
+   /* public <T, R> List<R> getPage(Supplier<List<T>> supplier, Class<R> targetClass) {
         PageUtils.startPage();
         List<T> list = supplier.get();
         PageInfo<T> pageInfo = new PageInfo<>(list);
@@ -135,7 +133,7 @@ public class BaseBiz {
         resultPageInfo.setPageSize(pageInfo.getPageSize());
         resultPageInfo.setPages(pageInfo.getPages());
         return resultList;
-    }
+    }*/
 
 
     /**
