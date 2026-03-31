@@ -1,18 +1,18 @@
 package com.oyproj.service.impl;
 
-import com.lx.blog.common.base.Result;
-import com.lx.blog.domain.dto.CommentReactionDto;
-import com.lx.blog.domain.dto.CommentReplySaveDto;
-import com.lx.blog.domain.dto.CommentSaveDto;
-import com.lx.blog.domain.vo.CommentReplyVo;
-import com.lx.blog.domain.vo.CommentVo;
-import com.lx.blog.repository.dao.CommentDao;
-import com.lx.blog.repository.dao.CommentReactionDao;
-import com.lx.blog.repository.dao.CommentReplyDao;
-import com.lx.blog.repository.dao.impl.mapper.entity.Comment;
-import com.lx.blog.repository.dao.impl.mapper.entity.CommentReply;
-import com.lx.blog.service.auth.biz.ArticleCommentBizService;
-import com.lx.blog.service.biz.ArticleBaseBizService;
+import com.oyproj.base.ArticleBaseBizService;
+import com.oyproj.common.base.Result;
+import com.oyproj.domain.dto.CommentReactionDto;
+import com.oyproj.domain.dto.CommentReplySaveDto;
+import com.oyproj.domain.dto.CommentSaveDto;
+import com.oyproj.domain.entity.Comment;
+import com.oyproj.domain.entity.CommentReply;
+import com.oyproj.domain.vo.CommentReplyVo;
+import com.oyproj.domain.vo.CommentVo;
+import com.oyproj.dto.CommentDao;
+import com.oyproj.dto.CommentReactionDao;
+import com.oyproj.dto.CommentReplyDao;
+import com.oyproj.service.ArticleCommentBizService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,10 +24,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+
 /**
- * @author LX
- * @date 2025/12/03
- * @description 文章评论业务服务实现类
+ * 文章评论业务服务实现类
  */
 @Service
 @RequiredArgsConstructor

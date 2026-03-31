@@ -1,6 +1,12 @@
 package com.oyproj.service.impl;
 
 
+import com.oyproj.base.ArticleBaseBizService;
+import com.oyproj.common.base.Result;
+import com.oyproj.dto.ArticleFavoriteDao;
+import com.oyproj.dto.ArticleLikeDao;
+import com.oyproj.dto.ArticleLogDao;
+import com.oyproj.dto.ArticleStatsDao;
 import com.oyproj.service.ArticleInteractionBizService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;

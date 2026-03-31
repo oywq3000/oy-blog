@@ -1,15 +1,15 @@
 package com.oyproj.service.impl;
 
-import com.lx.blog.common.base.Result;
-import com.lx.blog.domain.vo.ArticleChapterVo;
-import com.lx.blog.domain.vo.ArticleContentVo;
-import com.lx.blog.domain.vo.ArticleVo;
-import com.lx.blog.domain.vo.TagStatVo;
-import com.lx.blog.repository.dao.*;
-import com.lx.blog.repository.dao.impl.mapper.entity.Article;
-import com.lx.blog.repository.dao.impl.mapper.entity.Tag;
-import com.lx.blog.service.auth.biz.ArticleReadBizService;
-import com.lx.blog.service.biz.ArticleBaseBizService;
+import com.oyproj.base.ArticleBaseBizService;
+import com.oyproj.common.base.Result;
+import com.oyproj.domain.entity.Article;
+import com.oyproj.domain.entity.Tag;
+import com.oyproj.domain.vo.ArticleChapterVo;
+import com.oyproj.domain.vo.ArticleContentVo;
+import com.oyproj.domain.vo.ArticleVo;
+import com.oyproj.domain.vo.TagStatVo;
+import com.oyproj.dto.*;
+import com.oyproj.service.ArticleReadBizService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

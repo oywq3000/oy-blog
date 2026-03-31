@@ -1,0 +1,22 @@
+package com.oyproj.strategy;
+import com.oyproj.constant.MessageTypeEnum;
+import com.oyproj.domain.dto.MessageSendDto;
+
+/**
+ * 消息发送策略接口
+ */
+public interface MessageStrategy {
+
+    /**
+     * 是否支持该消息类型
+     * @param messageType 消息类型
+     * @return boolean
+     */
+    boolean support(MessageTypeEnum messageType);
+
+    /**
+     * 发送消息
+     * @param sendDto 消息数据
+     */
+    void send(MessageSendDto sendDto);
+}

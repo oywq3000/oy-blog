@@ -14,5 +14,6 @@
         <module>file-service</module>
         <module>article-service</module>
         <module>service-api</module>
+        <module>message-service</module>
     </modules>
 </project>
