@@ -4,6 +4,7 @@ import com.oyproj.common.base.BaseException;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.base.ResultCode;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -67,4 +68,19 @@ public class GlobalExceptionHandler {
     public Result handleException(Exception e) {
         return Result.error(ResultCode.INTERNAL_SERVER_ERROR.getErrCode(), e.getMessage());
     }
+
+    /**
+     * 处理方法参数验证异常
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+        // 获取第一个验证错误信息
+        String errorMessage = e.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getDefaultMessage())
+                .findFirst()
+                .orElse("参数验证失败");
+        return Result.error(ResultCode.BAD_REQUEST.getErrCode(), errorMessage);
+    }
+
 }

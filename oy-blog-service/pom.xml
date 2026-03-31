@@ -11,5 +11,8 @@
     <name>oy-blog-service</name>
     <modules>
         <module>user-service</module>
+        <module>file-service</module>
+        <module>article-service</module>
+        <module>service-api</module>
     </modules>
 </project>

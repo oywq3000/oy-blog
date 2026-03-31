@@ -1,5 +1,7 @@
 package com.oyproj.utils;
 
+import com.oyproj.common.constant.CommonConstant;
+import com.oyproj.common.domain.dto.UserDTO;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -24,35 +26,37 @@ public class JwtUtil {
     
     /**
      * 生成访问令牌
-     * @param userDetails 用户详情
+     * @param userId 用户id
      * @return 访问令牌
      */
-    public static String generateAccessToken(UserDetails userDetails) {
+    public static String generateAccessToken(String userId) {
+        Date expiration = new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRE_TIME);
         Map<String, Object> claims = new HashMap<>();
-        claims.put("sub", userDetails.getUsername());
+        claims.put(Claims.SUBJECT,userId);
         claims.put("iat", new Date());
-        claims.put("exp", new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRE_TIME));
-        
+        claims.put("exp", expiration);
         return Jwts.builder()
                 .setClaims(claims)
                 .signWith(SECRET_KEY)
+                .setExpiration(expiration)
                 .compact();
     }
     
     /**
      * 生成刷新令牌
-     * @param userDetails 用户详情
+     * @param  userId 用户id
      * @return 刷新令牌
      */
-    public static String generateRefreshToken(UserDetails userDetails) {
+    public static String generateRefreshToken(String userId) {
+        Date expiration = new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRE_TIME);
         Map<String, Object> claims = new HashMap<>();
-        claims.put("sub", userDetails.getUsername());
+        claims.put(Claims.SUBJECT,userId);
         claims.put("iat", new Date());
         claims.put("exp", new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRE_TIME));
-        
         return Jwts.builder()
                 .setClaims(claims)
                 .signWith(SECRET_KEY)
+                .setExpiration(expiration)
                 .compact();
     }
     
@@ -74,6 +78,10 @@ public class JwtUtil {
      * @return 过期时间（秒）
      */
     public static long getAccessTokenExpireTime() {
-        return ACCESS_TOKEN_EXPIRE_TIME / 1000;
+        return ACCESS_TOKEN_EXPIRE_TIME;
+    }
+
+    public static long getRefreshTokenExpireTime(){
+        return REFRESH_TOKEN_EXPIRE_TIME;
     }
 }

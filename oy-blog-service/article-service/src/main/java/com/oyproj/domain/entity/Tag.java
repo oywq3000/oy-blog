@@ -1,0 +1,54 @@
+package com.oyproj.domain.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+/**
+ * 标签实体
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@TableName("tag")
+public class Tag {
+
+    /**
+     * 标签ID
+     */
+    @TableId(value = "id", type = IdType.INPUT)
+    private String id;
+
+    /**
+     * 名称
+     */
+    @TableField("name")
+    private String name;
+
+    /**
+     * 唯一编码
+     */
+    @TableField("code")
+    private String code;
+
+    /**
+     * 创建时间
+     */
+    @TableField("created_at")
+    private LocalDateTime createdAt;
+
+    /**
+     * 更新时间
+     */
+    @TableField("updated_at")
+    private LocalDateTime updatedAt;
+}
+

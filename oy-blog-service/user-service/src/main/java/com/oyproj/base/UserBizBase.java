@@ -1,11 +1,13 @@
 package com.oyproj.base;
 
-import com.oyproj.common.service.BaseBiz;
+import com.oyproj.common.service.base.BaseBiz;
 import com.oyproj.dao.UserDao;
+import com.oyproj.domain.dto.SecurityUser;
 import com.oyproj.domain.entity.User;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * 基础业务服务类
@@ -29,5 +31,10 @@ public class UserBizBase extends BaseBiz {
             return user;
         }
         return userDao.getByEmail(key);
+    }
+
+    public String getUserId(){
+        SecurityUser securityUser = (SecurityUser)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return securityUser.getUser().getId();
     }
 }

@@ -13,10 +13,17 @@ public class SecurityUser implements UserDetails {
     private UserDTO user;
     private List<GrantedAuthority> authorities;
 
+    public SecurityUser(String userId,int status,List<GrantedAuthority> authorities){
+        this.user = new UserDTO();
+        this.user.setId(userId);
+        this.user.setStatus(status);
+        this.authorities = authorities;
+    }
     public SecurityUser(UserDTO user, List<GrantedAuthority> authorities) {
         this.user = user;
         this.authorities = authorities;
     }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;

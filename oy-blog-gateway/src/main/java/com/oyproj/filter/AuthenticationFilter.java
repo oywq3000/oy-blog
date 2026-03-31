@@ -1,7 +1,16 @@
 package com.oyproj.filter;
 
+import com.oyproj.common.base.BaseException;
+import com.oyproj.common.base.ResultCode;
+import com.oyproj.common.constant.CachePrefix;
+import com.oyproj.common.constant.CommonConstant;
+import com.oyproj.common.constant.HeaderConstant;
+import com.oyproj.common.exception.UnAuthorizedException;
+import com.oyproj.common.service.CommonCache;
+import com.oyproj.common.utils.JsonUtil;
 import com.oyproj.properties.AuthProperties;
 import com.oyproj.utils.JwtUtil;
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -16,41 +25,42 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class AuthenticationFilter implements GlobalFilter, Ordered {
     private final AuthProperties authProperties;
+    private final CommonCache commonCache;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
-        
         // 跳过认证路径
         if (isWhitelisted(path)) {
             return chain.filter(exchange);
         }
-        
         // 从请求头获取令牌
         String token = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (token == null || !token.startsWith("Bearer ")) {
-            // 没有令牌，直接通过，由下游服务处理
-            return chain.filter(exchange);
+           return Mono.error(new UnAuthorizedException());
         }
-        
-        // 提取令牌
         token = token.substring(7);
-        
-        // 验证令牌
-        if (!JwtUtil.validateToken(token)) {
-            // 令牌无效，直接通过，由下游服务处理
-            return chain.filter(exchange);
+
+        Claims claims;
+        try {
+            // 从令牌中获取用户ID
+             claims = JwtUtil.parseToken(token);
+        } catch (Exception e) {
+            // 无法解析令牌或获取用户信息，抛出未认证异常
+            return Mono.error(new UnAuthorizedException());
         }
-        
-        // 从令牌中获取用户ID
-        String userId = JwtUtil.getUserIdFromToken(token);
-        
+        //
+         ;
+        if(!commonCache.hasKey(CachePrefix.TOKEN.getPrefix()+claims.getSubject()+token)){
+            //Token过期
+            return Mono.error(new BaseException(ResultCode.TOKEN_EXPIRE));
+        }
+
         // 将用户信息添加到请求头中
         ServerHttpRequest modifiedRequest = request.mutate()
-                .header("X-User-Id", userId)
+                .header(HeaderConstant.USER_ID.getValue(), claims.getSubject())
                 .build();
-        
         return chain.filter(exchange.mutate().request(modifiedRequest).build());
     }
 

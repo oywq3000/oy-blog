@@ -1,0 +1,15 @@
+server:
+  port: 8090
+
+spring:
+  data:
+    redis:
+      host: 192.168.200.130
+      timeout: 10000
+      client-type: lettuce
+      lettuce:
+        pool:
+          max-active: 8 # 最大连接数
+          max-wait: -1 # 最大阻塞等待时间（负数表示无限制）
+          max-idle: 8 # 最大空闲连接数
+          min-idle: 0 # 最小空闲连接数

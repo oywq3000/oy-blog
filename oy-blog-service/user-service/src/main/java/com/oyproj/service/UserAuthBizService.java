@@ -5,6 +5,7 @@ import com.oyproj.domain.dto.LoginDto;
 import com.oyproj.domain.dto.RegisterDto;
 import com.oyproj.domain.dto.TokenInfo;
 import com.oyproj.domain.dto.UpdatePasswordDto;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 用户认证业务服务接口
@@ -16,6 +17,7 @@ public interface UserAuthBizService {
      * @param req 登录请求参数
      * @return 登录结果
      */
+    @Transactional
     Result<TokenInfo> login(LoginDto req);
 
     /**
@@ -24,6 +26,7 @@ public interface UserAuthBizService {
      * @param req 注册请求参数
      * @return 注册结果
      */
+    @Transactional
     Result<Object> register(RegisterDto req);
 
     /**

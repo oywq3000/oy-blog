@@ -1,4 +1,4 @@
-package com.oyproj.common.service;
+package com.oyproj.common.service.base;
 
 import com.oyproj.common.base.ResultCode;
 import com.oyproj.common.utils.BeanCopyUtils;
@@ -8,7 +8,6 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
 /**
  *

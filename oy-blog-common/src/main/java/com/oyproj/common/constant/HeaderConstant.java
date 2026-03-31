@@ -7,6 +7,7 @@ public enum HeaderConstant {
     USER_ID("X-User-Id"),
     USER_NAME("X-User-Name"),
     USER_ROLE("X-User-Role"),
+    USER_DATA("X-User-Data"),
     
     // 认证相关
     AUTHORIZATION("Authorization"),

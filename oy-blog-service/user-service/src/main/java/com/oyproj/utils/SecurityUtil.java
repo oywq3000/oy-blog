@@ -1,9 +1,14 @@
 package com.oyproj.utils;
 
+import com.oyproj.common.domain.dto.UserDTO;
+import com.oyproj.domain.dto.SecurityUser;
 import com.oyproj.domain.dto.TokenInfo;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.List;
 
 public class SecurityUtil {
 
@@ -51,30 +56,31 @@ public class SecurityUtil {
         }
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String userId = userDetails.getUsername();
-        String username = userDetails.getUsername(); // 假设用户名就是用户ID，实际项目中可能需要从用户详情中获取
         // 生成访问令牌和刷新令牌
-        String accessToken = JwtUtil.generateAccessToken(userDetails);
-        String refreshToken = JwtUtil.generateRefreshToken(userDetails);
+        String accessToken = JwtUtil.generateAccessToken(userId);
+        String refreshToken = JwtUtil.generateRefreshToken(userId);
         // 构建TokenInfo对象
         TokenInfo tokenInfo = new TokenInfo();
         tokenInfo.setAccessToken(accessToken);
         tokenInfo.setTokenType("Bearer");
         tokenInfo.setExpiresIn(JwtUtil.getAccessTokenExpireTime());
         tokenInfo.setRefreshToken(refreshToken);
+        tokenInfo.setRefreshTokenExpiresIn(JwtUtil.getRefreshTokenExpireTime());
         tokenInfo.setUserId(userId);
-        tokenInfo.setUsername(username);
         return tokenInfo;
     }
 
     /**
      * 登录用户
-     * @param id 用户ID
+     * @param userDTO 用户传播信息
      */
-    public static void login(String id) {
+    public static void login(UserDTO userDTO, List<GrantedAuthority> authorities) {
 
+        //SecurityUser 对象只保留最少的用户数据
+        SecurityUser securityUser = new SecurityUser(userDTO.getId(),userDTO.getStatus(),authorities);
         Authentication authentication =
                 new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
-                        id, null, java.util.Collections.emptyList()
+                        securityUser, null,securityUser.getAuthorities()
                 );
 
         // 将认证对象设置到安全上下文中

@@ -25,12 +25,12 @@ public class TokenInfo {
     private String refreshToken;
 
     /**
+     * 刷新Token过期时间
+     */
+    private Long refreshTokenExpiresIn;
+
+    /**
      * 用户ID
      */
     private String userId;
-
-    /**
-     * 用户名
-     */
-    private String username;
 }
