@@ -12,9 +12,7 @@ import org.springframework.stereotype.Service;
 import java.io.InputStream;
 
 /**
- * @author LX
- * @date 2025/12/9
- * @description MinIO 文件存储服务实现
+ *  MinIO 文件存储服务实现
  */
 @Slf4j
 @Service

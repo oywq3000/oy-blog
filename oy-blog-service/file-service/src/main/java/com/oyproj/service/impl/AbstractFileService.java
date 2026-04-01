@@ -1,18 +1,16 @@
 package com.oyproj.service.impl;
 
+import com.oyproj.api.domain.vo.FileVo;
 import com.oyproj.base.BaseUpload;
 import com.oyproj.domain.dto.FileKeyDto;
-import com.oyproj.domain.dto.FileUploadDto;
-import com.oyproj.domain.dto.FileVo;
+import com.oyproj.api.domain.dto.FileUploadDto;
 import com.oyproj.service.FileService;
 import lombok.RequiredArgsConstructor;
 
 import java.io.ByteArrayInputStream;
 
 /**
- * @author LX
- * @date 2025/12/8
- * @description 文件服务抽象类 (连接 FileService 与 BaseUpload)
+ *  文件服务抽象类 (连接 FileService 与 BaseUpload)
  */
 @RequiredArgsConstructor
 public abstract class AbstractFileService implements FileService {

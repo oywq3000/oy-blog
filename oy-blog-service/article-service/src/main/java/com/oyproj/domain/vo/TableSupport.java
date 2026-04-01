@@ -1,6 +1,6 @@
 package com.oyproj.domain.vo;
 
-import com.lx.blog.common.utils.ServletUtils;
+import com.oyproj.common.utils.ServletUtils;
 import lombok.Data;
 
 /**

@@ -1,7 +1,12 @@
 server:
-  port: 8092
+  port: 8091
 
 spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.200.130:3306/oyblog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8&allowMultiQueries=true
+    username: root
+    password: root
   data:
     redis:
       host: 192.168.200.130
@@ -13,11 +18,3 @@ spring:
           max-wait: -1 # 最大阻塞等待时间（负数表示无限制）
           max-idle: 8 # 最大空闲连接数
           min-idle: 0 # 最小空闲连接数
-
-
-storage:
-  minio-endpoint: http://192.168.200.130:9090
-  minio-access-key: minioadmin
-  minio-secret-key: minioadmin
-  minio-bucket: oy-blog
-  storage-platform: 1

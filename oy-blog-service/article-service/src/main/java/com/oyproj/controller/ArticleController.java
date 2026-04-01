@@ -1,5 +1,6 @@
 package com.oyproj.controller;
 
+import com.oyproj.api.domain.vo.FileVo;
 import com.oyproj.common.base.OpLog;
 import com.oyproj.common.base.Result;
 import com.oyproj.domain.dto.ArticleSaveDto;

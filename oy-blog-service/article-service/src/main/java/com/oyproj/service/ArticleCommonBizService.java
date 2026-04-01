@@ -1,5 +1,7 @@
 package com.oyproj.service;
 
+import com.oyproj.api.domain.vo.FileVo;
+import com.oyproj.common.base.Result;
 import org.springframework.web.multipart.MultipartFile;
 
 /**

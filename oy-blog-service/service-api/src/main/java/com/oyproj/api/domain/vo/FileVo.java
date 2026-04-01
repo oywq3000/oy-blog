@@ -1,4 +1,4 @@
-package com.oyproj.domain.dto;
+package com.oyproj.api.domain.vo;
 
 import lombok.Data;
 
