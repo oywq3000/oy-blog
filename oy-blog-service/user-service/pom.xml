@@ -31,6 +31,12 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.oyproj</groupId>
+            <artifactId>service-api</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+
         <!-- 业务依赖 -->
         <dependency>
             <groupId>com.baomidou</groupId>

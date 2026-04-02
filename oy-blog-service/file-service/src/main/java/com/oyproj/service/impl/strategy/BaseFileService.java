@@ -1,9 +1,8 @@
-package com.oyproj.service.impl;
+package com.oyproj.service.impl.strategy;
 
 import com.oyproj.base.BaseUpload;
 import com.oyproj.constant.StoragePlatformEnum;
 import com.oyproj.domain.model.StorageDomain;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
@@ -11,8 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Service
-@Primary
+
 public class BaseFileService extends BaseUpload {
 
     private final Map<StoragePlatformEnum, BaseUpload> uploadStrategyMap = new ConcurrentHashMap<>();

@@ -67,13 +67,8 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
 
         TokenInfo tokenInfo = SecurityUtil.getTokenInfo();
 
-        //将当前信息存储到Redis中
-        commonCache.put(userDTO.getId(),userDTO);
-        commonCache.put(CachePrefix.TOKEN.getPrefix()+userDTO.getId()+tokenInfo.getAccessToken(),
-                1,tokenInfo.getExpiresIn());
-        commonCache.put(CachePrefix.TOKEN.getPrefix()+userDTO.getId()+tokenInfo.getRefreshToken(),
-                1,tokenInfo.getRefreshTokenExpiresIn());
-
+        //将当前信息存储到Redis中,还有一个含义代表当前用户已经登录，登出时需要把它从redis中删除
+        commonCache.put(userDTO.getId(),userDTO,tokenInfo.getExpiresIn());
         return Result.ok(tokenInfo);
     }
 
@@ -99,6 +94,7 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
     @Override
     public Result<Object> logout() {
         SecurityUtil.logout();
+        commonCache.remove(getUserId()); //移除login操作
         return Result.ok();
     }
 
@@ -119,4 +115,11 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
         userDao.updateById(user);
         return Result.ok();
     }
+
+    @Override
+    public Result<String> test() {
+        return Result.ok(getUserId());
+    }
+
+
 }

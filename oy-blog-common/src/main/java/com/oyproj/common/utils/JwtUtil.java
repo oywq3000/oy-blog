@@ -1,12 +1,8 @@
-package com.oyproj.utils;
-
-import com.oyproj.common.constant.CommonConstant;
-import com.oyproj.common.domain.dto.UserDTO;
+package com.oyproj.common.utils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -14,16 +10,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class JwtUtil {
-    
+
     // 密钥，实际项目中应从配置文件读取
-    private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-    
+    private static SecretKey SECRET_KEY =Keys.hmacShaKeyFor("your-very-secure-secret-key-that-is-at-least-32-characters-long".getBytes());
+
     // 访问令牌过期时间：2小时
-    private static final long ACCESS_TOKEN_EXPIRE_TIME = 2 * 60 * 60 * 1000;
-    
+    private static long ACCESS_TOKEN_EXPIRE_TIME = 2 * 60 * 60 * 1000;
+
     // 刷新令牌过期时间：7天
-    private static final long REFRESH_TOKEN_EXPIRE_TIME = 7 * 24 * 60 * 60 * 1000;
-    
+    private static long REFRESH_TOKEN_EXPIRE_TIME = 7 * 24 * 60 * 60 * 1000;
+
     /**
      * 生成访问令牌
      * @param userId 用户id
@@ -41,7 +37,7 @@ public class JwtUtil {
                 .setExpiration(expiration)
                 .compact();
     }
-    
+
     /**
      * 生成刷新令牌
      * @param  userId 用户id
@@ -59,7 +55,7 @@ public class JwtUtil {
                 .setExpiration(expiration)
                 .compact();
     }
-    
+
     /**
      * 解析令牌
      * @param token 令牌
@@ -72,7 +68,7 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody();
     }
-    
+
     /**
      * 获取访问令牌过期时间
      * @return 过期时间（秒）
@@ -83,5 +79,18 @@ public class JwtUtil {
 
     public static long getRefreshTokenExpireTime(){
         return REFRESH_TOKEN_EXPIRE_TIME;
+    }
+
+    //设置
+    public static void setConfig(String securityKey, long accessTokenExpireTime, long refreshTokenExpireTime) {
+        if (securityKey != null && !securityKey.isEmpty()) {
+            SECRET_KEY = Keys.hmacShaKeyFor(securityKey.getBytes());
+        }
+        if (accessTokenExpireTime > 0) {
+            ACCESS_TOKEN_EXPIRE_TIME = accessTokenExpireTime;
+        }
+        if (refreshTokenExpireTime > 0) {
+            REFRESH_TOKEN_EXPIRE_TIME = refreshTokenExpireTime;
+        }
     }
 }

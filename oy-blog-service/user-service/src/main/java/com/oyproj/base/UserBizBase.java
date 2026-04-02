@@ -35,6 +35,6 @@ public class UserBizBase extends BaseBiz {
 
     public String getUserId(){
         SecurityUser securityUser = (SecurityUser)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return securityUser.getUser().getId();
+        return securityUser.getUsername();
     }
 }

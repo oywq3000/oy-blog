@@ -1,4 +1,5 @@
 package com.oyproj.api.client;
+import com.oyproj.api.client.fallback.FileUploadClientFallbackFactory;
 import com.oyproj.api.domain.dto.FileUploadDto;
 import com.oyproj.api.domain.vo.FileVo;
 import com.oyproj.common.base.Result;
@@ -7,7 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 
-@FeignClient(value = "file-service",url = "http://localhost:8090")
+@FeignClient(value = "file-service",fallbackFactory = FileUploadClientFallbackFactory.class)
 public interface FileUploadClient {
     /**
      * 上传文件

@@ -1,4 +1,4 @@
-package com.oyproj.service.strategy;
+package com.oyproj.service.impl.strategy;
 
 import com.oyproj.base.BaseUpload;
 import com.oyproj.constant.StoragePlatformEnum;
@@ -7,6 +7,7 @@ import io.minio.*;
 import io.minio.errors.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
@@ -16,6 +17,7 @@ import java.io.InputStream;
  */
 @Slf4j
 @Service
+@Primary
 public class MinioFileService extends BaseUpload {
 
     @NotNull final MinioClient minioClient;

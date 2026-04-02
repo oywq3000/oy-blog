@@ -3,6 +3,8 @@ package com.oyproj.service.impl;
 
 import com.oyproj.domain.dto.FileKeyDto;
 import com.oyproj.service.FileService;
+import com.oyproj.service.impl.strategy.BaseFileService;
+import com.oyproj.service.impl.strategy.MinioFileService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +15,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class FileServiceImpl extends AbstractFileService implements FileService {
 
-    public FileServiceImpl(BaseFileService baseFileService) {
+    public FileServiceImpl(MinioFileService baseFileService) {
         super(baseFileService);
     }
 

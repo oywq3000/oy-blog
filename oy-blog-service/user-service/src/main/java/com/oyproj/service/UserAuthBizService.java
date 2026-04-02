@@ -44,4 +44,6 @@ public interface UserAuthBizService {
      */
     Result<Object> updatePassword(UpdatePasswordDto req);
 
+    Result<String> test();
+
 }

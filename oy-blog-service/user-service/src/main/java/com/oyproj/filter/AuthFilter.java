@@ -1,5 +1,6 @@
 package com.oyproj.filter;
 import com.oyproj.common.constant.CachePrefix;
+import com.oyproj.common.constant.CommonConstant;
 import com.oyproj.common.constant.HeaderConstant;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.exception.ForbiddenException;
@@ -25,10 +26,12 @@ import java.util.List;
 import java.util.Map;
 
 
-@Slf4j
 public class AuthFilter implements Filter {
-    @Autowired
-    private CommonCache commonCache;
+
+    private final CommonCache commonCache;
+    public AuthFilter(CommonCache commonCache){
+        this.commonCache = commonCache;
+    }
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
@@ -36,13 +39,20 @@ public class AuthFilter implements Filter {
         //从请求头中获取信息
         String userId = httpServletRequest.getHeader(HeaderConstant.USER_ID.getValue());
         if(userId!=null){
-            //使用工具类将JSON字符串转为Map
-            UserDTO userDTO = (UserDTO) commonCache.get(CachePrefix.USER_DTO.getValue());
+
+            UserDTO userDTO;
+            if(userId.equals(CommonConstant.GUEST_ID.getValue())){
+                //如果是游客
+                userDTO = new UserDTO(userId,1);
+            }else{
+                //使用工具类将JSON字符串转为Map
+                userDTO = (UserDTO) commonCache.get(userId);
+            }
+
             //todo 完成权限绑定功能
             List<GrantedAuthority> auths = new ArrayList<>();
             SecurityUser securityUser = new SecurityUser(userDTO.getId(),userDTO.getStatus(),auths);
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(securityUser,null,securityUser.getAuthorities());
-            authentication.setAuthenticated(true);
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
         chain.doFilter(request,response);

@@ -23,7 +23,8 @@ public enum ResultCode implements Serializable {
     CONFLICT(409, "资源冲突", "error.conflict"),
     TOO_MANY_REQUESTS(429, "请求频率过快", "error.too_many_requests"),
     UNKNOWN_ERROR(500, "未知错误", "error.unknown"),
-    CUSTOM_ERROR(500, "自定义错误", "error.custom");
+    CUSTOM_ERROR(500, "自定义错误", "error.custom"),
+    SERVICE_UNAVAILABLE(501,"服务繁忙","error.unavailable" );
 
     private static final long serialVersionUID = 100000000001L;
 

@@ -1,0 +1,20 @@
+oyproj:
+  common:
+    jwt:
+      security-key: your-very-secure-secret-key-that-is-at-least-32-characters-long
+      access-token-expire-time: 7200000 #2h
+      refresh-token-expire-time: 604800000 #7day
+
+
+spring:
+  data:
+    redis:
+      host: 192.168.200.130
+      timeout: 10000
+      client-type: lettuce
+      lettuce:
+        pool:
+          max-active: 8 # 最大连接数
+          max-wait: -1 # 最大阻塞等待时间（负数表示无限制）
+          max-idle: 8 # 最大空闲连接数
+          min-idle: 0 # 最小空闲连接数

@@ -1,11 +1,10 @@
+# Feign Sentinel 配置
+feign:
+  sentinel:
+    enabled: true
+
 spring:
   cloud:
-    nacos:
-      discovery:
-        server-addr: http://192.168.200.130:8848
-      config:
-        server-addr: http://192.168.200.130:8848
-        file-extension: yaml
     sentinel:
       enabled: true
       eager: true

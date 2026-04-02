@@ -25,7 +25,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/auth")
 public class UserAuthController {
     private final UserAuthBizService authBiz;
-
     /**
      * 用户登录
      * @return
@@ -75,18 +74,9 @@ public class UserAuthController {
 
 
 
-
-
-
-
-
-
-
-
-
     @GetMapping
     public Result<String> test(){
-        return Result.ok();
+        return authBiz.test();
     }
 
 
