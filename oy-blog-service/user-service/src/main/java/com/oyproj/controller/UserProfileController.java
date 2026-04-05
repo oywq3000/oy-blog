@@ -1,5 +1,6 @@
 package com.oyproj.controller;
 
+import com.oyproj.common.annotation.Log;
 import com.oyproj.common.base.Result;
 import com.oyproj.domain.vo.UserVo;
 import com.oyproj.service.UserCommonBizService;
@@ -8,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,6 +18,7 @@ import java.util.Map;
 /**
  * 用户个人信息接口
  */
+@Slf4j
 @Tag(name = "用户个人信息控制器", description = "用户个人信息查询操作")
 @RestController
 @RequestMapping("/profile")
@@ -30,9 +33,11 @@ public class UserProfileController {
      *
      * @return 当前登录用户信息
      */
+    @Log
     @GetMapping("/info")
     @Operation(summary = "获取当前登录用户信息", description = "获取当前登录用户的详细信息")
     public Result<UserVo> getProfile() {
+        log.info("get profile");
         return profileBiz.getProfile();
     }
 

@@ -5,7 +5,9 @@ public enum CachePrefix {
 
     USER_DTO("userDTO"),
     TOKEN("TOKEN"),
-    REFRESH_TOKEN("REFRESH_TOKEN");
+    REFRESH_TOKEN("REFRESH_TOKEN"),
+    GUEST_ID("GUEST_ID"),
+    USER_ID("USER_ID");
 
     private final String value;
 

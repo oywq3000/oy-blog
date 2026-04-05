@@ -15,6 +15,18 @@ spring:
             - Path=/user-service/**
           filters:
             - StripPrefix=1
+        - id: article-service
+          uri: lb://article-service
+          predicates:
+            - Path=/article-service/**
+          filters:
+            - StripPrefix=1
+        - id: file-service
+          uri: lb://file-service
+          predicates:
+            - Path=/file-service/**
+          filters:
+            - StripPrefix=1
   data:
     redis:
       host: 192.168.200.130
@@ -31,8 +43,11 @@ auth:
   whitelist:
     - /user-service/auth/login
     - /user-service/auth/register
-    - /api/public
+    - /user-service/profile/info
+    - /article-service/article/read
     - /health
     - /swagger-ui
     - /v3/api-docs
+
+
 

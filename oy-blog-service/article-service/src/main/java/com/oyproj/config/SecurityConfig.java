@@ -3,8 +3,10 @@ package com.oyproj.config;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.exception.ForbiddenException;
 import com.oyproj.common.exception.UnAuthorizedException;
+import com.oyproj.common.service.CommonCache;
 import com.oyproj.common.utils.JsonUtil;
 import com.oyproj.filter.AuthFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -19,8 +21,9 @@ import org.springframework.security.web.savedrequest.NullRequestCache;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
-
+    private final CommonCache commonCache;
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
@@ -60,7 +63,7 @@ public class SecurityConfig {
                             response.getWriter().write(JsonUtil.toJson(Result.error(forbiddenException.getErrCode(),forbiddenException.getMessage())));
                         }));
                  });
-         http.addFilterBefore(new AuthFilter(), UsernamePasswordAuthenticationFilter.class);
+         http.addFilterBefore(new AuthFilter(commonCache), UsernamePasswordAuthenticationFilter.class);
          return http.build();
     }
 

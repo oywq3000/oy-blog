@@ -1,4 +1,5 @@
 package com.oyproj.filter;
+import com.oyproj.common.constant.BlogRole;
 import com.oyproj.common.constant.CachePrefix;
 import com.oyproj.common.constant.CommonConstant;
 import com.oyproj.common.constant.HeaderConstant;
@@ -21,6 +22,7 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.time.chrono.HijrahEra;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,18 +39,27 @@ public class AuthFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         //从请求头中获取信息
+        String userType = httpServletRequest.getHeader(HeaderConstant.USER_TYPE.getValue());
+        BlogRole blogRole = BlogRole.valueOf(userType);
         String userId = httpServletRequest.getHeader(HeaderConstant.USER_ID.getValue());
-        if(userId!=null){
-
-            UserDTO userDTO;
-            if(userId.equals(CommonConstant.GUEST_ID.getValue())){
-                //如果是游客
-                userDTO = new UserDTO(userId,1);
-            }else{
-                //使用工具类将JSON字符串转为Map
-                userDTO = (UserDTO) commonCache.get(userId);
+        UserDTO userDTO = new UserDTO();
+        userDTO.setBlogRole(blogRole);
+        switch (blogRole){
+            case USER -> {
+                userDTO =  (UserDTO) commonCache.get(CachePrefix.USER_ID.getPrefix()+userId);
             }
+            case GUEST -> {
+                userDTO.setId(userId);
+                userDTO.setStatus(1);
+            }
+            case ADMIN -> {
 
+            }
+            default -> {
+                throw new UnAuthorizedException("未知用户类型");
+            }
+        }
+        if(userDTO!=null){
             //todo 完成权限绑定功能
             List<GrantedAuthority> auths = new ArrayList<>();
             SecurityUser securityUser = new SecurityUser(userDTO.getId(),userDTO.getStatus(),auths);
