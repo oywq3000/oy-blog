@@ -1,7 +1,6 @@
-package com.oyproj.domain.dto;
+package com.oyproj.common.security.domain;
 
 import com.oyproj.common.domain.dto.UserDTO;
-import com.oyproj.domain.entity.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -13,7 +12,7 @@ public class SecurityUser implements UserDetails {
     private UserDTO user;
     private List<GrantedAuthority> authorities;
 
-    public SecurityUser(String userId,int status,List<GrantedAuthority> authorities){
+    public SecurityUser(String userId, int status, List<GrantedAuthority> authorities){
         this.user = new UserDTO();
         this.user.setId(userId);
         this.user.setStatus(status);
@@ -58,7 +57,6 @@ public class SecurityUser implements UserDetails {
     public boolean isEnabled() {
         return user.getStatus() == 1; // 假设1表示启用
     }
-
     public UserDTO getUser() {
         return user;
     }

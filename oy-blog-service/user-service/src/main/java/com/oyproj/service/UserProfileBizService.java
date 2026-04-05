@@ -1,6 +1,7 @@
 package com.oyproj.service;
 
 import com.oyproj.common.base.Result;
+import com.oyproj.domain.dto.UpdateProfileDto;
 import com.oyproj.domain.vo.UserVo;
 
 import java.util.Map;
@@ -23,4 +24,11 @@ public interface UserProfileBizService {
      * @return 用户名
      */
     Result<Map<String, String>> getUsernameById(String userId);
+
+    /**
+     * 跟新部分用户profile
+     * @param updateProfileDto
+     * @return
+     */
+    Result<Object> update(UpdateProfileDto updateProfileDto);
 }

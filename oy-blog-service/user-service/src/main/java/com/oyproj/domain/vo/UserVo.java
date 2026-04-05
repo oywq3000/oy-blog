@@ -31,6 +31,12 @@ public class UserVo {
     private String username;
 
     /**
+     * bio
+     */
+    @Schema(description = "各人简介")
+    private String bio;
+
+    /**
      * 邮箱
      */
     @Schema(description = "邮箱", example = "user123@example.com")
@@ -47,6 +53,8 @@ public class UserVo {
      */
     @Schema(description = "头像URL", example = "https://example.com/avatar.jpg")
     private String avatarUrl;
+
+
 
     /**
      * 邮箱是否验证

@@ -3,7 +3,6 @@ package com.oyproj.filter;
 
 import com.oyproj.common.constant.BlogRole;
 import com.oyproj.common.constant.CachePrefix;
-import com.oyproj.common.constant.CommonConstant;
 import com.oyproj.common.constant.HeaderConstant;
 import com.oyproj.common.exception.UnAuthorizedException;
 import com.oyproj.common.service.CommonCache;
@@ -74,7 +73,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             token = token.substring(7);
             Claims claims = JwtUtil.parseToken(token);
             String userId = claims.getSubject();
-            // 验证Token是否在缓存中（支持登出功能）
+            // 验证User是否在缓存中
             if (commonCache.hasKey(CachePrefix.USER_ID.getPrefix() + userId)) {
                 return AuthenticationResult.authenticated(userId);
             }
@@ -96,7 +95,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest();
         ServerHttpRequest modifiedRequest = request.mutate()
                 .header(HeaderConstant.USER_ID.getValue(), authResult.getUserId())
-                .header(HeaderConstant.USER_TYPE.getValue(), BlogRole.USER.name())
+                .header(HeaderConstant.USER_TYPE.getValue(), BlogRole.READER.name())
                 .build();
         return chain.filter(exchange.mutate().request(modifiedRequest).build());
     }

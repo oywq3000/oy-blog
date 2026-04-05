@@ -4,10 +4,14 @@ import com.oyproj.base.UserBizBase;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.component.IpParseApi;
 import com.oyproj.common.exception.NotFoundException;
+import com.oyproj.common.service.CommonCache;
 import com.oyproj.dao.UserDao;
+import com.oyproj.domain.dto.UpdateProfileDto;
 import com.oyproj.domain.entity.User;
 import com.oyproj.domain.vo.UserVo;
 import com.oyproj.service.UserProfileBizService;
+import com.oyproj.starategy.UserBehaviorStrategy;
+import com.oyproj.starategy.factory.UserBehaviorStrategyFactory;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 
@@ -20,33 +24,21 @@ import java.util.Map;
 @Service
 public class UserProfileBizServiceImpl extends UserBizBase implements UserProfileBizService {
 
+    @NotNull private final UserBehaviorStrategyFactory userBehaviorStrategyFactory;
     @NotNull private final IpParseApi ipParseApi;
-    public UserProfileBizServiceImpl(UserDao userDao,IpParseApi ipParseApi) {
-        super(userDao);
+    public UserProfileBizServiceImpl(UserDao userDao,
+                                     IpParseApi ipParseApi,
+                                     CommonCache commonCache,
+                                     UserBehaviorStrategyFactory userBehaviorStrategyFactory) {
+        super(userDao,commonCache);
         this.ipParseApi =ipParseApi;
+        this.userBehaviorStrategyFactory = userBehaviorStrategyFactory;
     }
     @Override
     public Result<UserVo> getProfile() {
-        User user = userDao.getById(getUserId());
-        if (user == null) {
-            throw new NotFoundException(I18n("user.notfound"));
-        }
-        UserVo userVo = UserVo.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .status(user.getStatus())
-                .lastLogin(user.getLastLoginAt())
-                .avatarUrl(user.getAvatarUrl())
-                .emailVerified(Integer.valueOf(1).equals(user.getEmailVerified()))
-                .build();
-        try{
-            String ipAddress = ipParseApi.parseIpAddress(user.getLastLoginIp()).getRegion();
-            userVo.setIpAddress(ipAddress.isEmpty() ? I18n("common.unknown") : ipAddress);
-        }catch (IOException e){
-            userVo.setIpAddress(I18n("common.unknown"));
-        }
-        return Result.ok(userVo);
+        UserBehaviorStrategy strategy = userBehaviorStrategyFactory.getStrategy(getCurrentUserBlogType());
+        UserVo profile = strategy.getProfile();
+        return Result.ok(profile);
     }
 
     @Override
@@ -56,5 +48,16 @@ public class UserProfileBizServiceImpl extends UserBizBase implements UserProfil
             throw new NotFoundException(I18n("user.notfound"));
         }
         return Result.ok(Map.of("username", user.getUsername()));
+    }
+
+    @Override
+    public Result<Object> update(UpdateProfileDto updateProfileDto) {
+        User user = new User();
+        user.setId(getCurrentUserId());
+        user.setEmail(updateProfileDto.getEmail());
+        user.setUsername(updateProfileDto.getUsername());
+        user.setAvatarUrl(updateProfileDto.getAvatarUrl());
+        user.setBio(updateProfileDto.getBio());
+        return userDao.updateById(user)?Result.ok():Result.error();
     }
 }

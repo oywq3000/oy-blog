@@ -2,6 +2,7 @@ package com.oyproj.controller;
 
 import com.oyproj.common.annotation.Log;
 import com.oyproj.common.base.Result;
+import com.oyproj.domain.dto.UpdateProfileDto;
 import com.oyproj.domain.vo.UserVo;
 import com.oyproj.service.UserCommonBizService;
 import com.oyproj.service.UserProfileBizService;
@@ -64,6 +65,15 @@ public class UserProfileController {
     @Operation(summary = "上传用户头像", description = "上传并更新当前用户的头像")
     public Result<String> uploadAvatar(@RequestPart("file") MultipartFile file) {
         return commonBiz.uploadAvatar(file);
+    }
+
+    /**
+     * 更新用户数据
+     */
+    @PostMapping("/update")
+    @Operation(summary = "更新用户数据",description = "跟新用户数据")
+    public Result<Object> update(@RequestBody UpdateProfileDto updateProfileDto) {
+        return profileBiz.update(updateProfileDto);
     }
 
 }

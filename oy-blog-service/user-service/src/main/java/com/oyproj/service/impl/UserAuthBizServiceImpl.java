@@ -4,6 +4,7 @@ import com.oyproj.base.UserBizBase;
 import com.oyproj.common.base.BaseException;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.base.ResultCode;
+import com.oyproj.common.constant.BlogRole;
 import com.oyproj.common.constant.CachePrefix;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.exception.ForbiddenException;
@@ -32,7 +33,7 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
     private final CommonCache commonCache;
     private final PasswordEncoder passwordEncoder;
     public UserAuthBizServiceImpl(PasswordEncoder passwordEncoder,UserDao userDao,CommonCache commonCache) {
-        super(userDao);
+        super(userDao,commonCache);
         this.passwordEncoder = passwordEncoder;
         this.commonCache = commonCache;
     }
@@ -60,15 +61,13 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
         //创建服务间通用的
         UserDTO userDTO = new UserDTO();
         BeanCopyUtils.copyProperties(user,userDTO);
-        
+        userDTO.setBlogRole(BlogRole.READER);
         //SpringSecurity 登录
         SecurityUtil.login(userDTO,null);
         //存储对象到Redis中
-
         TokenInfo tokenInfo = SecurityUtil.getTokenInfo();
-
         //将当前信息存储到Redis中,还有一个含义代表当前用户已经登录，登出时需要把它从redis中删除
-        commonCache.put(userDTO.getId(),userDTO,tokenInfo.getExpiresIn());
+        commonCache.put(CachePrefix.USER_ID.getPrefix()+userDTO.getId(),userDTO,tokenInfo.getExpiresIn());
         return Result.ok(tokenInfo);
     }
 
@@ -93,8 +92,8 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
 
     @Override
     public Result<Object> logout() {
+        commonCache.remove(CachePrefix.USER_ID.getPrefix()+getCurrentUserId()); //移除login操作
         SecurityUtil.logout();
-        commonCache.remove(getUserId()); //移除login操作
         return Result.ok();
     }
 
@@ -118,7 +117,7 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
 
     @Override
     public Result<String> test() {
-        return Result.ok(getUserId());
+        return Result.ok(getCurrentUserId());
     }
 
 

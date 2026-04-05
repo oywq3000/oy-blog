@@ -1,8 +1,12 @@
 package com.oyproj.base;
 
+import com.oyproj.common.constant.BlogRole;
+import com.oyproj.common.constant.CachePrefix;
+import com.oyproj.common.domain.dto.UserDTO;
+import com.oyproj.common.security.domain.SecurityUser;
+import com.oyproj.common.service.CommonCache;
 import com.oyproj.common.service.base.BaseBiz;
 import com.oyproj.dao.UserDao;
-import com.oyproj.domain.dto.SecurityUser;
 import com.oyproj.domain.entity.User;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +21,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @RequiredArgsConstructor
 public class UserBizBase extends BaseBiz {
     protected final UserDao userDao;
+    protected final CommonCache cache;
     @Value("${app.host:http://localhost:8080}")
     protected String appHost;
     /**
@@ -33,8 +38,19 @@ public class UserBizBase extends BaseBiz {
         return userDao.getByEmail(key);
     }
 
-    public String getUserId(){
+    //获得当前用户id
+    public String getCurrentUserId(){
         SecurityUser securityUser = (SecurityUser)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return securityUser.getUsername();
     }
+    //获得当前用户
+    public UserDTO getCurrentUserDTO(){
+        return ((SecurityUser)SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUser();
+    }
+
+    //获取当期用户类型
+    public BlogRole getCurrentUserBlogType(){
+        return getCurrentUserDTO().getBlogRole();
+    }
+
 }

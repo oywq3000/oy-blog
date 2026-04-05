@@ -1,14 +1,12 @@
-package com.oyproj.config;
-
+package com.oyproj.common.security.config;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.exception.ForbiddenException;
 import com.oyproj.common.exception.UnAuthorizedException;
+import com.oyproj.common.security.filter.AuthFilter;
 import com.oyproj.common.service.CommonCache;
 import com.oyproj.common.utils.JsonUtil;
-import com.oyproj.filter.AuthFilter;
-import io.swagger.v3.oas.models.media.JsonSchema;
-import jakarta.servlet.Filter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -24,6 +22,11 @@ import org.springframework.security.web.savedrequest.NullRequestCache;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@ConditionalOnClass({
+        HttpSecurity.class,
+        SecurityFilterChain.class,
+        EnableWebSecurity.class
+})
 public class SecurityConfig {
     private final CommonCache commonCache;
 

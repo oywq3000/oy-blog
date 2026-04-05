@@ -174,7 +174,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
             article.setIsReviewed(0); // 默认未审核
             // 生成Slug (简单处理，实际应用可能需要更复杂的逻辑)
             if (!StringUtils.hasText(article.getSlug())) {
-                article.setSlug(getId().substring(0, getId().lastIndexOf("-")));
+                article.setSlug(getId());
             }
             articleDao.save(article);
             

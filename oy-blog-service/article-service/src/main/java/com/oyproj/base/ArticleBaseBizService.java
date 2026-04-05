@@ -1,5 +1,6 @@
 package com.oyproj.base;
 import com.github.pagehelper.PageInfo;
+import com.oyproj.common.security.domain.SecurityUser;
 import com.oyproj.common.service.base.BaseBiz;
 import com.oyproj.utils.PageUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -12,7 +13,7 @@ import java.util.function.Supplier;
  */
 public class ArticleBaseBizService extends BaseBiz {
     protected String getUserId(){
-        String userId = (String)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userId = ((SecurityUser)SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
         return userId;
     }
 
