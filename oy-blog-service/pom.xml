@@ -15,5 +15,6 @@
         <module>article-service</module>
         <module>service-api</module>
         <module>message-service</module>
+        <module>search-service</module>
     </modules>
 </project>
