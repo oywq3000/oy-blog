@@ -1,4 +1,4 @@
-package com.oyproj.api.domain.dto;
+package com.oyproj.api.file.domain.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

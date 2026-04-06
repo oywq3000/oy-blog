@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  */
 @SpringBootApplication
 @EnableTransactionManagement
-@EnableFeignClients(basePackages = "com.oyproj.api.client")
+@EnableFeignClients(basePackages = "com.oyproj.api")
 public class UserApplication
 {
     public static void main( String[] args )

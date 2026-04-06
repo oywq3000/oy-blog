@@ -1,6 +1,7 @@
 package com.oyproj.service;
 
 import com.oyproj.common.base.Result;
+import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.domain.dto.UpdateProfileDto;
 import com.oyproj.domain.vo.UserVo;
 
@@ -31,4 +32,6 @@ public interface UserProfileBizService {
      * @return
      */
     Result<Object> update(UpdateProfileDto updateProfileDto);
+
+    Result<UserDTO> getUserDTOById(String userId);
 }

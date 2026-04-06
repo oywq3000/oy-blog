@@ -1,8 +1,8 @@
 package com.oyproj.service;
 
-import com.oyproj.api.domain.vo.FileVo;
+import com.oyproj.api.file.domain.vo.FileVo;
 import com.oyproj.domain.dto.FileKeyDto;
-import com.oyproj.api.domain.dto.FileUploadDto;
+import com.oyproj.api.file.domain.dto.FileUploadDto;
 
 /**
  * 文件服务入口

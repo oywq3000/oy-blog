@@ -2,6 +2,7 @@ package com.oyproj.controller;
 
 import com.oyproj.common.annotation.Log;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.domain.dto.UpdateProfileDto;
 import com.oyproj.domain.vo.UserVo;
 import com.oyproj.service.UserCommonBizService;
@@ -56,6 +57,15 @@ public class UserProfileController {
 
 
     /**
+     * 根据用户id获取用户UserDTO
+     */
+    @GetMapping("/info/{userId}")
+    @Operation(summary = "getUserDTO",description = "根据userId获取信息")
+    public Result<UserDTO> getUserDTO(@PathVariable String userId){
+        return profileBiz.getUserDTOById(userId);
+    }
+
+    /**
      * 上传用户头像
      *
      * @param file 头像文件
@@ -75,5 +85,7 @@ public class UserProfileController {
     public Result<Object> update(@RequestBody UpdateProfileDto updateProfileDto) {
         return profileBiz.update(updateProfileDto);
     }
+
+
 
 }

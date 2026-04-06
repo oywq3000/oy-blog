@@ -1,7 +1,7 @@
-package com.oyproj.api.client;
-import com.oyproj.api.client.fallback.FileUploadClientFallbackFactory;
-import com.oyproj.api.domain.dto.FileUploadDto;
-import com.oyproj.api.domain.vo.FileVo;
+package com.oyproj.api.file.client;
+import com.oyproj.api.file.client.fallback.FileUploadClientFallbackFactory;
+import com.oyproj.api.file.domain.dto.FileUploadDto;
+import com.oyproj.api.file.domain.vo.FileVo;
 import com.oyproj.common.base.Result;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;

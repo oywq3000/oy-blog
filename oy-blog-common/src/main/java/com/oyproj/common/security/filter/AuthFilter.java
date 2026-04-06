@@ -10,6 +10,7 @@ import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.IOException;
@@ -27,7 +28,18 @@ public class AuthFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
-        //从请求头中获取信息
+        String serviceCallHeader = httpServletRequest.getHeader("X-Service-Call");
+        if("true".equals(serviceCallHeader)){
+            // 这里可以设置一个特殊的服务用户身份
+            SecurityUser serviceUser = new SecurityUser("service",1,null);
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                    serviceUser, null,null);
+            SecurityContextHolder.getContext().setAuthentication(auth);
+            chain.doFilter(request, response);
+            return;
+        }
+
+        //非服务器之间调用
         String userType = httpServletRequest.getHeader(HeaderConstant.USER_TYPE.getValue());
         BlogRole blogRole = BlogRole.valueOf(userType);
         String userId = httpServletRequest.getHeader(HeaderConstant.USER_ID.getValue());

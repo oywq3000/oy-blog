@@ -2,8 +2,12 @@ package com.oyproj.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
+import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.domain.dto.UserDTO;
+import com.oyproj.common.mq.constants.MQOperation;
+import com.oyproj.common.mq.domain.ArticleIndexMessage;
 import com.oyproj.common.utils.UUIDUtils;
 import com.oyproj.domain.dto.ArticleSaveDto;
 import com.oyproj.domain.entity.*;
@@ -12,20 +16,26 @@ import com.oyproj.dto.*;
 import com.oyproj.mapper.ArticleCategoryMapper;
 import com.oyproj.mapper.ArticleTagMapper;
 import com.oyproj.service.ArticleBizService;
+import com.oyproj.service.ArticleMessageProducer;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * 文章业务服务实现类
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ArticleBizServiceImpl extends ArticleBaseBizService implements ArticleBizService {
@@ -39,6 +49,8 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
     @NotNull private final TagDao tagDao;
     @NotNull private final ArticleCategoryMapper articleCategoryMapper;
     @NotNull private final ArticleTagMapper articleTagMapper;
+    @NotNull private final ArticleMessageProducer articleMessageProducer;
+    @NotNull private final UserClient userClient;
 
     /**
      * 保存草稿
@@ -49,7 +61,8 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result<String> saveDraft(ArticleSaveDto dto) {
-        String articleId = saveArticleBase(dto, "draft");
+        Article article = saveArticleBase(dto, "draft");
+        String articleId =article.getId();
         saveRevision(articleId, dto.getContentMd());
         return Result.ok(articleId);
     }
@@ -60,22 +73,65 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
      * @param dto 文章信息
      * @return 文章ID
      */
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result<Map<String, String>> publish(ArticleSaveDto dto) {
-        String articleId = saveArticleBase(dto, "published");
+        Article article = saveArticleBase(dto, "published");
+        String articleId = article.getId();
         saveRevision(articleId, dto.getContentMd());
-        // 保存内容
         saveContent(articleId, dto.getContentMd(), dto.getContentHtml());
-        // 解析并保存章节（目录）
         parseAndSaveChapters(articleId, dto.getContentMd());
-        // 保存关联
         saveRelations(articleId, dto);
-
         Map<String, String> result = new HashMap<>();
+        sendMessageAfterCommit(article,dto);
         result.put("articleId", articleId);
         return Result.ok(result);
     }
+
+
+
+    private String getAuthorName(String authorId) {
+        return null;
+    }
+
+
+    //在事务后添加同步消息
+    private void sendMessageAfterCommit(Article article,ArticleSaveDto dto) {
+
+        ArticleIndexMessage articleIndexMessage = buildArticleIndexMessage(article, dto, MQOperation.CREATE);
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        CompletableFuture.runAsync(() -> {
+                            articleMessageProducer.sendArticleIndexMessage(articleIndexMessage);
+                        });
+                    }
+                }
+        );
+    }
+
+    /**
+     * 构建文章索引消息
+     */
+    private ArticleIndexMessage buildArticleIndexMessage(Article article, ArticleSaveDto dto, MQOperation operation) {
+        ArticleIndexMessage message = new ArticleIndexMessage();
+        message.setOperation(operation);
+        message.setArticleId(article.getId());
+        message.setTitle(article.getTitle());
+        message.setSummary(article.getSummary());
+        message.setAuthorId(article.getAuthorId());
+        Result<UserDTO> userDTO = userClient.getUserDTO(article.getAuthorId());
+        message.setAuthor(userDTO.getData().getUsername());
+        message.setCreateTime(article.getCreatedAt());
+        message.setUpdateTime(article.getUpdatedAt());
+        message.setStatus(article.getStatus());
+        message.setCategory(dto.getCategoryCode());
+        message.setTags(dto.getTags());
+        return message;
+    }
+
 
     /**
      * 删除文章
@@ -147,7 +203,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
      * @param status 文章状态（draft或published）
      * @return 文章ID
      */
-    private String saveArticleBase(ArticleSaveDto dto, String status) {
+    private Article saveArticleBase(ArticleSaveDto dto, String status) {
         Article article;
         boolean isNew = false;
         if (StringUtils.hasText(dto.getId())) {
@@ -193,7 +249,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
             articleDao.updateById(article);
         }
         
-        return article.getId();
+        return article;
     }
 
     /**

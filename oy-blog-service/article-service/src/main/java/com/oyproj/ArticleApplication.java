@@ -7,7 +7,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  * 文章管理模块
  */
 @MapperScan(basePackages = "com.oyproj.mapper")
-@EnableFeignClients(basePackages = "com.oyproj.api.client")
+@EnableFeignClients(basePackages = "com.oyproj.api")
 @SpringBootApplication
 public class ArticleApplication
 {

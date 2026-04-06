@@ -48,9 +48,9 @@
     <!-- Spring Boot AOP 支持 -->
     <spring-boot-aop.version>3.2.4</spring-boot-aop.version>
     <!-- Elasticsearch 版本 -->
-    <elasticsearch.version>8.13.2</elasticsearch.version>
+    <elasticsearch.version>8.17.10</elasticsearch.version>
     <!-- Elasticsearch 客户端 -->
-    <elasticsearch.client.version>8.13.2</elasticsearch.client.version>
+    <elasticsearch.client.version>8.17.10</elasticsearch.client.version>
     <!-- TransmittableThreadLocal -->
     <transmittable-thread-local.version>2.14.4</transmittable-thread-local.version>
     <!-- WebSocket -->

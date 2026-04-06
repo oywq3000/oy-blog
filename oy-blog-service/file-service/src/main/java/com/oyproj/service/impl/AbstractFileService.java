@@ -1,9 +1,9 @@
 package com.oyproj.service.impl;
 
-import com.oyproj.api.domain.vo.FileVo;
+import com.oyproj.api.file.domain.vo.FileVo;
 import com.oyproj.base.BaseUpload;
 import com.oyproj.domain.dto.FileKeyDto;
-import com.oyproj.api.domain.dto.FileUploadDto;
+import com.oyproj.api.file.domain.dto.FileUploadDto;
 import com.oyproj.service.FileService;
 import lombok.RequiredArgsConstructor;
 

@@ -27,6 +27,17 @@ spring:
         port: 8719
       filter:
         url-patterns: /**
+  rabbitmq:
+    host: 192.168.200.130
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+    # 开启消息确认
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
 
 
 feign:

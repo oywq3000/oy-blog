@@ -1,15 +1,25 @@
 package com.oyproj.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import co.elastic.clients.elasticsearch.core.DeleteRequest;
 import co.elastic.clients.elasticsearch.core.IndexRequest;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
+import com.oyproj.Repository.ArticleSearchRepository;
 import com.oyproj.common.base.Result;
+import com.oyproj.domain.dto.SearchQueryDTO;
+import com.oyproj.domain.entity.ArticleDocument;
 import com.oyproj.service.SearchBizService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -21,87 +31,104 @@ import java.util.stream.Collectors;
 /**
  * 搜索业务服务实现（Elasticsearch）
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SearchBizServiceImpl implements SearchBizService {
 
     private static final String INDEX = "articles";
+    private final ArticleSearchRepository articleSearchRepository;
 
     @NotNull private final ElasticsearchClient client;
 
-    /**
-     * 索引文章
-     *
-     * @param id 文章ID
-     * @param title 标题
-     * @param summary 摘要
-     * @param authorId 作者ID
-     * @param publishAt 发布时间
-     * @param tags 标签
-     * @return 结果
-     */
-    @Override
-    public Result<Object> indexArticle(String id, String title, String summary, String authorId, LocalDateTime publishAt, List<String> tags) {
-        try {
-            Map<String, Object> doc = new HashMap<>();
-            doc.put("id", id);
-            doc.put("title", title);
-            doc.put("summary", summary);
-            doc.put("authorId", authorId);
-            doc.put("publishAt", publishAt != null ? publishAt.toString() : null);
-            doc.put("tags", tags);
-            client.index(IndexRequest.of(b -> b.index(INDEX).id(id).document(doc)));
-            return Result.ok();
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
-    }
+    public Result<List<ArticleDocument>> searchArticles(SearchQueryDTO queryDTO) {
+        // 构建复杂查询
+        try{
+            BoolQuery.Builder boolQueryBuilder  = new BoolQuery.Builder();
 
-    /**
-     * 关键词搜索文章
-     *
-     * @param q 关键词
-     * @param page 页码（从1开始）
-     * @param size 每页数量
-     * @return 命中列表
-     */
-    @Override
-    public Result<List<Map<String, Object>>> search(String q, int page, int size) {
-        try {
-            int from = Math.max((page - 1) * size, 0);
-            SearchRequest sr = SearchRequest.of(b -> b
-                    .index(INDEX)
-                    .from(from)
-                    .size(size)
-                    .query(QueryBuilders.multiMatch(m -> m
-                            .query(q)
-                            .fields("title", "summary", "tags")
-                    ))
+            // 关键词搜索（标题、内容）
+            if (queryDTO.getKeyword() != null && !queryDTO.getKeyword().isEmpty()) {
+                boolQueryBuilder.should(
+                        MatchQuery.of(m->m.field("title").query(queryDTO.getKeyword()).boost(2.0f))._toQuery()
+                );
+                boolQueryBuilder.should(
+                        MatchQuery.of(m -> m.field("content").query(queryDTO.getKeyword()))._toQuery()
+                );
+            }
+
+            // 作者搜索
+            if (queryDTO.getAuthor() != null && !queryDTO.getAuthor().isEmpty()) {
+                boolQueryBuilder.must(
+                        TermQuery.of(t -> t.field("author").value(queryDTO.getAuthor()))._toQuery()
+                );
+            }
+
+            // 标签搜索
+            if (queryDTO.getTag() != null && !queryDTO.getTag().isEmpty()) {
+                boolQueryBuilder.must(
+                        TermQuery.of(t -> t.field("tags").value(queryDTO.getTag()))._toQuery()
+                );
+            }
+
+            // 分类搜索
+            if (queryDTO.getCategory() != null && !queryDTO.getCategory().isEmpty()) {
+                boolQueryBuilder.must(
+                        TermQuery.of(t -> t.field("category").value(queryDTO.getCategory()))._toQuery()
+                );
+            }
+
+            // 状态过滤
+            if (queryDTO.getStatus() != null && !queryDTO.getStatus().isEmpty()) {
+                boolQueryBuilder.must(
+                        TermQuery.of(t -> t.field("status").value(queryDTO.getStatus()))._toQuery()
+                );
+            }
+
+            // 分页设置
+            int pageNum = queryDTO.getPage() != null ? queryDTO.getPage(): 0;
+            int pageSize = queryDTO.getSize() != null ? queryDTO.getSize() : 10;
+            int from = pageNum * pageSize;
+
+            // 执行搜索
+            SearchResponse<ArticleDocument> response = client.search(s -> s
+                            .index(INDEX)
+                            .query(boolQueryBuilder.build()._toQuery())
+                            .from(from)
+                            .size(pageSize),
+                    ArticleDocument.class
             );
-            SearchResponse<Map> resp = client.search(sr, Map.class);
-            List<Map<String, Object>> list = resp.hits().hits().stream()
-                    .map(h -> (Map<String, Object>) h.source())
-                    .collect(Collectors.toList());
-            return Result.ok(list);
+            return Result.ok(response.hits().hits().stream()
+                    .map(hit -> hit.source())
+                    .collect(Collectors.toList()));
+        }catch (Exception e) {
+            log.error("搜索文章失败: {}", e.getMessage(), e);
+            return Result.ok(List.of());
+        }
+    }
+    public void indexArticle(ArticleDocument article) {
+        try {
+            articleSearchRepository.save(article);
+            log.info("文章索引成功，ID: {}", article.getArticleId());
         } catch (Exception e) {
-            return Result.error(e.getMessage());
+            log.error("文章索引失败，ID: {}, 错误: {}", article.getArticleId(), e.getMessage());
+            throw new RuntimeException("文章索引失败");
         }
     }
 
-    /**
-     * 删除文章索引
-     *
-     * @param id 文章ID
-     * @return 结果
-     */
-    @Override
-    public Result<Object> delete(String id) {
+    public void deleteArticleIndex(Long articleId) {
+
+    }
+
+    public void bulkIndexArticles(List<ArticleDocument> articles) {
         try {
-            client.delete(DeleteRequest.of(b -> b.index(INDEX).id(id)));
-            return Result.ok();
+            articleSearchRepository.saveAll(articles);
+            log.info("批量索引成功，数量: {}", articles.size());
         } catch (Exception e) {
-            return Result.error(e.getMessage());
+            log.error("批量索引失败，错误: {}", e.getMessage());
+            throw new RuntimeException("批量索引失败");
         }
     }
+
+
 }
 

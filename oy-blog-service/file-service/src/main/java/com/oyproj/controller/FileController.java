@@ -1,7 +1,7 @@
 package com.oyproj.controller;
 
-import com.oyproj.api.domain.dto.FileUploadDto;
-import com.oyproj.api.domain.vo.FileVo;
+import com.oyproj.api.file.domain.dto.FileUploadDto;
+import com.oyproj.api.file.domain.vo.FileVo;
 import com.oyproj.common.base.Result;
 import com.oyproj.service.FileService;
 import io.swagger.v3.oas.annotations.Operation;

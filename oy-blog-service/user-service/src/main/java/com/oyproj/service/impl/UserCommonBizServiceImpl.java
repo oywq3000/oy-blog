@@ -1,8 +1,8 @@
 package com.oyproj.service.impl;
 
-import com.oyproj.api.client.FileUploadClient;
-import com.oyproj.api.domain.dto.FileUploadDto;
-import com.oyproj.api.domain.vo.FileVo;
+import com.oyproj.api.file.client.FileUploadClient;
+import com.oyproj.api.file.domain.dto.FileUploadDto;
+import com.oyproj.api.file.domain.vo.FileVo;
 import com.oyproj.base.UserBizBase;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.service.CommonCache;

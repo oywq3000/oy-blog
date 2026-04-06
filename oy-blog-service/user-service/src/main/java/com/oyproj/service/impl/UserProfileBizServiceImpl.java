@@ -3,6 +3,7 @@ package com.oyproj.service.impl;
 import com.oyproj.base.UserBizBase;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.component.IpParseApi;
+import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.exception.NotFoundException;
 import com.oyproj.common.service.CommonCache;
 import com.oyproj.dao.UserDao;
@@ -59,5 +60,16 @@ public class UserProfileBizServiceImpl extends UserBizBase implements UserProfil
         user.setAvatarUrl(updateProfileDto.getAvatarUrl());
         user.setBio(updateProfileDto.getBio());
         return userDao.updateById(user)?Result.ok():Result.error();
+    }
+
+    @Override
+    public Result<UserDTO> getUserDTOById(String userId) {
+        User user = userDao.getById(userId);
+        if (user == null) {
+            throw new NotFoundException(I18n("user.notfound"));
+        }
+        UserDTO userDTO = new UserDTO();
+        copyProperties(user,userDTO);
+        return Result.ok(userDTO);
     }
 }

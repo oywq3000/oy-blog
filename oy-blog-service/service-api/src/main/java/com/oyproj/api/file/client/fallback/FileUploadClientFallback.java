@@ -1,8 +1,8 @@
-package com.oyproj.api.client.fallback;
+package com.oyproj.api.file.client.fallback;
 
-import com.oyproj.api.client.FileUploadClient;
-import com.oyproj.api.domain.dto.FileUploadDto;
-import com.oyproj.api.domain.vo.FileVo;
+import com.oyproj.api.file.client.FileUploadClient;
+import com.oyproj.api.file.domain.dto.FileUploadDto;
+import com.oyproj.api.file.domain.vo.FileVo;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.base.ResultCode;
 import lombok.extern.slf4j.Slf4j;
