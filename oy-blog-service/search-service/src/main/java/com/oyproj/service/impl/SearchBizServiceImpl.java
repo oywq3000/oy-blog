@@ -1,31 +1,20 @@
 package com.oyproj.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
-import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
-import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
-import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
-import co.elastic.clients.elasticsearch.core.DeleteRequest;
-import co.elastic.clients.elasticsearch.core.IndexRequest;
-import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import com.oyproj.Repository.ArticleSearchRepository;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.dto.SearchQueryDTO;
 import com.oyproj.domain.entity.ArticleDocument;
 import com.oyproj.service.SearchBizService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -41,11 +30,12 @@ public class SearchBizServiceImpl implements SearchBizService {
 
     @NotNull private final ElasticsearchClient client;
 
-    public Result<List<ArticleDocument>> searchArticles(SearchQueryDTO queryDTO) {
+    public Result<PageVo<List<ArticleDocument>>> searchArticles(SearchQueryDTO queryDTO) {
         // 构建复杂查询
         try{
+            // 检查是否有任何搜索条件
+            boolean hasSearchCondition = false;
             BoolQuery.Builder boolQueryBuilder  = new BoolQuery.Builder();
-
             // 关键词搜索（标题、内容）
             if (queryDTO.getKeyword() != null && !queryDTO.getKeyword().isEmpty()) {
                 boolQueryBuilder.should(
@@ -54,33 +44,40 @@ public class SearchBizServiceImpl implements SearchBizService {
                 boolQueryBuilder.should(
                         MatchQuery.of(m -> m.field("content").query(queryDTO.getKeyword()))._toQuery()
                 );
+                hasSearchCondition = true;
             }
-
             // 作者搜索
             if (queryDTO.getAuthor() != null && !queryDTO.getAuthor().isEmpty()) {
                 boolQueryBuilder.must(
                         TermQuery.of(t -> t.field("author").value(queryDTO.getAuthor()))._toQuery()
                 );
+                hasSearchCondition = true;
             }
-
             // 标签搜索
             if (queryDTO.getTag() != null && !queryDTO.getTag().isEmpty()) {
                 boolQueryBuilder.must(
                         TermQuery.of(t -> t.field("tags").value(queryDTO.getTag()))._toQuery()
                 );
+                hasSearchCondition = true;
             }
-
             // 分类搜索
             if (queryDTO.getCategory() != null && !queryDTO.getCategory().isEmpty()) {
                 boolQueryBuilder.must(
                         TermQuery.of(t -> t.field("category").value(queryDTO.getCategory()))._toQuery()
                 );
+                hasSearchCondition = true;
             }
-
             // 状态过滤
             if (queryDTO.getStatus() != null && !queryDTO.getStatus().isEmpty()) {
                 boolQueryBuilder.must(
                         TermQuery.of(t -> t.field("status").value(queryDTO.getStatus()))._toQuery()
+                );
+                hasSearchCondition = true;
+            }
+            // 如果没有搜索条件，添加 match_all 查询
+            if (!hasSearchCondition) {
+                boolQueryBuilder.must(
+                        MatchAllQuery.of(m -> m)._toQuery()
                 );
             }
 
@@ -88,7 +85,6 @@ public class SearchBizServiceImpl implements SearchBizService {
             int pageNum = queryDTO.getPage() != null ? queryDTO.getPage(): 0;
             int pageSize = queryDTO.getSize() != null ? queryDTO.getSize() : 10;
             int from = pageNum * pageSize;
-
             // 执行搜索
             SearchResponse<ArticleDocument> response = client.search(s -> s
                             .index(INDEX)
@@ -97,20 +93,28 @@ public class SearchBizServiceImpl implements SearchBizService {
                             .size(pageSize),
                     ArticleDocument.class
             );
-            return Result.ok(response.hits().hits().stream()
+            List<ArticleDocument> collect = response.hits().hits().stream()
                     .map(hit -> hit.source())
-                    .collect(Collectors.toList()));
+                    .collect(Collectors.toList());
+            // 获取总记录数 - 从response.hits().total()获取
+            Long total = response.hits().total() != null ? response.hits().total().value() : 0L;
+            Integer totalPages = (int) Math.ceil((double) total / pageSize);
+            // 构建分页结果
+            PageVo<List<ArticleDocument>> pageVo = new PageVo<>(pageNum, pageSize, total, totalPages, collect);
+            return Result.ok(pageVo);
         }catch (Exception e) {
             log.error("搜索文章失败: {}", e.getMessage(), e);
-            return Result.ok(List.of());
+            PageVo<List<ArticleDocument>> pageVo = new PageVo<>(0,0 , 0L, 0, null);
+            return Result.ok(pageVo);
+
         }
     }
     public void indexArticle(ArticleDocument article) {
         try {
             articleSearchRepository.save(article);
-            log.info("文章索引成功，ID: {}", article.getArticleId());
+            log.info("文章索引成功，ID: {}", article.getId());
         } catch (Exception e) {
-            log.error("文章索引失败，ID: {}, 错误: {}", article.getArticleId(), e.getMessage());
+            log.error("文章索引失败，ID: {}, 错误: {}", article.getId(), e.getMessage());
             throw new RuntimeException("文章索引失败");
         }
     }

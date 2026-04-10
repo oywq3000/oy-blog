@@ -124,8 +124,8 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         message.setAuthorId(article.getAuthorId());
         Result<UserDTO> userDTO = userClient.getUserDTO(article.getAuthorId());
         message.setAuthor(userDTO.getData().getUsername());
-        message.setCreateTime(article.getCreatedAt());
-        message.setUpdateTime(article.getUpdatedAt());
+        message.setCreatedAt(article.getCreatedAt());
+        message.setUpdatedAt(article.getUpdatedAt());
         message.setStatus(article.getStatus());
         message.setCategory(dto.getCategoryCode());
         message.setTags(dto.getTags());

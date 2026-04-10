@@ -1,7 +1,6 @@
 package com.oyproj.common.mq.domain;
 
 import com.oyproj.common.mq.constants.MQOperation;
-import lombok.Builder;
 import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,12 +44,12 @@ public class ArticleIndexMessage {
     /**
      * 创建时间
      */
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
     
     /**
      * 更新时间
      */
-    private LocalDateTime updateTime;
+    private LocalDateTime updatedAt;
     
     /**
      * 状态

@@ -40,7 +40,8 @@ public class ArticleReadController {
     @OpLog(action = "view", func = "article.view")
     @Operation(summary = "根据slug查询文章", description = "根据SEO别名查询文章基础信息")
     public Result<ArticleVo> getBySlug(@PathVariable("slug") String slug) {
-        return biz.getBySlug(slug);
+        //文章不多使用id查询代替
+        return biz.getById(slug);
     }
 
     /**

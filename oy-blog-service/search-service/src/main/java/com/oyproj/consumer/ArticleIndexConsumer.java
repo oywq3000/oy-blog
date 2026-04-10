@@ -62,7 +62,7 @@ public class ArticleIndexConsumer {
     private void indexArticle(ArticleIndexMessage message) {
         ArticleDocument document = convertToDocument(message);
         articleSearchRepository.save(document);
-        log.info("文章索引成功，文章ID: {}", message.getArticleId());
+        log.info("文章索引成功，文章ID: {}", document.getId());
     }
 
     /**
@@ -82,13 +82,13 @@ public class ArticleIndexConsumer {
      */
     private ArticleDocument convertToDocument(ArticleIndexMessage message) {
         ArticleDocument document = new ArticleDocument();
-        document.setArticleId(message.getArticleId());
+        document.setId(message.getArticleId());
         document.setTitle(message.getTitle());
         document.setSummary(message.getSummary());
         document.setAuthor(message.getAuthor());
         document.setAuthorId(message.getAuthorId());
-        document.setCreateTime(message.getCreateTime());
-        document.setUpdateTime(message.getUpdateTime());
+        document.setCreatedAt(message.getCreatedAt());
+        document.setUpdatedAt(message.getUpdatedAt());
         document.setStatus(message.getStatus());
         document.setTags(message.getTags());
         document.setCategory(message.getCategory());

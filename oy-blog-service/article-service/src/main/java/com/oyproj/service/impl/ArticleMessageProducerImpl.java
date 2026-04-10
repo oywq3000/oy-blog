@@ -64,22 +64,5 @@ public class ArticleMessageProducerImpl implements ArticleMessageProducer {
         }
     }*/
 
-    /**
-     * 将Article实体转换为消息对象
-     */
-    private ArticleIndexMessage convertToMessage(Article article,ArticleSaveDto dto, MQOperation operation) {
-        ArticleIndexMessage message = new ArticleIndexMessage();
-        message.setOperation(operation);
-        message.setArticleId(article.getId());
-        message.setTitle(article.getTitle());
-        message.setSummary(article.getSummary());
-        //message.setAuthor(article.getAuthor());
-        message.setAuthorId(article.getAuthorId());
-        message.setCreateTime(article.getCreatedAt());
-        message.setUpdateTime(article.getUpdatedAt());
-        message.setStatus(article.getStatus());
-        message.setCategory(dto.getCategoryCode());
-        message.setTags(dto.getTags());
-        return message;
-    }
+
 }

@@ -4,10 +4,9 @@ import lombok.Data;
 
 @Data
 public class SearchQueryDTO {
-    private String p;
+    private String keyword;
     private Integer page;
     private Integer size;
-    private String keyword;
     private String author;
     private String tag;
     private String category;
