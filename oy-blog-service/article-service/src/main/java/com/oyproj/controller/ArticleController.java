@@ -13,7 +13,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
+import com.oyproj.api.article.domain.UserArticleStatDto;
 import java.util.Map;
 
 /**
@@ -111,7 +111,7 @@ public class ArticleController {
      */
     @GetMapping("/stats/me")
     @Operation(summary = "获取当前用户文章统计", description = "获取当前登录用户的文章统计信息")
-    public Result<UserArticleStatsVo> getMyStats() {
+    public Result<UserArticleStatDto> getMyStats() {
         return biz.getMyStats();
     }
 
@@ -123,9 +123,13 @@ public class ArticleController {
      */
     @GetMapping("/stats/{userId}")
     @Operation(summary = "获取指定用户文章统计", description = "获取指定用户的文章统计信息")
-    public Result<UserArticleStatsVo> getUserStats(@PathVariable("userId") String userId) {
+    public Result<UserArticleStatDto> getUserStats(@PathVariable("userId") String userId) {
         return biz.getUserStats(userId);
     }
+
+    /**
+     * 根据用户id统计文章
+     */
 
 
 }

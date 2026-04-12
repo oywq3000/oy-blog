@@ -61,4 +61,9 @@ public interface UserDao extends IService<User> {
      * @return 权限列表
      */
     List<Permission> listPermissionsByUserId(String userId);
+
+    /**
+     * 根据id查询有多少个
+     */
+
 }

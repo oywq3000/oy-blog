@@ -4,6 +4,8 @@ import com.oyproj.common.annotation.Log;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.domain.dto.UpdateProfileDto;
+import com.oyproj.domain.vo.SimpleUserVo;
+import com.oyproj.domain.vo.UserPublicVo;
 import com.oyproj.domain.vo.UserVo;
 import com.oyproj.service.UserCommonBizService;
 import com.oyproj.service.UserProfileBizService;
@@ -35,13 +37,33 @@ public class UserProfileController {
      *
      * @return 当前登录用户信息
      */
-    @Log
     @GetMapping("/info")
     @Operation(summary = "获取当前登录用户信息", description = "获取当前登录用户的详细信息")
     public Result<UserVo> getProfile() {
         log.info("get profile");
         return profileBiz.getProfile();
     }
+
+    /**
+     * 获取简单用户Profile
+     */
+
+    @GetMapping("/public/simple/{userId}")
+    @Operation(summary = "获取简单用户信息", description = "根据id获取简单用户的详细信息")
+    public Result<SimpleUserVo> getSimpleProfile(@PathVariable String userId) {
+        return profileBiz.getSimpleProfile(userId);
+    }
+    /**
+     * 获取公共用户信息
+     */
+    @GetMapping("/public/{userId}")
+    @Operation(summary = "获取可公开的用户信息", description = "获取当前登录用户的详细信息")
+    Result<UserPublicVo> getUserPublicInfo(@PathVariable String userId){
+        return profileBiz.getUserPublicInfo(userId);
+    }
+
+
+
 
     /**
      * 根据用户ID获取用户名

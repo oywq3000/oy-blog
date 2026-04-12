@@ -2,6 +2,7 @@ package com.oyproj.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
+import com.oyproj.api.article.domain.UserArticleStatDto;
 import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
@@ -9,6 +10,7 @@ import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.mq.constants.MQOperation;
 import com.oyproj.common.mq.domain.ArticleIndexMessage;
 import com.oyproj.common.utils.UUIDUtils;
+import com.oyproj.dao.UserArticleStatDao;
 import com.oyproj.domain.dto.ArticleSaveDto;
 import com.oyproj.domain.entity.*;
 import com.oyproj.domain.vo.UserArticleStatsVo;
@@ -51,6 +53,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
     @NotNull private final ArticleTagMapper articleTagMapper;
     @NotNull private final ArticleMessageProducer articleMessageProducer;
     @NotNull private final UserClient userClient;
+    @NotNull private final UserArticleStatDao userArticleStatDao;
 
     /**
      * 保存草稿
@@ -172,7 +175,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
      * @return 统计信息
      */
     @Override
-    public Result<UserArticleStatsVo> getMyStats() {
+    public Result<UserArticleStatDto> getMyStats() {
         return getUserStats(getUserId());
     }
 
@@ -183,17 +186,9 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
      * @return 统计信息
      */
     @Override
-    public Result<UserArticleStatsVo> getUserStats(String userId) {
-        Long count = articleDao.countByAuthorId(userId);
-        
-        // 暂无总浏览量、总点赞量统计，预留接口
-        // 实际应查询 article join article_stats sum(views), sum(likes)
-        
-        return Result.ok(UserArticleStatsVo.builder()
-                .articleCount(count)
-                .viewCount(0L)
-                .likeCount(0L)
-                .build());
+    public Result<UserArticleStatDto> getUserStats(String userId) {
+        UserArticleStatDto articleStat = userArticleStatDao.getArticleStatById(userId);
+        return Result.ok(articleStat);
     }
 
     /**

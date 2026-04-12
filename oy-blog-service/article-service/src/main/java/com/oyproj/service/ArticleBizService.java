@@ -3,6 +3,7 @@ package com.oyproj.service;
 import com.oyproj.common.base.Result;
 import com.oyproj.domain.dto.ArticleSaveDto;
 import com.oyproj.domain.vo.UserArticleStatsVo;
+import com.oyproj.api.article.domain.UserArticleStatDto;
 
 import java.util.Map;
 
@@ -36,7 +37,7 @@ public interface ArticleBizService {
      *
      * @return 统计信息
      */
-    Result<UserArticleStatsVo> getMyStats();
+    Result<UserArticleStatDto> getMyStats();
 
     /**
      * 获取指定用户文章统计
@@ -44,7 +45,7 @@ public interface ArticleBizService {
      * @param userId 用户ID
      * @return 统计信息
      */
-    Result<UserArticleStatsVo> getUserStats(String userId);
+    Result<UserArticleStatDto> getUserStats(String userId);
 
     /**
      * 判断是否为当前用户的文章

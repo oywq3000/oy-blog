@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.oyproj.dao.UserArticleStatDao">
+    <select id="getArticleStatById" resultType="com.oyproj.api.article.domain.UserArticleStatDto">
+        SELECT
+        a.author_id as user_id,
+        COUNT(DISTINCT a.id) as article_count,
+        COALESCE(SUM(s.views),0) as view_count,
+        COALESCE(SUM(s.likes),0) as like_count,
+        COALESCE(SUM(s.favorites),0) as favorite_count
+        FROM article a
+        LEFT JOIN article_stats s ON a.id=s.article_id
+        WHERE a.author_id=#{userId}
+        AND a.status='published'
+        GROUP BY a.author_id
+    </select>
+</mapper>
