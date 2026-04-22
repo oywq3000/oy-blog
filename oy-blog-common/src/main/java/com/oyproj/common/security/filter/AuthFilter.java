@@ -50,7 +50,7 @@ public class AuthFilter implements Filter {
             }
             case GUEST -> {
                 userDTO.setId(userId);
-                userDTO.setStatus(1);
+                userDTO.setStatus(2); //代表游客状态
                 userDTO.setBlogRole(blogRole);
                 userDTO.setUsername("游客");
             }
