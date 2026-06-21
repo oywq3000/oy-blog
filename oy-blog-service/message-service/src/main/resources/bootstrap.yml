@@ -2,4 +2,4 @@ spring:
   profiles:
     active: dev
   application:
-    name: article-service
+    name: message-service

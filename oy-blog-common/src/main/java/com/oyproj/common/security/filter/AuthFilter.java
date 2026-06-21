@@ -43,31 +43,38 @@ public class AuthFilter implements Filter {
         String userType = httpServletRequest.getHeader(HeaderConstant.USER_TYPE.getValue());
         BlogRole blogRole = BlogRole.valueOf(userType);
         String userId = httpServletRequest.getHeader(HeaderConstant.USER_ID.getValue());
-        UserDTO userDTO = new UserDTO();
+        UserDTO userDTO;
         switch (blogRole){
             case READER -> {
-                userDTO =  (UserDTO) commonCache.get(CachePrefix.USER_ID.getPrefix()+userId);
+                // Gateway 已验证 JWT 和会话，从缓存获取完整 UserDTO，若缓存失效则用 header 兜底
+                userDTO = (UserDTO) commonCache.get(CachePrefix.USER_ID.getPrefix() + userId);
+                if (userDTO == null) {
+                    userDTO = new UserDTO();
+                    userDTO.setId(userId);
+                    userDTO.setBlogRole(blogRole);
+                }
             }
             case GUEST -> {
+                userDTO = new UserDTO();
                 userDTO.setId(userId);
                 userDTO.setStatus(2); //代表游客状态
                 userDTO.setBlogRole(blogRole);
                 userDTO.setUsername("游客");
             }
             case ADMIN -> {
-
+                userDTO = new UserDTO();
+                userDTO.setId(userId);
+                userDTO.setBlogRole(blogRole);
             }
             default -> {
                 throw new UnAuthorizedException("未知用户类型");
             }
         }
-        if(userDTO!=null){
-            //todo 完成权限绑定功能
-            List<GrantedAuthority> auths = new ArrayList<>();
-            SecurityUser securityUser = new SecurityUser(userDTO,auths);
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(securityUser,null,securityUser.getAuthorities());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-        }
+        //todo 完成权限绑定功能
+        List<GrantedAuthority> auths = new ArrayList<>();
+        SecurityUser securityUser = new SecurityUser(userDTO, auths);
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(securityUser, null, securityUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
         chain.doFilter(request,response);
     }
 }

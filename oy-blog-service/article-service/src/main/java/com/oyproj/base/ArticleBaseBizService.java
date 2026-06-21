@@ -1,9 +1,11 @@
 package com.oyproj.base;
 import com.github.pagehelper.PageInfo;
-import com.oyproj.common.security.domain.SecurityUser;
+import com.oyproj.common.constant.HeaderConstant;
 import com.oyproj.common.service.base.BaseBiz;
 import com.oyproj.utils.PageUtils;
-import org.springframework.security.core.context.SecurityContextHolder;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -13,8 +15,12 @@ import java.util.function.Supplier;
  */
 public class ArticleBaseBizService extends BaseBiz {
     protected String getUserId(){
-        String userId = ((SecurityUser)SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUsername();
-        return userId;
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes == null) {
+            return null;
+        }
+        HttpServletRequest request = attributes.getRequest();
+        return request.getHeader(HeaderConstant.USER_ID.getValue());
     }
 
     /**
