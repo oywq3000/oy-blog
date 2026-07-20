@@ -34,7 +34,7 @@ logging:
     com.oyproj: DEBUG
     org.springframework: WARN
   file:
-    path: ./logs/user-service
+    path: ./logs
 
 feign:
   sentinel:

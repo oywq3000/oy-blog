@@ -22,5 +22,5 @@ logging:
     com.oyproj: DEBUG
     org.springframework: WARN
   file:
-    path: ./logs/search-service
+    path: ./logs
 

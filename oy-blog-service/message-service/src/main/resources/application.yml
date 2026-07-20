@@ -22,4 +22,4 @@ logging:
     com.oyproj: DEBUG
     org.springframework: WARN
   file:
-    path: ./logs/message-service
+    path: ./logs

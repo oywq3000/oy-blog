@@ -52,7 +52,7 @@ logging:
     org.springframework.cloud.gateway: WARN
     reactor.netty: WARN
   file:
-    path: ./logs/gateway
+    path: ./logs
 
 auth:
   whitelist:
