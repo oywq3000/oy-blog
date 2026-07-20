@@ -28,6 +28,14 @@ spring:
       filter:
         url-patterns: /**
 
+# ============ Logging Configuration ============
+logging:
+  level:
+    com.oyproj: DEBUG
+    org.springframework: WARN
+  file:
+    path: ./logs/user-service
+
 feign:
   sentinel:
     enabled: true

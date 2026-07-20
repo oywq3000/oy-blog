@@ -16,3 +16,11 @@ spring:
     template:
       mandatory: true
 
+# ============ Logging Configuration ============
+logging:
+  level:
+    com.oyproj: DEBUG
+    org.springframework: WARN
+  file:
+    path: ./logs/search-service
+

@@ -22,6 +22,14 @@ spring:
         port: 8719
       filter:
         url-patterns: /**
+# ============ Logging Configuration ============
+logging:
+  level:
+    com.oyproj: DEBUG
+    org.springframework: WARN
+  file:
+    path: ./logs/file-service
+
 feign:
   sentinel:
     enabled: true

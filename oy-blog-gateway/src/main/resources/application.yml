@@ -45,6 +45,15 @@ spring:
           max-idle: 8 # 最大空闲连接数
           min-idle: 0 # 最小空闲连接数
 
+# ============ Logging Configuration ============
+logging:
+  level:
+    com.oyproj: DEBUG
+    org.springframework.cloud.gateway: WARN
+    reactor.netty: WARN
+  file:
+    path: ./logs/gateway
+
 auth:
   whitelist:
     - /user-service/auth/login

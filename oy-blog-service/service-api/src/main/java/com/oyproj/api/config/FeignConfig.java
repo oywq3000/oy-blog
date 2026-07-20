@@ -15,6 +15,11 @@ public class FeignConfig {
             public void apply(RequestTemplate template) {
                 // 为所有 Feign 调用添加服务间调用标识
                 template.header("X-Service-Call", "true");
+                // 传播 traceId 实现全链路追踪
+                String traceId = org.slf4j.MDC.get("traceId");
+                if (traceId != null && !traceId.isEmpty()) {
+                    template.header("X-Trace-Id", traceId);
+                }
             }
         };
     }

@@ -1,0 +1,25 @@
+server:
+  port: 8094
+
+spring:
+  application:
+    name: message-service
+  mail:
+    host: smtp.example.com
+    port: 587
+    username: noreply@example.com
+    password: your-email-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# ============ Logging Configuration ============
+logging:
+  level:
+    com.oyproj: DEBUG
+    org.springframework: WARN
+  file:
+    path: ./logs/message-service
