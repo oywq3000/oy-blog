@@ -11,6 +11,7 @@ import com.oyproj.domain.AuthenticationResult;
 import com.oyproj.properties.AuthProperties;
 import com.oyproj.utils.GuestUtil;
 import io.jsonwebtoken.Claims;
+import io.netty.util.internal.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -37,13 +38,17 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
         log.info("转发:{}",path);
-
+        String token = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         //优先认证用户
-        AuthenticationResult authResult = authenticateUser(request);
+        AuthenticationResult authResult = authenticateUser(token);
         if(authResult.isAuthenticated()){
             //用户认证成功
             log.debug("认证用户访问: {}, 用户ID: {}", path, authResult.getUserId());
             return handleAuthenticatedUser(exchange, chain, authResult);
+        }else if(!StringUtil.isNullOrEmpty(token)){
+            //存在token，且认证失败 → 直接拒绝
+            log.warn("Token认证失败，拒绝访问: {}", path);
+            return Mono.error(new UnAuthorizedException("Token无效或已过期，请重新登录"));
         }
         //游客访问白名单路径
         if(isWhitelisted(path)){
@@ -64,8 +69,8 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         return authProperties.getWhitelist().stream().anyMatch(path::startsWith);
     }
 
-    private AuthenticationResult authenticateUser(ServerHttpRequest request) {
-        String token = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+    private AuthenticationResult authenticateUser(String token) {
+
         if (token == null) {
             return AuthenticationResult.unauthenticated();
         }
