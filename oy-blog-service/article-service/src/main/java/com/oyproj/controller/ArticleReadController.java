@@ -41,7 +41,7 @@ public class ArticleReadController {
     @Operation(summary = "根据slug查询文章", description = "根据SEO别名查询文章基础信息")
     public Result<ArticleVo> getBySlug(@PathVariable("slug") String slug) {
         //文章不多使用id查询代替
-        return biz.getById(slug);
+        return biz.getBySlug(slug);
     }
 
     /**
