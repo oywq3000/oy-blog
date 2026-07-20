@@ -31,8 +31,8 @@ public class LoggingFilter implements Filter {
             java.util.Arrays.asList("authorization", "x-user-data", "cookie", "set-cookie")
     );
 
-    private static final String TRACE_HEADER = "X-Trace-Id";
-    private static final String MDC_TRACE_KEY = "traceId";
+    private static final String RECORD_HEADER = "X-Record-Id";
+    private static final String MDC_RECORD_KEY = "recordId";
 
     // ==================== 请求头格式化 ====================
 
@@ -88,10 +88,10 @@ public class LoggingFilter implements Filter {
         ContentCachingRequestWrapper wrappedRequest = wrapRequest(httpRequest);
         ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(httpResponse);
 
-        // traceId 生成/传播
-        String traceId = resolveTraceId(httpRequest);
-        MDC.put(MDC_TRACE_KEY, traceId);
-        httpResponse.setHeader(TRACE_HEADER, traceId);
+        // recordId 生成/传播
+        String recordId = resolveRecordId(httpRequest);
+        MDC.put(MDC_RECORD_KEY, recordId);
+        httpResponse.setHeader(RECORD_HEADER, recordId);
 
         long startTime = System.currentTimeMillis();
         boolean hasException = false;
@@ -195,14 +195,14 @@ public class LoggingFilter implements Filter {
     }
 
     /**
-     * 解析 traceId：优先从请求头获取，否则新生成
+     * 解析 recordId：优先从请求头获取，否则新生成
      */
-    private String resolveTraceId(HttpServletRequest request) {
-        String traceId = request.getHeader(TRACE_HEADER);
-        if (traceId != null && !traceId.isEmpty()) {
-            return traceId;
+    private String resolveRecordId(HttpServletRequest request) {
+        String recordId = request.getHeader(RECORD_HEADER);
+        if (recordId != null && !recordId.isEmpty()) {
+            return recordId;
         }
-        return LoggingUtils.generateTraceId();
+        return LoggingUtils.generateRecordId();
     }
 
     /**

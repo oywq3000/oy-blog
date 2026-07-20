@@ -125,9 +125,9 @@ public final class LoggingUtils {
     }
 
     /**
-     * 生成 traceId
+     * 生成 recordId
      */
-    public static String generateTraceId() {
+    public static String generateRecordId() {
         return java.util.UUID.randomUUID().toString().replace("-", "");
     }
 }

@@ -28,8 +28,8 @@ public class GatewayLoggingFilter implements GlobalFilter, Ordered {
 
     private static final Logger log = LoggerFactory.getLogger(GatewayLoggingFilter.class);
 
-    private static final String TRACE_HEADER = "X-Trace-Id";
-    private static final String MDC_TRACE_KEY = "traceId";
+    private static final String RECORD_HEADER = "X-Record-Id";
+    private static final String MDC_RECORD_KEY = "recordId";
 
     private static final java.util.Set<String> SENSITIVE_HEADERS = new java.util.HashSet<>(
             java.util.Arrays.asList("authorization", "cookie", "set-cookie", "x-user-data")
@@ -46,15 +46,15 @@ public class GatewayLoggingFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
-        // traceId 生成/传播
-        String traceId = request.getHeaders().getFirst(TRACE_HEADER);
-        if (traceId == null || traceId.isEmpty()) {
-            traceId = LoggingUtils.generateTraceId();
+        // recordId 生成/传播
+        String recordId = request.getHeaders().getFirst(RECORD_HEADER);
+        if (recordId == null || recordId.isEmpty()) {
+            recordId = LoggingUtils.generateRecordId();
         }
-        MDC.put(MDC_TRACE_KEY, traceId);
+        MDC.put(MDC_RECORD_KEY, recordId);
 
-        // 在响应头中设置 traceId
-        exchange.getResponse().getHeaders().set(TRACE_HEADER, traceId);
+        // 在响应头中设置 recordId
+        exchange.getResponse().getHeaders().set(RECORD_HEADER, recordId);
 
         long startTime = System.currentTimeMillis();
         String queryString = request.getURI().getRawQuery();
