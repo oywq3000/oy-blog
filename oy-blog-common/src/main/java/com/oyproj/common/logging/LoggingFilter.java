@@ -182,13 +182,13 @@ public class LoggingFilter implements Filter {
         if (content.length == 0) {
             return "[EMPTY]";
         }
-        // 不强制截断响应体，但截断过长的（如文件内容）
-        if (content.length > 4096) {
-            return "[LARGE_BODY " + content.length + " bytes]";
-        }
         String contentType = wrapper.getContentType();
         if (LoggingUtils.shouldSkipBody(contentType)) {
             return "[BINARY]";
+        }
+        // 超大响应体（>100KB）仅记录大小，避免解码时占用过多内存
+        if (content.length > 102400) {
+            return "[LARGE_BODY " + content.length + " bytes]";
         }
         String body = new String(content, StandardCharsets.UTF_8);
         return LoggingUtils.truncate(LoggingUtils.maskSensitive(body));

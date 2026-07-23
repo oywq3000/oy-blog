@@ -13,7 +13,7 @@ public final class LoggingUtils {
     }
 
     /** 请求/响应体最大日志长度 */
-    private static final int DEFAULT_MAX_BODY_LENGTH = 2048;
+    private static final int DEFAULT_MAX_BODY_LENGTH = 8192;
 
     /** 需要脱敏的字段名（小写匹配） */
     private static final List<String> SENSITIVE_FIELDS = Arrays.asList(
