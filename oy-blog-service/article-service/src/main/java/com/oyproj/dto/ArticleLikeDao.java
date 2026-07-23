@@ -4,8 +4,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.oyproj.domain.entity.ArticleLike;
 
 /**
- * @author LX
- * @date 2025/12/03
  * @description 文章点赞数据访问接口
  */
 public interface ArticleLikeDao extends IService<ArticleLike> {

@@ -6,7 +6,6 @@ import com.oyproj.domain.entity.Article;
 import java.util.List;
 
 /**
-
  * @description 文章数据访问接口
  */
 public interface ArticleDao extends IService<Article> {

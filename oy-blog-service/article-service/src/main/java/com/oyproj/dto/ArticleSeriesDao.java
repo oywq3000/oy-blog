@@ -4,8 +4,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.oyproj.domain.entity.ArticleSeries;
 
 /**
- * @author LX
- * @date 2025/12/03
  * @description 文章系列数据访问接口
  */
 public interface ArticleSeriesDao extends IService<ArticleSeries> {

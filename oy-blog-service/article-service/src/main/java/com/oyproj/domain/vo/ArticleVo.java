@@ -30,4 +30,9 @@ public class ArticleVo {
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateAt;
+
+    private Long views;
+    private Long likes;
+    private Long comments;
+    private Long favorites;
 }

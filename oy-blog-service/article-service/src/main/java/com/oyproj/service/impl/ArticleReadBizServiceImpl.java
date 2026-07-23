@@ -3,6 +3,7 @@ package com.oyproj.service.impl;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
 import com.oyproj.domain.entity.Article;
+import com.oyproj.domain.entity.ArticleStats;
 import com.oyproj.domain.entity.Tag;
 import com.oyproj.domain.vo.ArticleChapterVo;
 import com.oyproj.domain.vo.ArticleContentVo;
@@ -13,10 +14,13 @@ import com.oyproj.service.ArticleReadBizService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -31,6 +35,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     @NotNull private final ArticleChapterDao chapterDao;
     @NotNull private final ArticleLogDao viewDao;
     @NotNull private final TagDao tagDao;
+    @NotNull private final ArticleStatsDao articleStatsDao;
 
     /**
      * 根据slug查询文章
@@ -71,8 +76,11 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
      * @return 文章列表
      */
     @Override
+    @Transactional
     public Result<List<ArticleVo>> listPublished() {
-        return Result.ok(getPage(articleDao::listPublished, ArticleVo.class));
+        List<ArticleVo> voList = getPage(articleDao::listPublished, ArticleVo.class);
+        enrichWithStats(voList);
+        return Result.ok(voList);
     }
 
     /**
@@ -91,7 +99,35 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         for (String id : articleIds) {
             articles.stream().filter(a -> a.getId().equals(id)).findFirst().ifPresent(sortedArticles::add);
         }
-        return Result.ok(copyList(sortedArticles, ArticleVo.class));
+        List<ArticleVo> voList = copyList(sortedArticles, ArticleVo.class);
+        enrichWithStats(voList);
+        return Result.ok(voList);
+    }
+
+    /**
+     * 为文章VO列表批量注入统计数据
+     *
+     * @param voList 文章VO列表
+     */
+    private void enrichWithStats(List<ArticleVo> voList) {
+        if (voList == null || voList.isEmpty()) {
+            return;
+        }
+        List<String> articleIds = voList.stream()
+                .map(ArticleVo::getId)
+                .collect(Collectors.toList());
+        List<ArticleStats> statsList = articleStatsDao.listByArticleIds(articleIds);
+        Map<String, ArticleStats> statsMap = statsList.stream()
+                .collect(Collectors.toMap(ArticleStats::getArticleId, Function.identity()));
+        for (ArticleVo vo : voList) {
+            ArticleStats stats = statsMap.get(vo.getId());
+            if (stats != null) {
+                vo.setViews(stats.getViews());
+                vo.setLikes(stats.getLikes());
+                vo.setComments(stats.getComments());
+                vo.setFavorites(stats.getFavorites());
+            }
+        }
     }
 
     /**

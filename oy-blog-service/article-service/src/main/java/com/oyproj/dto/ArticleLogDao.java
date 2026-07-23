@@ -6,8 +6,6 @@ import com.oyproj.domain.entity.ArticleLog;
 import java.util.List;
 
 /**
- * @author LX
- * @date 2025/12/03
  * @description 文章阅读数据访问接口
  */
 public interface ArticleLogDao extends IService<ArticleLog> {
