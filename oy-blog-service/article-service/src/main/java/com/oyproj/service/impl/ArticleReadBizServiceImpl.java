@@ -122,9 +122,9 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         for (ArticleVo vo : voList) {
             ArticleStats stats = statsMap.get(vo.getId());
             if (stats != null) {
-                vo.setViews(stats.getViews());
-                vo.setLikes(stats.getLikes());
-                vo.setComments(stats.getComments());
+                vo.setViewCount(stats.getViews());
+                vo.setLikeCount(stats.getLikes());
+                vo.setCommentCount(stats.getComments());
                 vo.setFavorites(stats.getFavorites());
             }
         }

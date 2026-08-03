@@ -3,6 +3,7 @@ package com.oyproj.service.impl;
 
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.constant.CachePrefix;
 import com.oyproj.dto.ArticleFavoriteDao;
 import com.oyproj.dto.ArticleLikeDao;
 import com.oyproj.dto.ArticleLogDao;
@@ -32,7 +33,11 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
      */
     @Override
     public Result<Object> like(String articleId) {
-        likeDao.like(articleId, getUserId());
+        String userId = getUserId();
+        if (!likeDao.hasLiked(articleId, userId)) {
+            likeDao.like(articleId, userId);
+            statsDao.incLikes(articleId, 1);
+        }
         return Result.ok();
     }
 
@@ -44,32 +49,58 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
      */
     @Override
     public Result<Object> unlike(String articleId) {
-        likeDao.unlike(articleId, getUserId());
+        String userId = getUserId();
+        if (likeDao.hasLiked(articleId, userId)) {
+            likeDao.unlike(articleId, userId);
+            statsDao.incLikes(articleId, -1);
+        }
         return Result.ok();
     }
 
     /**
-     * 收藏文章
+     * 收藏文章（仅认证用户）
      *
      * @param articleId 文章ID
      * @return 结果
      */
     @Override
     public Result<Object> favorite(String articleId) {
-        favoriteDao.favorite(articleId, getUserId());
+        if (isGuest()) {
+            return Result.error("游客不支持收藏");
+        }
+        String userId = getUserId();
+        if (!favoriteDao.hasFavorited(articleId, userId)) {
+            favoriteDao.favorite(articleId, userId);
+            statsDao.incFavorites(articleId, 1);
+        }
         return Result.ok();
     }
 
     /**
-     * 取消收藏文章
+     * 取消收藏文章（仅认证用户）
      *
      * @param articleId 文章ID
      * @return 结果
      */
     @Override
     public Result<Object> unfavorite(String articleId) {
-        favoriteDao.unfavorite(articleId, getUserId());
+        if (isGuest()) {
+            return Result.error("游客不支持收藏");
+        }
+        String userId = getUserId();
+        if (favoriteDao.hasFavorited(articleId, userId)) {
+            favoriteDao.unfavorite(articleId, userId);
+            statsDao.incFavorites(articleId, -1);
+        }
         return Result.ok();
+    }
+
+    /**
+     * 判断当前请求是否为游客
+     */
+    private boolean isGuest() {
+        String userId = getUserId();
+        return userId != null && userId.startsWith(CachePrefix.GUEST_ID.getPrefix());
     }
 
      /**

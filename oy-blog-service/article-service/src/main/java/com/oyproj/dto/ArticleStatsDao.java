@@ -27,5 +27,21 @@ public interface ArticleStatsDao extends IService<ArticleStats> {
      * @return 文章统计列表
      */
     List<ArticleStats> listByArticleIds(List<String> articleIds);
+
+    /**
+     * 更新点赞数
+     *
+     * @param articleId 文章ID
+     * @param delta 增量（正数点赞，负数取消）
+     */
+    void incLikes(String articleId, long delta);
+
+    /**
+     * 更新收藏数
+     *
+     * @param articleId 文章ID
+     * @param delta 增量（正数收藏，负数取消）
+     */
+    void incFavorites(String articleId, long delta);
 }
 

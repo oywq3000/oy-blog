@@ -46,5 +46,31 @@ public class ArticleStatsDaoImpl extends ServiceImpl<ArticleStatsMapper, Article
         return baseMapper.selectList(new LambdaQueryWrapper<ArticleStats>()
                 .in(ArticleStats::getArticleId, articleIds));
     }
+
+    /**
+     * 更新点赞数
+     *
+     * @param articleId 文章ID
+     * @param delta 增量（正数点赞，负数取消）
+     */
+    @Override
+    public void incLikes(String articleId, long delta) {
+        baseMapper.update(null, new LambdaUpdateWrapper<ArticleStats>()
+                .eq(ArticleStats::getArticleId, articleId)
+                .setSql("likes = GREATEST(likes + " + delta + ", 0)"));
+    }
+
+    /**
+     * 更新收藏数
+     *
+     * @param articleId 文章ID
+     * @param delta 增量（正数收藏，负数取消）
+     */
+    @Override
+    public void incFavorites(String articleId, long delta) {
+        baseMapper.update(null, new LambdaUpdateWrapper<ArticleStats>()
+                .eq(ArticleStats::getArticleId, articleId)
+                .setSql("favorites = GREATEST(favorites + " + delta + ", 0)"));
+    }
 }
 
