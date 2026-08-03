@@ -35,4 +35,7 @@ public class ArticleVo {
     private Long likeCount;
     private Long commentCount;
     private Long favorites;
+
+    private String authorName;
+    private String authorAvatar;
 }

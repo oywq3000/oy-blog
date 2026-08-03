@@ -1,7 +1,9 @@
 package com.oyproj.service.impl;
 
+import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.domain.entity.ArticleStats;
 import com.oyproj.domain.entity.Tag;
@@ -13,11 +15,13 @@ import com.oyproj.dto.*;
 import com.oyproj.service.ArticleReadBizService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -26,6 +30,7 @@ import java.util.stream.Collectors;
 /**
  * 文章阅读查询业务服务实现类
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements ArticleReadBizService {
@@ -36,6 +41,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     @NotNull private final ArticleLogDao viewDao;
     @NotNull private final TagDao tagDao;
     @NotNull private final ArticleStatsDao articleStatsDao;
+    @NotNull private final UserClient userClient;
 
     /**
      * 根据slug查询文章
@@ -45,7 +51,9 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
      */
     @Override
     public Result<ArticleVo> getBySlug(String slug) {
-        return Result.ok(copyProperties(articleDao.getBySlug(slug), ArticleVo.class));
+        ArticleVo vo = copyProperties(articleDao.getBySlug(slug), ArticleVo.class);
+        enrichWithAuthorInfo(Collections.singletonList(vo));
+        return Result.ok(vo);
     }
     
     /**
@@ -80,6 +88,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     public Result<List<ArticleVo>> listPublished() {
         List<ArticleVo> voList = getPage(articleDao::listPublished, ArticleVo.class);
         enrichWithStats(voList);
+        enrichWithAuthorInfo(voList);
         return Result.ok(voList);
     }
 
@@ -101,6 +110,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         }
         List<ArticleVo> voList = copyList(sortedArticles, ArticleVo.class);
         enrichWithStats(voList);
+        enrichWithAuthorInfo(voList);
         return Result.ok(voList);
     }
 
@@ -131,6 +141,40 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     }
 
     /**
+     * 为文章VO列表批量注入作者信息（名称和头像）
+     *
+     * @param voList 文章VO列表
+     */
+    private void enrichWithAuthorInfo(List<ArticleVo> voList) {
+        if (voList == null || voList.isEmpty()) {
+            return;
+        }
+        List<String> authorIds = voList.stream()
+                .map(ArticleVo::getAuthorId)
+                .filter(id -> id != null && !id.isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, UserDTO> userMap = new HashMap<>();
+        for (String authorId : authorIds) {
+            try {
+                Result<UserDTO> result = userClient.getUserDTO(authorId);
+                if (result != null && result.getData() != null) {
+                    userMap.put(authorId, result.getData());
+                }
+            } catch (Exception e) {
+                log.warn("获取作者信息失败, authorId: {}", authorId, e);
+            }
+        }
+        for (ArticleVo vo : voList) {
+            UserDTO user = userMap.get(vo.getAuthorId());
+            if (user != null) {
+                vo.setAuthorName(user.getUsername());
+                vo.setAuthorAvatar(user.getAvatarUrl());
+            }
+        }
+    }
+
+    /**
      * 查询热门标签
      *
      * @return 标签列表
@@ -156,7 +200,9 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
       */
     @Override
     public Result<ArticleVo> getById(String articleId) {
-        return Result.ok(copyProperties(articleDao.getById(articleId), ArticleVo.class));
+        ArticleVo vo = copyProperties(articleDao.getById(articleId), ArticleVo.class);
+        enrichWithAuthorInfo(Collections.singletonList(vo));
+        return Result.ok(vo);
     }
 }
 
