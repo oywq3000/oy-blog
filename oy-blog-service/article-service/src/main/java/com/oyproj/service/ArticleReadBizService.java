@@ -4,7 +4,7 @@ package com.oyproj.service;
 import com.oyproj.common.base.Result;
 import com.oyproj.domain.vo.ArticleChapterVo;
 import com.oyproj.domain.vo.ArticleContentVo;
-import com.oyproj.domain.vo.ArticleVo;
+import com.oyproj.domain.vo.ArticleInfoVo;
 import com.oyproj.domain.vo.TagStatVo;
 
 import java.util.List;
@@ -20,7 +20,7 @@ public interface ArticleReadBizService {
      * @param slug SEO别名
      * @return 文章
      */
-    Result<ArticleVo> getBySlug(String slug);
+    Result<ArticleInfoVo> getBySlug(String slug);
     
     /**
      * 查询文章内容
@@ -43,14 +43,14 @@ public interface ArticleReadBizService {
      *
      * @return 文章列表
      */
-    Result<List<ArticleVo>> listPublished();
+    Result<List<ArticleInfoVo>> listPublished();
 
     /**
      * 查询用户浏览历史
      *
      * @return 文章列表
      */
-    Result<List<ArticleVo>> listHistory();
+    Result<List<ArticleInfoVo>> listHistory();
 
     /**
      * 查询热门标签
@@ -65,6 +65,6 @@ public interface ArticleReadBizService {
      * @param articleId 文章ID
      * @return 文章信息
      */
-    Result<ArticleVo> getById(String articleId);
+    Result<ArticleInfoVo> getById(String articleId);
 }
 

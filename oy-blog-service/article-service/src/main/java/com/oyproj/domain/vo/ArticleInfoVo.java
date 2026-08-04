@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
  * 文章VO
  */
 @Data
-public class ArticleVo {
+public class ArticleInfoVo {
     private String id;
     private String title;
     private String authorId;

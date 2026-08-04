@@ -3,7 +3,7 @@ import com.oyproj.common.base.OpLog;
 import com.oyproj.common.base.Result;
 import com.oyproj.domain.vo.ArticleChapterVo;
 import com.oyproj.domain.vo.ArticleContentVo;
-import com.oyproj.domain.vo.ArticleVo;
+import com.oyproj.domain.vo.ArticleInfoVo;
 import com.oyproj.domain.vo.TagStatVo;
 import com.oyproj.service.ArticleReadBizService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,7 +39,7 @@ public class ArticleReadController {
     @GetMapping("/by-slug/{slug}")
     @OpLog(action = "view", func = "article.view")
     @Operation(summary = "根据slug查询文章", description = "根据SEO别名查询文章基础信息")
-    public Result<ArticleVo> getBySlug(@PathVariable("slug") String slug) {
+    public Result<ArticleInfoVo> getBySlug(@PathVariable("slug") String slug) {
         //文章不多使用id查询代替
         return biz.getBySlug(slug);
     }
@@ -52,7 +52,7 @@ public class ArticleReadController {
      */
     @GetMapping("/{articleId}")
     @Operation(summary = "根据文章Id查询文章基础信息", description = "根据文章ID查询文章基础信息")
-    public Result<ArticleVo> getById(@PathVariable("articleId") String articleId) {
+    public Result<ArticleInfoVo> getById(@PathVariable("articleId") String articleId) {
         return biz.getById(articleId);
     }
 
@@ -87,7 +87,7 @@ public class ArticleReadController {
      */
     @GetMapping("/published")
     @Operation(summary = "查询已发布文章列表", description = "查询所有已发布的文章")
-    public Result<List<ArticleVo>> listPublished() {
+    public Result<List<ArticleInfoVo>> listPublished() {
         return biz.listPublished();
     }
 
@@ -98,7 +98,7 @@ public class ArticleReadController {
      */
     @GetMapping("/history")
     @Operation(summary = "查询用户浏览历史", description = "查询当前登录用户的浏览历史")
-    public Result<List<ArticleVo>> listHistory() {
+    public Result<List<ArticleInfoVo>> listHistory() {
         return biz.listHistory();
     }
 
