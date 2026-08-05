@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * @author LX
@@ -33,4 +34,12 @@ public class CommentVo {
 
     // 回复数量
     private Long replyCount;
+
+    // 表态统计
+    private Long likeCount;
+    private Long dislikeCount;
+    private String userReaction;
+
+    // 前N条回复预览
+    private List<CommentReplyVo> replies;
 }

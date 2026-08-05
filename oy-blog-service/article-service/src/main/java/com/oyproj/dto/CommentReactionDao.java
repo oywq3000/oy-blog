@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.oyproj.domain.entity.CommentReaction;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -12,7 +13,7 @@ import java.util.Set;
 public interface CommentReactionDao extends IService<CommentReaction> {
 
     /**
-     * 对评论进行反应
+     * 对评论进行反应（toggle：同类型取消，不同类型切换，无则新增）
      *
      * @param commentId 评论ID
      * @param userId 用户ID
@@ -21,7 +22,7 @@ public interface CommentReactionDao extends IService<CommentReaction> {
     void reactToComment(String commentId, String userId, String type);
 
     /**
-     * 对回复进行反应
+     * 对回复进行反应（toggle）
      *
      * @param replyId 回复ID
      * @param userId 用户ID
@@ -57,5 +58,24 @@ public interface CommentReactionDao extends IService<CommentReaction> {
      * @return 回复ID集合
      */
     Set<String> getReplyIdsByReaction(List<String> replyIds, String userId, String type);
+
+    /**
+     * 批量获取评论/回复的 like/dislike 计数
+     *
+     * @param commentIds 评论ID列表
+     * @param replyIds 回复ID列表
+     * @return Map&lt;targetId, Map&lt;reactionType, count&gt;&gt;
+     */
+    Map<String, Map<String, Long>> getReactionCounts(List<String> commentIds, List<String> replyIds);
+
+    /**
+     * 获取当前用户对一批目标的表态类型
+     *
+     * @param commentIds 评论ID列表
+     * @param replyIds 回复ID列表
+     * @param userId 用户ID
+     * @return Map&lt;targetId, reactionType&gt;
+     */
+    Map<String, String> getUserReactions(List<String> commentIds, List<String> replyIds, String userId);
 }
 

@@ -20,13 +20,19 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 
 /**
  * 文章评论业务服务实现类
+ *
+ * 数据查询策略：两次查询方案
+ * 1. 查评论（分页）
+ * 2. 批量查回复 + 批量查 reaction 聚合计数 + 当前用户表态
+ * 避免 N+1 查询，避免复杂 JOIN 破坏分页。
  */
 @Service
 @RequiredArgsConstructor
@@ -38,9 +44,6 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
 
     /**
      * 统计文章评论数量
-     *
-     * @param articleId 文章ID
-     * @return 评论数量
      */
     @Override
     public Result<Long> commentCount(String articleId) {
@@ -49,57 +52,73 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
     }
 
     /**
-     * 查询评论列表（分页）
+     * 查询评论列表（分页，含前3条回复预览 + 表态数据）
      *
-     * @param articleId 文章ID
-     * @return 评论列表
+     * 两次查询方案：
+     * 1. 分页查评论
+     * 2. 批量查回复 + reaction 聚合 + 当前用户表态
      */
     @Override
     public Result<List<CommentVo>> listComments(String articleId) {
+        // ===== 第1次查询：分页查评论 =====
         List<Comment> commentList = getPage(() -> commentDao.listByArticle(articleId), Comment.class);
         if (commentList.isEmpty()) {
             return Result.ok(new ArrayList<>());
         }
-        // 获取当前用户ID
+
+        // 获取当前用户ID（未登录时为 null）
         String userId = null;
         try { userId = getUserId(); } catch (Exception ignored) {}
 
-        Set<String> dislikedCommentIds = new java.util.HashSet<>();
-        Set<String> dislikedReplyIds = new java.util.HashSet<>();
-        
-        if (userId != null) {
-            List<String> commentIds = commentList.stream().map(Comment::getId).collect(Collectors.toList());
-            if (!commentIds.isEmpty()) {
-                dislikedCommentIds = reactionDao.getCommentIdsByReaction(commentIds, userId, "dislike");
-            }
-        }
-        final String currentUserId = userId;
-        final Set<String> finalDislikedCommentIds = dislikedCommentIds;
+        List<String> commentIds = commentList.stream().map(Comment::getId).collect(Collectors.toList());
 
-        // 转换为DTO
+        // ===== 第2次查询：批量查所有相关回复 =====
+        List<CommentReply> allReplies = replyDao.listRepliesByCommentIds(commentIds);
+        List<String> replyIds = allReplies.stream().map(CommentReply::getId).collect(Collectors.toList());
+
+        // 按 commentId 分组
+        Map<String, List<CommentReply>> repliesByComment = allReplies.stream()
+                .collect(Collectors.groupingBy(CommentReply::getCommentId));
+
+        // ===== 第3次查询：批量查 reaction 聚合计数 + 当前用户表态 =====
+        Map<String, Map<String, Long>> reactionCounts = reactionDao.getReactionCounts(commentIds, replyIds);
+        Map<String, String> userReactions = reactionDao.getUserReactions(commentIds, replyIds, userId);
+
+        // ===== 组装 VO =====
         List<CommentVo> voList = commentList.stream().map(comment -> {
             CommentVo vo = copyProperties(comment, CommentVo.class);
-            
-            // 设置 isShow
-            vo.setIsShow(currentUserId == null || !finalDislikedCommentIds.contains(comment.getId()));
-            vo.setUsername("User-" + comment.getUserId()); // 模拟
-            
-            // 填充回复数量
-            if (comment.getHasReply() != null && comment.getHasReply() == 1) {
-                vo.setReplyCount(replyDao.countByCommentId(comment.getId()));
-            } else {
-                vo.setReplyCount(0L);
-            }
+
+            // -- 表态统计 --
+            Map<String, Long> counts = reactionCounts.getOrDefault(comment.getId(), Collections.emptyMap());
+            vo.setLikeCount(counts.getOrDefault("like", 0L));
+            vo.setDislikeCount(counts.getOrDefault("dislike", 0L));
+            vo.setUserReaction(userReactions.get(comment.getId()));
+
+            // -- isShow: 当前用户踩过此评论则隐藏 --
+            vo.setIsShow(!"dislike".equals(userReactions.get(comment.getId())));
+
+            // -- 用户名（TODO: 批量调 UserClient 获取真实用户名/头像） --
+            vo.setUsername("User-" + comment.getUserId());
+
+            // -- 回复数量（全部，非仅前3条） --
+            List<CommentReply> commentReplies = repliesByComment.getOrDefault(comment.getId(), Collections.emptyList());
+            vo.setReplyCount((long) commentReplies.size());
+
+            // -- 前3条回复预览 --
+            List<CommentReplyVo> previewReplies = commentReplies.stream()
+                    .limit(3)
+                    .map(r -> buildReplyVo(r, reactionCounts, userReactions))
+                    .collect(Collectors.toList());
+            vo.setReplies(previewReplies);
+
             return vo;
         }).collect(Collectors.toList());
+
         return Result.ok(voList);
     }
 
     /**
-     * 查询评论回复列表
-     *
-     * @param commentId 评论ID
-     * @return 回复列表
+     * 查询评论回复列表（含表态数据）
      */
     @Override
     public Result<List<CommentReplyVo>> listReplies(String commentId) {
@@ -112,35 +131,47 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         String userId = null;
         try { userId = getUserId(); } catch (Exception ignored) {}
 
-        // 批量查询回复的 dislike 状态
-        Set<String> dislikedReplyIds = new java.util.HashSet<>();
-        if (userId != null) {
-            List<String> replyIds = replies.stream().map(CommentReply::getId).collect(Collectors.toList());
-            dislikedReplyIds = reactionDao.getReplyIdsByReaction(replyIds, userId, "dislike");
-        }
+        List<String> replyIds = replies.stream().map(CommentReply::getId).collect(Collectors.toList());
 
-        final String currentUserId = userId;
-        final Set<String> finalDislikedReplyIds = dislikedReplyIds;
+        // 批量查 reaction 聚合 + 当前用户表态
+        Map<String, Map<String, Long>> reactionCounts = reactionDao.getReactionCounts(null, replyIds);
+        Map<String, String> userReactions = reactionDao.getUserReactions(null, replyIds, userId);
 
-        List<CommentReplyVo> voList = replies.stream().map(r -> {
-            CommentReplyVo vo = copyProperties(r, CommentReplyVo.class);
-            vo.setUsername("User-" + r.getUserId());
-            if (r.getReplyToUserId() != null) {
-                vo.setReplyToUsername("User-" + r.getReplyToUserId());
-            }
-            // 设置 isShow
-            vo.setIsShow(currentUserId == null || !finalDislikedReplyIds.contains(r.getId()));
-            return vo;
-        }).collect(Collectors.toList());
+        List<CommentReplyVo> voList = replies.stream()
+                .map(r -> buildReplyVo(r, reactionCounts, userReactions))
+                .collect(Collectors.toList());
 
         return Result.ok(voList);
     }
 
     /**
+     * 将 CommentReply 实体转为 CommentReplyVo（含表态数据）
+     */
+    private CommentReplyVo buildReplyVo(CommentReply r,
+                                         Map<String, Map<String, Long>> reactionCounts,
+                                         Map<String, String> userReactions) {
+        CommentReplyVo vo = copyProperties(r, CommentReplyVo.class);
+
+        // 表态统计
+        Map<String, Long> counts = reactionCounts.getOrDefault(r.getId(), Collections.emptyMap());
+        vo.setLikeCount(counts.getOrDefault("like", 0L));
+        vo.setDislikeCount(counts.getOrDefault("dislike", 0L));
+        vo.setUserReaction(userReactions.get(r.getId()));
+
+        // isShow
+        vo.setIsShow(!"dislike".equals(userReactions.get(r.getId())));
+
+        // 用户名（TODO: 批量调 UserClient 获取真实用户名/头像）
+        vo.setUsername("User-" + r.getUserId());
+        if (r.getReplyToUserId() != null) {
+            vo.setReplyToUsername("User-" + r.getReplyToUserId());
+        }
+
+        return vo;
+    }
+
+    /**
      * 发表评论
-     *
-     * @param dto 评论DTO
-     * @return 结果
      */
     @Override
     public Result<Object> addComment(CommentSaveDto dto) {
@@ -148,20 +179,17 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         comment.setId(getId());
         comment.setUserId(getUserId());
         comment.setCommentAt(LocalDateTime.now());
-        
+
         // 计算楼层：当前文章最大楼层 + 1
         Integer maxFloor = commentDao.getMaxFloor(comment.getArticleId());
         comment.setFloor(maxFloor != null ? maxFloor + 1 : 1);
-        
+
         commentDao.save(comment);
         return Result.ok();
     }
 
     /**
      * 回复评论或回复者
-     *
-     * @param dto 回复DTO
-     * @return 结果
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -171,13 +199,13 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         commentReply.setId(getId());
         commentReply.setUserId(getUserId());
         commentReply.setReplyAt(LocalDateTime.now());
-        
+
         // 确保 articleId 存在。如果前端没传，需要先查 Comment 补全
         if (commentReply.getArticleId() == null && commentReply.getCommentId() != null) {
             Comment comment = commentDao.getById(commentReply.getCommentId());
             if (comment != null) {
                 commentReply.setArticleId(comment.getArticleId());
-                
+
                 // 更新主评论的 has_reply 状态
                 if (comment.getHasReply() == null || comment.getHasReply() == 0) {
                     comment.setHasReply(1);
@@ -187,16 +215,18 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
                 return Result.error("评论不存在");
             }
         }
-        
+
         replyDao.save(commentReply);
         return Result.ok();
     }
 
     /**
-     * 评论点赞或踩
+     * 评论/回复表态（点赞/踩）
      *
-     * @param dto 点赞或踩DTO
-     * @return 结果
+     * Toggle 逻辑（在 DAO 层实现）：
+     * - 无表态 → INSERT
+     * - 同类型 → DELETE（取消）
+     * - 不同类型 → UPDATE（切换）
      */
     @Override
     public Result<Object> react(CommentReactionDto dto) {

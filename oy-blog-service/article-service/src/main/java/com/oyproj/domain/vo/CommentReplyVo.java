@@ -29,4 +29,9 @@ public class CommentReplyVo {
 
     // 是否显示（根据当前用户是否踩过决定）
     private Boolean isShow;
+
+    // 表态统计
+    private Long likeCount;
+    private Long dislikeCount;
+    private String userReaction;
 }

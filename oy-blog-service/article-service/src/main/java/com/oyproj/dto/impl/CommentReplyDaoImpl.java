@@ -9,6 +9,7 @@ import com.oyproj.mapper.CommentReplyMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -41,6 +42,20 @@ public class CommentReplyDaoImpl extends ServiceImpl<CommentReplyMapper, Comment
     public long countByCommentId(String commentId) {
         return baseMapper.selectCount(new LambdaQueryWrapper<CommentReply>()
                 .eq(CommentReply::getCommentId, commentId));
+    }
+
+    /**
+     * 批量查询回复（按评论ID列表）
+     *
+     * @param commentIds 评论ID列表
+     * @return 回复列表
+     */
+    @Override
+    public List<CommentReply> listRepliesByCommentIds(List<String> commentIds) {
+        if (commentIds == null || commentIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return ((CommentReplyMapper) baseMapper).selectRepliesByCommentIds(commentIds);
     }
 }
 

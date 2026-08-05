@@ -53,6 +53,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     public Result<ArticleInfoVo> getBySlug(String slug) {
         ArticleInfoVo vo = copyProperties(articleDao.getBySlug(slug), ArticleInfoVo.class);
         enrichWithAuthorInfo(Collections.singletonList(vo));
+        enrichWithStats(Collections.singletonList(vo));
         return Result.ok(vo);
     }
     
