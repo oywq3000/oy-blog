@@ -3,6 +3,7 @@ package com.oyproj.service;
 
 
 import com.oyproj.common.base.Result;
+import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.dto.CommentReactionDto;
 import com.oyproj.domain.dto.CommentReplySaveDto;
 import com.oyproj.domain.dto.CommentSaveDto;
@@ -25,12 +26,13 @@ public interface ArticleCommentBizService {
     Result<Long> commentCount(String articleId);
 
     /**
-     * 查询评论列表（分页）
+     * 查询评论列表（分页，默认每页10条）
+     * <p>支持请求参数 pageNum / pageSize 控制分页</p>
      *
      * @param articleId 文章ID
-     * @return 评论列表
+     * @return 分页评论列表
      */
-    Result<List<CommentVo>> listComments(String articleId);
+    Result<PageVo<List<CommentVo>>> listComments(String articleId);
 
     /**
      * 查询评论回复列表

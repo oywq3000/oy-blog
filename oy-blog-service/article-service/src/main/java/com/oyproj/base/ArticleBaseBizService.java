@@ -1,6 +1,7 @@
 package com.oyproj.base;
 import com.github.pagehelper.PageInfo;
 import com.oyproj.common.constant.HeaderConstant;
+import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.common.service.base.BaseBiz;
 import com.oyproj.utils.PageUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,6 +34,25 @@ public class ArticleBaseBizService extends BaseBiz {
      * @return 分页结果
      */
     public <T, R> List<R> getPage(Supplier<List<T>> supplier, Class<R> targetClass) {
+        return getPageInfo(supplier, targetClass).getList();
+    }
+
+    /**
+     * 获取分页数据（含分页元数据）
+     *
+     * @param supplier 数据提供者（Lambda表达式，执行实际的查询逻辑）
+     * @param targetClass 目标VO类
+     * @param <T> 源数据类型
+     * @param <R> 目标数据类型
+     * @return 分页结果（含 total / pages / pageNum / pageSize）
+     */
+    public <T, R> PageVo<List<R>> getPageVo(Supplier<List<T>> supplier, Class<R> targetClass) {
+        PageInfo<R> pageInfo = getPageInfo(supplier, targetClass);
+        return new PageVo<>(pageInfo.getPageNum(), pageInfo.getPageSize(),
+                pageInfo.getTotal(), pageInfo.getPages(), pageInfo.getList());
+    }
+
+    private <T, R> PageInfo<R> getPageInfo(Supplier<List<T>> supplier, Class<R> targetClass) {
         PageUtils.startPage();
         List<T> list = supplier.get();
         PageInfo<T> pageInfo = new PageInfo<>(list);
@@ -43,6 +63,6 @@ public class ArticleBaseBizService extends BaseBiz {
         resultPageInfo.setPageNum(pageInfo.getPageNum());
         resultPageInfo.setPageSize(pageInfo.getPageSize());
         resultPageInfo.setPages(pageInfo.getPages());
-        return resultList;
+        return resultPageInfo;
     }
 }

@@ -1,7 +1,10 @@
 package com.oyproj.service.impl;
 
+import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.domain.dto.UserDTO;
+import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.dto.CommentReactionDto;
 import com.oyproj.domain.dto.CommentReplySaveDto;
 import com.oyproj.domain.dto.CommentSaveDto;
@@ -15,12 +18,14 @@ import com.oyproj.dto.CommentReplyDao;
 import com.oyproj.service.ArticleCommentBizService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,11 +34,14 @@ import java.util.stream.Collectors;
 /**
  * 文章评论业务服务实现类
  *
- * 数据查询策略：两次查询方案
+ * 数据查询策略：批量查询方案
  * 1. 查评论（分页）
- * 2. 批量查回复 + 批量查 reaction 聚合计数 + 当前用户表态
+ * 2. 批量查回复
+ * 3. 批量调用 UserClient 拉取用户信息
+ * 4. 批量查 reaction 聚合计数 + 当前用户表态
  * 避免 N+1 查询，避免复杂 JOIN 破坏分页。
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implements ArticleCommentBizService {
@@ -41,6 +49,7 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
     @NotNull private final CommentDao commentDao;
     @NotNull private final CommentReplyDao replyDao;
     @NotNull private final CommentReactionDao reactionDao;
+    @NotNull private final UserClient userClient;
 
     /**
      * 统计文章评论数量
@@ -59,11 +68,20 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
      * 2. 批量查回复 + reaction 聚合 + 当前用户表态
      */
     @Override
-    public Result<List<CommentVo>> listComments(String articleId) {
+    public Result<PageVo<List<CommentVo>>> listComments(String articleId) {
         // ===== 第1次查询：分页查评论 =====
-        List<Comment> commentList = getPage(() -> commentDao.listByArticle(articleId), Comment.class);
+        PageVo<List<Comment>> entityPage = getPageVo(() -> commentDao.listByArticle(articleId), Comment.class);
+        List<Comment> commentList = entityPage.getData();
+
+        // 提取分页元数据
+        Integer currentPage = entityPage.getCurrentPage();
+        Integer pageSize = entityPage.getPageSize();
+        Long total = entityPage.getTotal();
+        Integer totalPages = entityPage.getTotalPages();
+
         if (commentList.isEmpty()) {
-            return Result.ok(new ArrayList<>());
+            PageVo<List<CommentVo>> emptyPage = new PageVo<>(currentPage, pageSize, total, totalPages, new ArrayList<>());
+            return Result.ok(emptyPage);
         }
 
         // 获取当前用户ID（未登录时为 null）
@@ -80,7 +98,18 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         Map<String, List<CommentReply>> repliesByComment = allReplies.stream()
                 .collect(Collectors.groupingBy(CommentReply::getCommentId));
 
-        // ===== 第3次查询：批量查 reaction 聚合计数 + 当前用户表态 =====
+        // ===== 第3次查询：批量拉取所有相关用户信息 =====
+        List<String> allUserIds = new ArrayList<>();
+        commentList.forEach(c -> allUserIds.add(c.getUserId()));
+        allReplies.forEach(r -> {
+            allUserIds.add(r.getUserId());
+            if (r.getReplyToUserId() != null) {
+                allUserIds.add(r.getReplyToUserId());
+            }
+        });
+        Map<String, UserDTO> userMap = fetchUserInfoMap(allUserIds);
+
+        // ===== 第4次查询：批量查 reaction 聚合计数 + 当前用户表态 =====
         Map<String, Map<String, Long>> reactionCounts = reactionDao.getReactionCounts(commentIds, replyIds);
         Map<String, String> userReactions = reactionDao.getUserReactions(commentIds, replyIds, userId);
 
@@ -97,8 +126,14 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
             // -- isShow: 当前用户踩过此评论则隐藏 --
             vo.setIsShow(!"dislike".equals(userReactions.get(comment.getId())));
 
-            // -- 用户名（TODO: 批量调 UserClient 获取真实用户名/头像） --
-            vo.setUsername("User-" + comment.getUserId());
+            // -- 用户信息 --
+            UserDTO commentUser = userMap.get(comment.getUserId());
+            if (commentUser != null) {
+                vo.setUsername(commentUser.getUsername());
+                vo.setAvatar(commentUser.getAvatarUrl());
+            } else {
+                vo.setUsername("User-" + comment.getUserId());
+            }
 
             // -- 回复数量（全部，非仅前3条） --
             List<CommentReply> commentReplies = repliesByComment.getOrDefault(comment.getId(), Collections.emptyList());
@@ -107,14 +142,15 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
             // -- 前3条回复预览 --
             List<CommentReplyVo> previewReplies = commentReplies.stream()
                     .limit(3)
-                    .map(r -> buildReplyVo(r, reactionCounts, userReactions))
+                    .map(r -> buildReplyVo(r, reactionCounts, userReactions, userMap))
                     .collect(Collectors.toList());
             vo.setReplies(previewReplies);
 
             return vo;
         }).collect(Collectors.toList());
 
-        return Result.ok(voList);
+        PageVo<List<CommentVo>> resultPage = new PageVo<>(currentPage, pageSize, total, totalPages, voList);
+        return Result.ok(resultPage);
     }
 
     /**
@@ -133,12 +169,22 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
 
         List<String> replyIds = replies.stream().map(CommentReply::getId).collect(Collectors.toList());
 
+        // 批量拉取所有相关用户信息
+        List<String> allUserIds = new ArrayList<>();
+        replies.forEach(r -> {
+            allUserIds.add(r.getUserId());
+            if (r.getReplyToUserId() != null) {
+                allUserIds.add(r.getReplyToUserId());
+            }
+        });
+        Map<String, UserDTO> userMap = fetchUserInfoMap(allUserIds);
+
         // 批量查 reaction 聚合 + 当前用户表态
         Map<String, Map<String, Long>> reactionCounts = reactionDao.getReactionCounts(null, replyIds);
         Map<String, String> userReactions = reactionDao.getUserReactions(null, replyIds, userId);
 
         List<CommentReplyVo> voList = replies.stream()
-                .map(r -> buildReplyVo(r, reactionCounts, userReactions))
+                .map(r -> buildReplyVo(r, reactionCounts, userReactions, userMap))
                 .collect(Collectors.toList());
 
         return Result.ok(voList);
@@ -149,7 +195,8 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
      */
     private CommentReplyVo buildReplyVo(CommentReply r,
                                          Map<String, Map<String, Long>> reactionCounts,
-                                         Map<String, String> userReactions) {
+                                         Map<String, String> userReactions,
+                                         Map<String, UserDTO> userMap) {
         CommentReplyVo vo = copyProperties(r, CommentReplyVo.class);
 
         // 表态统计
@@ -161,13 +208,45 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         // isShow
         vo.setIsShow(!"dislike".equals(userReactions.get(r.getId())));
 
-        // 用户名（TODO: 批量调 UserClient 获取真实用户名/头像）
-        vo.setUsername("User-" + r.getUserId());
+        // 用户信息
+        UserDTO replyUser = userMap.get(r.getUserId());
+        if (replyUser != null) {
+            vo.setUsername(replyUser.getUsername());
+            vo.setAvatar(replyUser.getAvatarUrl());
+        } else {
+            vo.setUsername("User-" + r.getUserId());
+        }
         if (r.getReplyToUserId() != null) {
-            vo.setReplyToUsername("User-" + r.getReplyToUserId());
+            UserDTO replyToUser = userMap.get(r.getReplyToUserId());
+            if (replyToUser != null) {
+                vo.setReplyToUsername(replyToUser.getUsername());
+            } else {
+                vo.setReplyToUsername("User-" + r.getReplyToUserId());
+            }
         }
 
         return vo;
+    }
+
+    /**
+     * 批量拉取用户信息
+     *
+     * @param userIds 用户ID列表
+     * @return userId → UserDTO 映射
+     */
+    private Map<String, UserDTO> fetchUserInfoMap(List<String> userIds) {
+        Map<String, UserDTO> userMap = new HashMap<>();
+        for (String userId : userIds.stream().distinct().collect(Collectors.toList())) {
+            try {
+                Result<UserDTO> result = userClient.getUserDTO(userId);
+                if (result != null && result.getData() != null) {
+                    userMap.put(userId, result.getData());
+                }
+            } catch (Exception e) {
+                log.warn("获取用户信息失败, userId: {}", userId, e);
+            }
+        }
+        return userMap;
     }
 
     /**

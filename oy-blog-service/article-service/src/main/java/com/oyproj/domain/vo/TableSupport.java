@@ -3,11 +3,6 @@ package com.oyproj.domain.vo;
 import com.oyproj.common.utils.ServletUtils;
 import lombok.Data;
 
-/**
- * @author LX
- * @date 2025/11/13
- * @description
- */
 @Data
 public class TableSupport {
 

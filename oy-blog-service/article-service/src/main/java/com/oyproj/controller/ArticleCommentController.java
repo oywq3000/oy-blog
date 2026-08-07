@@ -2,6 +2,7 @@ package com.oyproj.controller;
 import com.oyproj.common.annotation.Log;
 import com.oyproj.common.base.OpLog;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.dto.CommentReactionDto;
 import com.oyproj.domain.dto.CommentReplySaveDto;
 import com.oyproj.domain.dto.CommentSaveDto;
@@ -26,9 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 
 public class ArticleCommentController {
-
     @NotNull private final ArticleCommentBizService biz;
-
     /**
      * 统计文章评论数量
      *
@@ -40,7 +39,6 @@ public class ArticleCommentController {
     public Result<Long> commentCount(@PathVariable("articleId") String articleId) {
         return biz.commentCount(articleId);
     }
-
     /**
      * 查询评论列表
      *
@@ -49,7 +47,7 @@ public class ArticleCommentController {
      */
     @GetMapping("/{articleId}/comments")
     @Operation(summary = "查询评论列表", description = "查询文章的评论列表（不含回复）")
-    public Result<List<CommentVo>> listComments(@PathVariable("articleId") String articleId) {
+    public Result<PageVo<List<CommentVo>>> listComments(@PathVariable("articleId") String articleId) {
         return biz.listComments(articleId);
     }
 
