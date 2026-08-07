@@ -27,11 +27,12 @@ public interface CommentReplyDao extends IService<CommentReply> {
     long countByCommentId(String commentId);
 
     /**
-     * 批量查询回复（按评论ID列表）
+     * 批量查询回复（每条评论取前 limit 条）
      *
      * @param commentIds 评论ID列表
+     * @param limit      每条评论最多取几条回复
      * @return 回复列表
      */
-    List<CommentReply> listRepliesByCommentIds(List<String> commentIds);
+    List<CommentReply> listRepliesByCommentIds(List<String> commentIds, int limit);
 }
 

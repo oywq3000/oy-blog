@@ -90,8 +90,8 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
 
         List<String> commentIds = commentList.stream().map(Comment::getId).collect(Collectors.toList());
 
-        // ===== 第2次查询：批量查所有相关回复 =====
-        List<CommentReply> allReplies = replyDao.listRepliesByCommentIds(commentIds);
+        // ===== 第2次查询：每条评论批量取前3条回复 =====
+        List<CommentReply> allReplies = replyDao.listRepliesByCommentIds(commentIds, 3);
         List<String> replyIds = allReplies.stream().map(CommentReply::getId).collect(Collectors.toList());
 
         // 按 commentId 分组
@@ -99,8 +99,10 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
                 .collect(Collectors.groupingBy(CommentReply::getCommentId));
 
         // ===== 第3次查询：批量拉取所有相关用户信息 =====
-        List<String> allUserIds = new ArrayList<>();
-        commentList.forEach(c -> allUserIds.add(c.getUserId()));
+        List<String> allUserIds = commentList.stream()
+                .map(Comment::getUserId)
+                .distinct()
+                .collect(Collectors.toCollection(ArrayList::new));
         allReplies.forEach(r -> {
             allUserIds.add(r.getUserId());
             if (r.getReplyToUserId() != null) {

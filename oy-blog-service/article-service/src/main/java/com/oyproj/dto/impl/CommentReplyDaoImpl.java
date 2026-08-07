@@ -45,17 +45,18 @@ public class CommentReplyDaoImpl extends ServiceImpl<CommentReplyMapper, Comment
     }
 
     /**
-     * 批量查询回复（按评论ID列表）
+     * 批量查询回复（每条评论取前 limit 条）
      *
      * @param commentIds 评论ID列表
+     * @param limit      每条评论最多取几条回复
      * @return 回复列表
      */
     @Override
-    public List<CommentReply> listRepliesByCommentIds(List<String> commentIds) {
+    public List<CommentReply> listRepliesByCommentIds(List<String> commentIds, int limit) {
         if (commentIds == null || commentIds.isEmpty()) {
             return Collections.emptyList();
         }
-        return ((CommentReplyMapper) baseMapper).selectRepliesByCommentIds(commentIds);
+        return ((CommentReplyMapper) baseMapper).selectRepliesByCommentIds(commentIds, limit);
     }
 }
 
