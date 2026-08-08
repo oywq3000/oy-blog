@@ -9,6 +9,7 @@ import com.oyproj.domain.dto.CommentReplySaveDto;
 import com.oyproj.domain.dto.CommentSaveDto;
 import com.oyproj.domain.vo.CommentReplyVo;
 import com.oyproj.domain.vo.CommentVo;
+import com.oyproj.domain.vo.CommentWrapperVo;
 
 import java.util.List;
 
@@ -32,7 +33,7 @@ public interface ArticleCommentBizService {
      * @param articleId 文章ID
      * @return 分页评论列表
      */
-    Result<PageVo<List<CommentVo>>> listComments(String articleId);
+    Result<PageVo<CommentWrapperVo>> listComments(String articleId);
 
     /**
      * 查询评论回复列表（分页）

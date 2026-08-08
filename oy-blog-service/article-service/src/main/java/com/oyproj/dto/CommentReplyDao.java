@@ -43,5 +43,13 @@ public interface CommentReplyDao extends IService<CommentReply> {
      * @return Map&lt;commentId, count&gt;
      */
     Map<String, Long> countByCommentIds(List<String> commentIds);
+
+    /**
+     * 统计文章下所有回复数量（用于计算总评论数）
+     *
+     * @param articleId 文章ID
+     * @return 回复总数
+     */
+    long countByArticleId(String articleId);
 }
 

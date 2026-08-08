@@ -8,6 +8,7 @@ import com.oyproj.domain.dto.CommentReplySaveDto;
 import com.oyproj.domain.dto.CommentSaveDto;
 import com.oyproj.domain.vo.CommentReplyVo;
 import com.oyproj.domain.vo.CommentVo;
+import com.oyproj.domain.vo.CommentWrapperVo;
 import com.oyproj.service.ArticleCommentBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -47,7 +48,7 @@ public class ArticleCommentController {
      */
     @GetMapping("/{articleId}/comments")
     @Operation(summary = "查询评论列表", description = "查询文章的评论列表（不含回复）")
-    public Result<PageVo<List<CommentVo>>> listComments(@PathVariable("articleId") String articleId) {
+    public Result<PageVo<CommentWrapperVo>> listComments(@PathVariable("articleId") String articleId) {
         return biz.listComments(articleId);
     }
 

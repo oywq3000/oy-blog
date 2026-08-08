@@ -12,6 +12,7 @@ import com.oyproj.domain.entity.Comment;
 import com.oyproj.domain.entity.CommentReply;
 import com.oyproj.domain.vo.CommentReplyVo;
 import com.oyproj.domain.vo.CommentVo;
+import com.oyproj.domain.vo.CommentWrapperVo;
 import com.oyproj.dto.CommentDao;
 import com.oyproj.dto.CommentReactionDao;
 import com.oyproj.dto.CommentReplyDao;
@@ -68,7 +69,8 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
      * 2. 批量查回复 + reaction 聚合 + 当前用户表态
      */
     @Override
-    public Result<PageVo<List<CommentVo>>> listComments(String articleId) {
+    @Transactional
+    public Result<PageVo<CommentWrapperVo>> listComments(String articleId) {
         // ===== 第1次查询：分页查评论 =====
         PageVo<List<Comment>> entityPage = getPageVo(() -> commentDao.listByArticle(articleId), Comment.class);
         List<Comment> commentList = entityPage.getData();
@@ -80,7 +82,7 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         Integer totalPages = entityPage.getTotalPages();
 
         if (commentList.isEmpty()) {
-            PageVo<List<CommentVo>> emptyPage = new PageVo<>(currentPage, pageSize, total, totalPages, new ArrayList<>());
+            PageVo<CommentWrapperVo> emptyPage = new PageVo<>(currentPage, pageSize, total, totalPages, new CommentWrapperVo(0,new ArrayList<>()));
             return Result.ok(emptyPage);
         }
 
@@ -115,6 +117,8 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         Map<String, Map<String, Long>> reactionCounts = reactionDao.getReactionCounts(commentIds, replyIds);
         Map<String, String> userReactions = reactionDao.getUserReactions(commentIds, replyIds, userId);
         Map<String, Long> replyCountMap = replyDao.countByCommentIds(commentIds);
+
+
 
         // ===== 组装 VO =====
         List<CommentVo> voList = commentList.stream().map(comment -> {
@@ -152,7 +156,11 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
             return vo;
         }).collect(Collectors.toList());
 
-        PageVo<List<CommentVo>> resultPage = new PageVo<>(currentPage, pageSize, total, totalPages, voList);
+        // 总评论数 = 一级评论总数 + 文章下所有回复总数
+        long totalReplyCount = replyDao.countByArticleId(articleId);
+        long totalCommentCount = total + totalReplyCount;
+        CommentWrapperVo wrapper = new CommentWrapperVo(totalCommentCount, voList);
+        PageVo<CommentWrapperVo> resultPage = new PageVo<>(currentPage, pageSize, total, totalPages, wrapper);
         return Result.ok(resultPage);
     }
 

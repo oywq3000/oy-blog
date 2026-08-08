@@ -78,5 +78,14 @@ public class CommentReplyDaoImpl extends ServiceImpl<CommentReplyMapper, Comment
                 row -> (String) row.get("comment_id"),
                 row -> (Long) row.get("cnt")));
     }
+
+    /**
+     * 统计文章下所有回复数量
+     */
+    @Override
+    public long countByArticleId(String articleId) {
+        return baseMapper.selectCount(new LambdaQueryWrapper<CommentReply>()
+                .eq(CommentReply::getArticleId, articleId));
+    }
 }
 
