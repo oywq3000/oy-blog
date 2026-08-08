@@ -91,7 +91,7 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         List<String> commentIds = commentList.stream().map(Comment::getId).collect(Collectors.toList());
 
         // ===== 第2次查询：每条评论批量取前3条回复 =====
-        List<CommentReply> allReplies = replyDao.listRepliesByCommentIds(commentIds, 3);
+        List<CommentReply> allReplies = replyDao.listRepliesByCommentIds(commentIds, 10);
         List<String> replyIds = allReplies.stream().map(CommentReply::getId).collect(Collectors.toList());
 
         // 按 commentId 分组
@@ -111,9 +111,10 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         });
         Map<String, UserDTO> userMap = fetchUserInfoMap(allUserIds);
 
-        // ===== 第4次查询：批量查 reaction 聚合计数 + 当前用户表态 =====
+        // ===== 第4次查询：批量查 reaction 聚合计数 + 当前用户表态 + 回复总数 =====
         Map<String, Map<String, Long>> reactionCounts = reactionDao.getReactionCounts(commentIds, replyIds);
         Map<String, String> userReactions = reactionDao.getUserReactions(commentIds, replyIds, userId);
+        Map<String, Long> replyCountMap = replyDao.countByCommentIds(commentIds);
 
         // ===== 组装 VO =====
         List<CommentVo> voList = commentList.stream().map(comment -> {
@@ -126,7 +127,7 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
             vo.setUserReaction(userReactions.get(comment.getId()));
 
             // -- isShow: 当前用户踩过此评论则隐藏 --
-            //vo.setIsShow(!"dislike".equals(userReactions.get(comment.getId())));
+            vo.setIsShow(!"dislike".equals(userReactions.get(comment.getId())));
 
             // -- 用户信息 --
             UserDTO commentUser = userMap.get(comment.getUserId());
@@ -137,9 +138,9 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
                 vo.setUsername("User-" + comment.getUserId());
             }
 
-            // -- 回复数量（全部，非仅前3条） --
+            // -- 回复数量（真实总数） --
             List<CommentReply> commentReplies = repliesByComment.getOrDefault(comment.getId(), Collections.emptyList());
-            vo.setReplyCount((long) commentReplies.size());
+            vo.setReplyCount(replyCountMap.getOrDefault(comment.getId(), 0L));
 
             // -- 前3条回复预览 --
             List<CommentReplyVo> previewReplies = commentReplies.stream()
@@ -156,13 +157,22 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
     }
 
     /**
-     * 查询评论回复列表（含表态数据）
+     * 查询评论回复列表（分页，含表态数据）
      */
     @Override
-    public Result<List<CommentReplyVo>> listReplies(String commentId) {
-        List<CommentReply> replies = replyDao.listByCommentId(commentId);
+    public Result<PageVo<List<CommentReplyVo>>> listReplies(String commentId) {
+        // ===== 分页查回复 =====
+        PageVo<List<CommentReply>> entityPage = getPageVo(() -> replyDao.listByCommentId(commentId), CommentReply.class);
+        List<CommentReply> replies = entityPage.getData();
+
+        Integer currentPage = entityPage.getCurrentPage();
+        Integer pageSize = entityPage.getPageSize();
+        Long total = entityPage.getTotal();
+        Integer totalPages = entityPage.getTotalPages();
+
         if (replies.isEmpty()) {
-            return Result.ok(new ArrayList<>());
+            PageVo<List<CommentReplyVo>> emptyPage = new PageVo<>(currentPage, pageSize, total, totalPages, new ArrayList<>());
+            return Result.ok(emptyPage);
         }
 
         // 获取当前用户ID
@@ -189,7 +199,8 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
                 .map(r -> buildReplyVo(r, reactionCounts, userReactions, userMap))
                 .collect(Collectors.toList());
 
-        return Result.ok(voList);
+        PageVo<List<CommentReplyVo>> resultPage = new PageVo<>(currentPage, pageSize, total, totalPages, voList);
+        return Result.ok(resultPage);
     }
 
     /**

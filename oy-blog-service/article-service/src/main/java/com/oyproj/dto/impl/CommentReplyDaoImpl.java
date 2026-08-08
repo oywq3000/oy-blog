@@ -1,6 +1,7 @@
 package com.oyproj.dto.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import com.oyproj.domain.entity.CommentReply;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  *  评论回复数据访问实现
@@ -57,6 +60,23 @@ public class CommentReplyDaoImpl extends ServiceImpl<CommentReplyMapper, Comment
             return Collections.emptyList();
         }
         return ((CommentReplyMapper) baseMapper).selectRepliesByCommentIds(commentIds, limit);
+    }
+
+    /**
+     * 批量统计每条评论的回复数量
+     */
+    @Override
+    public Map<String, Long> countByCommentIds(List<String> commentIds) {
+        if (commentIds == null || commentIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Map<String, Object>> rows = baseMapper.selectMaps(new QueryWrapper<CommentReply>()
+                .select("comment_id, COUNT(*) AS cnt")
+                .in("comment_id", commentIds)
+                .groupBy("comment_id"));
+        return rows.stream().collect(Collectors.toMap(
+                row -> (String) row.get("comment_id"),
+                row -> (Long) row.get("cnt")));
     }
 }
 

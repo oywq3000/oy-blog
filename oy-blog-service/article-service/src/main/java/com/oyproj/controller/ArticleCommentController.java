@@ -58,8 +58,8 @@ public class ArticleCommentController {
      * @return 回复列表
      */
     @GetMapping("/{commentId}/replies")
-    @Operation(summary = "查询评论回复列表", description = "查询指定评论的回复列表")
-    public Result<List<CommentReplyVo>> listReplies(@PathVariable("commentId") String commentId) {
+    @Operation(summary = "查询评论回复列表", description = "查询指定评论的回复列表（分页）")
+    public Result<PageVo<List<CommentReplyVo>>> listReplies(@PathVariable("commentId") String commentId) {
         return biz.listReplies(commentId);
     }
 

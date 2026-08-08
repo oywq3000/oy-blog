@@ -35,12 +35,12 @@ public interface ArticleCommentBizService {
     Result<PageVo<List<CommentVo>>> listComments(String articleId);
 
     /**
-     * 查询评论回复列表
+     * 查询评论回复列表（分页）
      *
      * @param commentId 评论ID
-     * @return 回复列表
+     * @return 分页回复列表
      */
-    Result<List<CommentReplyVo>> listReplies(String commentId);
+    Result<PageVo<List<CommentReplyVo>>> listReplies(String commentId);
 
     /**
      * 添加评论

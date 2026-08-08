@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.oyproj.domain.entity.CommentReply;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 评论回复数据访问接口
@@ -34,5 +35,13 @@ public interface CommentReplyDao extends IService<CommentReply> {
      * @return 回复列表
      */
     List<CommentReply> listRepliesByCommentIds(List<String> commentIds, int limit);
+
+    /**
+     * 批量统计每条评论的回复数量
+     *
+     * @param commentIds 评论ID列表
+     * @return Map&lt;commentId, count&gt;
+     */
+    Map<String, Long> countByCommentIds(List<String> commentIds);
 }
 
