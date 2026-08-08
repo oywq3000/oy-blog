@@ -92,30 +92,17 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
 
         List<String> commentIds = commentList.stream().map(Comment::getId).collect(Collectors.toList());
 
-        // ===== 第2次查询：每条评论批量取前3条回复 =====
-        List<CommentReply> allReplies = replyDao.listRepliesByCommentIds(commentIds, 10);
-        List<String> replyIds = allReplies.stream().map(CommentReply::getId).collect(Collectors.toList());
-
-        // 按 commentId 分组
-        Map<String, List<CommentReply>> repliesByComment = allReplies.stream()
-                .collect(Collectors.groupingBy(CommentReply::getCommentId));
 
         // ===== 第3次查询：批量拉取所有相关用户信息 =====
         List<String> allUserIds = commentList.stream()
                 .map(Comment::getUserId)
                 .distinct()
                 .collect(Collectors.toCollection(ArrayList::new));
-        allReplies.forEach(r -> {
-            allUserIds.add(r.getUserId());
-            if (r.getReplyToUserId() != null) {
-                allUserIds.add(r.getReplyToUserId());
-            }
-        });
         Map<String, UserDTO> userMap = fetchUserInfoMap(allUserIds);
 
         // ===== 第4次查询：批量查 reaction 聚合计数 + 当前用户表态 + 回复总数 =====
-        Map<String, Map<String, Long>> reactionCounts = reactionDao.getReactionCounts(commentIds, replyIds);
-        Map<String, String> userReactions = reactionDao.getUserReactions(commentIds, replyIds, userId);
+        Map<String, Map<String, Long>> reactionCounts = reactionDao.getReactionCounts(commentIds,null);
+        Map<String, String> userReactions = reactionDao.getUserReactions(commentIds,null, userId);
         Map<String, Long> replyCountMap = replyDao.countByCommentIds(commentIds);
 
 
@@ -141,18 +128,8 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
             } else {
                 vo.setUsername("User-" + comment.getUserId());
             }
-
             // -- 回复数量（真实总数） --
-            List<CommentReply> commentReplies = repliesByComment.getOrDefault(comment.getId(), Collections.emptyList());
             vo.setReplyCount(replyCountMap.getOrDefault(comment.getId(), 0L));
-
-            // -- 前3条回复预览 --
-            List<CommentReplyVo> previewReplies = commentReplies.stream()
-                    .limit(3)
-                    .map(r -> buildReplyVo(r, reactionCounts, userReactions, userMap))
-                    .collect(Collectors.toList());
-            vo.setReplies(previewReplies);
-
             return vo;
         }).collect(Collectors.toList());
 

@@ -41,5 +41,5 @@ public class CommentVo {
     private String userReaction;
 
     // 前N条回复预览
-    private List<CommentReplyVo> replies;
+    //private List<CommentReplyVo> replies;
 }
