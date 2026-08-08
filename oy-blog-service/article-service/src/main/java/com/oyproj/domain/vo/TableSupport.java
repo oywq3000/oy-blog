@@ -40,7 +40,7 @@ public class TableSupport {
         pageDomain.setPageSize(ServletUtils.getParameterToInt(PAGE_SIZE, 10));
         pageDomain.setOrderBy(ServletUtils.getParameterToString(ORDER_BY));
         pageDomain.setIsAsc(ServletUtils.getParameterToString(IS_ASC));
-        pageDomain.setReasonable(ServletUtils.getParameterToBool(REASONABLE));
+        pageDomain.setReasonable(ServletUtils.getParameterToBool(REASONABLE, true));
         return pageDomain;
     }
 

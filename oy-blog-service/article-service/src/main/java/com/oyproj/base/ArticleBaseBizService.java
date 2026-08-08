@@ -5,6 +5,7 @@ import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.common.service.base.BaseBiz;
 import com.oyproj.utils.PageUtils;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -14,6 +15,7 @@ import java.util.function.Supplier;
 /**
  * 基础业务服务类
  */
+@Slf4j
 public class ArticleBaseBizService extends BaseBiz {
     protected String getUserId(){
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -56,6 +58,9 @@ public class ArticleBaseBizService extends BaseBiz {
         PageUtils.startPage();
         List<T> list = supplier.get();
         PageInfo<T> pageInfo = new PageInfo<>(list);
+        log.debug("PageHelper pagination: pageNum={}, pageSize={}, total={}, pages={}, listSize={}",
+                pageInfo.getPageNum(), pageInfo.getPageSize(), pageInfo.getTotal(),
+                pageInfo.getPages(), list.size());
         PageUtils.clearPage();
         List<R> resultList = copyList(list, targetClass);
         PageInfo<R> resultPageInfo = new PageInfo<>(resultList);
@@ -63,6 +68,9 @@ public class ArticleBaseBizService extends BaseBiz {
         resultPageInfo.setPageNum(pageInfo.getPageNum());
         resultPageInfo.setPageSize(pageInfo.getPageSize());
         resultPageInfo.setPages(pageInfo.getPages());
+        log.debug("PageVo result: pageNum={}, pageSize={}, total={}, pages={}, dataSize={}",
+                resultPageInfo.getPageNum(), resultPageInfo.getPageSize(),
+                resultPageInfo.getTotal(), resultPageInfo.getPages(), resultPageInfo.getList().size());
         return resultPageInfo;
     }
 }
