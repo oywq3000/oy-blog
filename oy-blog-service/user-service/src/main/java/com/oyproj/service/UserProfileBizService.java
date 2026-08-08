@@ -7,6 +7,7 @@ import com.oyproj.domain.vo.SimpleUserVo;
 import com.oyproj.domain.vo.UserPublicVo;
 import com.oyproj.domain.vo.UserVo;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -36,6 +37,14 @@ public interface UserProfileBizService {
     Result<Object> update(UpdateProfileDto updateProfileDto);
 
     Result<UserDTO> getUserDTOById(String userId);
+
+    /**
+     * 批量获取用户DTO
+     *
+     * @param userIds 用户ID列表
+     * @return 用户DTO列表（不包含不存在的ID）
+     */
+    Result<List<UserDTO>> getUserDTOsByIds(List<String> userIds);
 
     Result<UserPublicVo> getUserPublicInfo(String userId);
 

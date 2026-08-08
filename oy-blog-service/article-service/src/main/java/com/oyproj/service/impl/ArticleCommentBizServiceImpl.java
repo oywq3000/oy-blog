@@ -126,7 +126,7 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
             vo.setUserReaction(userReactions.get(comment.getId()));
 
             // -- isShow: 当前用户踩过此评论则隐藏 --
-            vo.setIsShow(!"dislike".equals(userReactions.get(comment.getId())));
+            //vo.setIsShow(!"dislike".equals(userReactions.get(comment.getId())));
 
             // -- 用户信息 --
             UserDTO commentUser = userMap.get(comment.getUserId());
@@ -237,16 +237,17 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
      * @return userId → UserDTO 映射
      */
     private Map<String, UserDTO> fetchUserInfoMap(List<String> userIds) {
+        if (userIds.isEmpty()) {
+            return new HashMap<>();
+        }
         Map<String, UserDTO> userMap = new HashMap<>();
-        for (String userId : userIds.stream().distinct().collect(Collectors.toList())) {
-            try {
-                Result<UserDTO> result = userClient.getUserDTO(userId);
-                if (result != null && result.getData() != null) {
-                    userMap.put(userId, result.getData());
-                }
-            } catch (Exception e) {
-                log.warn("获取用户信息失败, userId: {}", userId, e);
+        try {
+            Result<List<UserDTO>> result = userClient.getUserDTOs(userIds.stream().distinct().collect(Collectors.toList()));
+            if (result != null && result.getIsSuccess() && result.getData() != null) {
+                result.getData().forEach(dto -> userMap.put(dto.getId(), dto));
             }
+        } catch (Exception e) {
+            log.warn("批量获取用户信息失败, userIds: {}", userIds, e);
         }
         return userMap;
     }
@@ -313,9 +314,9 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
     public Result<Object> react(CommentReactionDto dto) {
         String userId = getUserId();
         if (dto.getCommentId() != null) {
-            reactionDao.reactToComment(dto.getCommentId(), userId, dto.getType());
+            reactionDao.reactToComment(dto.getArticleId(), dto.getCommentId(), userId, dto.getType());
         } else if (dto.getReplyId() != null) {
-            reactionDao.reactToReply(dto.getReplyId(), userId, dto.getType());
+            reactionDao.reactToReply(dto.getArticleId(), dto.getReplyId(), userId, dto.getType());
         }
         return Result.ok();
     }

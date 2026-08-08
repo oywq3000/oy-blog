@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -85,6 +86,15 @@ public class UserProfileController {
     @Operation(summary = "getUserDTO",description = "根据userId获取信息")
     public Result<UserDTO> getUserDTO(@PathVariable String userId){
         return profileBiz.getUserDTOById(userId);
+    }
+
+    /**
+     * 批量获取用户UserDTO
+     */
+    @PostMapping("/info/batch")
+    @Operation(summary = "批量获取用户DTO", description = "根据用户ID列表批量获取用户信息")
+    public Result<List<UserDTO>> getUserDTOs(@RequestBody @NotNull List<String> userIds) {
+        return profileBiz.getUserDTOsByIds(userIds);
     }
 
     /**

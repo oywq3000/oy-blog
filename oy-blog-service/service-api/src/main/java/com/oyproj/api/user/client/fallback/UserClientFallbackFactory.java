@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Slf4j
 @Component
 public class UserClientFallbackFactory implements FallbackFactory<UserClient> {
@@ -19,6 +21,12 @@ public class UserClientFallbackFactory implements FallbackFactory<UserClient> {
             @Override
             public Result<UserDTO> getUserDTO(String userId) {
                 log.warn("用户服务调用失败，用户ID: {}, 错误: {}", userId, cause.getMessage());
+                return Result.error(ResultCode.SERVICE_UNAVAILABLE.getErrCode(), "用户服务暂时不可用");
+            }
+
+            @Override
+            public Result<List<UserDTO>> getUserDTOs(List<String> userIds) {
+                log.warn("用户服务批量调用失败，用户IDs: {}, 错误: {}", userIds, cause.getMessage());
                 return Result.error(ResultCode.SERVICE_UNAVAILABLE.getErrCode(), "用户服务暂时不可用");
             }
         };

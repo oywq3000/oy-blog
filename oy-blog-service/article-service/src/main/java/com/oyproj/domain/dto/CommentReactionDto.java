@@ -10,6 +10,12 @@ import lombok.Data;
 public class CommentReactionDto {
 
     /**
+     * 文章ID（必填）
+     */
+    @NotNull(message = "文章ID不能为空")
+    private String articleId;
+
+    /**
      * 评论ID（可空）
      */
     private String commentId;

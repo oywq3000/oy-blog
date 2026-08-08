@@ -98,7 +98,7 @@ public class ArticleCommentController {
     @PostMapping("/reaction")
     @OpLog(action = "react", func = "article.comment")
     @Operation(summary = "评论点赞或踩", description = "对评论或回复进行点赞或踩")
-    public Result<Object> react(@RequestBody @Valid CommentReactionDto dto) {
+    public Result<Object> react(@Valid CommentReactionDto dto) {
         return biz.react(dto);
     }
 }

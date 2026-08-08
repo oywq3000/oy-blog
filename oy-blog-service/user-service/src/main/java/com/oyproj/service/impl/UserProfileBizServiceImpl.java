@@ -21,7 +21,9 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 用户个人信息服务实现
@@ -78,6 +80,20 @@ public class UserProfileBizServiceImpl extends UserBizBase implements UserProfil
         UserDTO userDTO = new UserDTO();
         copyProperties(user,userDTO);
         return Result.ok(userDTO);
+    }
+
+    @Override
+    public Result<List<UserDTO>> getUserDTOsByIds(List<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Result.ok(List.of());
+        }
+        List<User> users = userDao.listByIds(userIds.stream().distinct().collect(Collectors.toList()));
+        List<UserDTO> dtos = users.stream().map(user -> {
+            UserDTO dto = new UserDTO();
+            copyProperties(user, dto);
+            return dto;
+        }).collect(Collectors.toList());
+        return Result.ok(dtos);
     }
 
     @Override

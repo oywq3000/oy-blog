@@ -15,20 +15,22 @@ public interface CommentReactionDao extends IService<CommentReaction> {
     /**
      * 对评论进行反应（toggle：同类型取消，不同类型切换，无则新增）
      *
+     * @param articleId 文章ID
      * @param commentId 评论ID
      * @param userId 用户ID
      * @param type 反应类型（like/dislike）
      */
-    void reactToComment(String commentId, String userId, String type);
+    void reactToComment(String articleId, String commentId, String userId, String type);
 
     /**
      * 对回复进行反应（toggle）
      *
+     * @param articleId 文章ID
      * @param replyId 回复ID
      * @param userId 用户ID
      * @param type 反应类型（like/dislike）
      */
-    void reactToReply(String replyId, String userId, String type);
+    void reactToReply(String articleId, String replyId, String userId, String type);
 
     /**
      * 取消对评论或回复的反应

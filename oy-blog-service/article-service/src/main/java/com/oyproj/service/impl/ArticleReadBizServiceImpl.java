@@ -156,15 +156,13 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
                 .distinct()
                 .collect(Collectors.toList());
         Map<String, UserDTO> userMap = new HashMap<>();
-        for (String authorId : authorIds) {
-            try {
-                Result<UserDTO> result = userClient.getUserDTO(authorId);
-                if (result != null && result.getData() != null) {
-                    userMap.put(authorId, result.getData());
-                }
-            } catch (Exception e) {
-                log.warn("获取作者信息失败, authorId: {}", authorId, e);
+        try {
+            Result<List<UserDTO>> result = userClient.getUserDTOs(authorIds);
+            if (result != null && result.getIsSuccess() && result.getData() != null) {
+                result.getData().forEach(dto -> userMap.put(dto.getId(), dto));
             }
+        } catch (Exception e) {
+            log.warn("批量获取作者信息失败, authorIds: {}", authorIds, e);
         }
         for (ArticleInfoVo vo : voList) {
             UserDTO user = userMap.get(vo.getAuthorId());

@@ -31,7 +31,7 @@ public class CommentReactionDaoImpl extends ServiceImpl<CommentReactionMapper, C
      * - 不同类型 → UPDATE（切换）
      */
     @Override
-    public void reactToComment(String commentId, String userId, String type) {
+    public void reactToComment(String articleId, String commentId, String userId, String type) {
         CommentReaction existing = baseMapper.selectOne(new LambdaQueryWrapper<CommentReaction>()
                 .eq(CommentReaction::getCommentId, commentId)
                 .eq(CommentReaction::getUserId, userId));
@@ -40,6 +40,7 @@ public class CommentReactionDaoImpl extends ServiceImpl<CommentReactionMapper, C
             // 无表态 → 新增
             CommentReaction r = CommentReaction.builder()
                     .id(UUIDUtils.getId())
+                    .articleId(articleId)
                     .commentId(commentId)
                     .userId(userId)
                     .reactionType(type)
@@ -59,14 +60,16 @@ public class CommentReactionDaoImpl extends ServiceImpl<CommentReactionMapper, C
      * 对回复进行反应（toggle 逻辑）
      */
     @Override
-    public void reactToReply(String replyId, String userId, String type) {
+    public void reactToReply(String articleId, String replyId, String userId, String type) {
         CommentReaction existing = baseMapper.selectOne(new LambdaQueryWrapper<CommentReaction>()
                 .eq(CommentReaction::getReplyId, replyId)
                 .eq(CommentReaction::getUserId, userId));
 
         if (existing == null) {
+            // 无表态 → 新增
             CommentReaction r = CommentReaction.builder()
                     .id(UUIDUtils.getId())
+                    .articleId(articleId)
                     .replyId(replyId)
                     .userId(userId)
                     .reactionType(type)
