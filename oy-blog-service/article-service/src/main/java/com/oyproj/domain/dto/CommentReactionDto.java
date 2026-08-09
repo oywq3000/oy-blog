@@ -16,8 +16,9 @@ public class CommentReactionDto {
     private String articleId;
 
     /**
-     * 评论ID（可空）
+     * 评论ID
      */
+    @NotNull(message = "评论ID不能为空")
     private String commentId;
 
     /**

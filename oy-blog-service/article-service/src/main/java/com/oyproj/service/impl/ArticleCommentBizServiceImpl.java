@@ -309,10 +309,10 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
     @Override
     public Result<Object> react(CommentReactionDto dto) {
         String userId = getUserId();
-        if (dto.getCommentId() != null) {
+        if(dto.getReplyId()!=null){
+            reactionDao.reactToReply(dto.getArticleId(), dto.getReplyId(),userId, dto.getType());
+        }else{
             reactionDao.reactToComment(dto.getArticleId(), dto.getCommentId(), userId, dto.getType());
-        } else if (dto.getReplyId() != null) {
-            reactionDao.reactToReply(dto.getArticleId(), dto.getReplyId(), userId, dto.getType());
         }
         return Result.ok();
     }

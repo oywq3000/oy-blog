@@ -137,7 +137,7 @@ public class CommentReactionDaoImpl extends ServiceImpl<CommentReactionMapper, C
                     .in(CommentReaction::getCommentId, commentIds));
             for (CommentReaction r : list) {
                 result.computeIfAbsent(r.getCommentId(), k -> new HashMap<>())
-                      .merge(r.getReactionType(), 1L, Long::sum);
+                        .merge(r.getReactionType(), 1L, Long::sum);
             }
         }
 
@@ -147,7 +147,7 @@ public class CommentReactionDaoImpl extends ServiceImpl<CommentReactionMapper, C
                     .in(CommentReaction::getReplyId, replyIds));
             for (CommentReaction r : list) {
                 result.computeIfAbsent(r.getReplyId(), k -> new HashMap<>())
-                      .merge(r.getReactionType(), 1L, Long::sum);
+                        .merge(r.getReactionType(), 1L, Long::sum);
             }
         }
 
