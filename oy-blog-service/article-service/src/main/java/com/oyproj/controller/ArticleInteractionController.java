@@ -113,5 +113,17 @@ public class ArticleInteractionController {
     public Result<Long> favoriteCount(@PathVariable("articleId") String articleId) {
         return biz.favoriteCount(articleId);
     }
+
+    /**
+     * 记录文章观看
+     *
+     * @param articleId 文章ID
+     * @return 最新观看次数
+     */
+    @PostMapping("/{articleId}/view")
+    @Operation(summary = "记录文章观看", description = "记录文章观看次数，含IP/用户去重")
+    public Result<Long> view(@PathVariable("articleId") String articleId) {
+        return biz.view(articleId);
+    }
 }
 

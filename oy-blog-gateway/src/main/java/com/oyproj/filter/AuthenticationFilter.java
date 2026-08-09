@@ -23,6 +23,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -32,6 +33,7 @@ import reactor.core.publisher.Mono;
 public class AuthenticationFilter implements GlobalFilter, Ordered {
     private final AuthProperties authProperties;
     private final CommonCache commonCache;
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -66,7 +68,8 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         return -100; // 优先级高于默认过滤器
     }
     private boolean isWhitelisted(String path) {
-        return authProperties.getWhitelist().stream().anyMatch(path::startsWith);
+        return authProperties.getWhitelist().stream()
+                .anyMatch(pattern -> pathMatcher.match(pattern, path));
     }
 
     private AuthenticationResult authenticateUser(String token) {

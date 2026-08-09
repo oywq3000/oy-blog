@@ -58,11 +58,15 @@ auth:
   whitelist:
     - /user-service/auth/login
     - /user-service/auth/register
-    - /user-service/profile/info
-    - /article-service/article/read
+    - /user-service/profile/info/**
+    - /article-service/article/read/**
+    - /article-service/article/comment/*/comment-count
+    - /article-service/article/comment/*/comments
+    - /article-service/article/comment/*/replies
+    - /article-service/article/interaction/*/view
     - /health
-    - /swagger-ui
-    - /v3/api-docs
+    - /swagger-ui/**
+    - /v3/api-docs/**
 
 
 

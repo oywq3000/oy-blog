@@ -71,5 +71,13 @@ public interface ArticleInteractionBizService {
      * @return 收藏数量
      */
     Result<Long> favoriteCount(String articleId);
+
+    /**
+     * 记录文章观看
+     *
+     * @param articleId 文章ID
+     * @return 最新观看次数
+     */
+    Result<Long> view(String articleId);
 }
 
