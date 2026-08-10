@@ -18,6 +18,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -164,6 +165,7 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
      * @return 最新观看次数
      */
     @Override
+    @Transactional
     public Result<Long> view(String articleId) {
         // 1. 检查文章是否存在
         Article article = articleDao.getById(articleId);
@@ -215,8 +217,8 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
         }
 
         // 4. 返回递增后的观看次数
-        stats = statsDao.getById(articleId);
-        return Result.ok(stats != null ? stats.getViews() : 1L);
+        //stats = statsDao.getById(articleId);
+        return Result.ok(stats != null ? stats.getViews()+1 : 1L);
     }
 
     /**
