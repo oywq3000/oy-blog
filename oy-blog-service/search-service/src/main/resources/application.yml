@@ -34,3 +34,11 @@ logging:
   file:
     path: ./logs
 
+# ============ ES-MySQL Sync Configuration ============
+oy-blog:
+  sync:
+    # 对账间隔（毫秒），默认 30 分钟
+    reconcile-interval-ms: 1800000
+    # 启动后首次对账延迟（毫秒），默认 60 秒
+    reconcile-initial-delay-ms: 60000
+

@@ -32,7 +32,8 @@ public class RetryMqScheduler {
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
 
-    @Scheduled(fixedDelay = 60 * 1000, initialDelay = 30 * 1000)
+    @Scheduled(fixedDelayString = "${oy-blog.mq.retry-interval-ms:60000}",
+               initialDelayString = "${oy-blog.mq.retry-initial-delay-ms:30000}")
     public void retryFailedMessages() {
         List<MqRetryLog> pendingLogs = retryLogMapper.selectList(
                 new LambdaQueryWrapper<MqRetryLog>()

@@ -45,7 +45,8 @@ public class IndexReconciler {
     /**
      * 每 30 分钟执行一次全量对账
      */
-    @Scheduled(fixedDelay = 30 * 60 * 1000, initialDelay = 60 * 1000)
+    @Scheduled(fixedDelayString = "${oy-blog.sync.reconcile-interval-ms:1800000}",
+               initialDelayString = "${oy-blog.sync.reconcile-initial-delay-ms:60000}")
     public void reconcile() {
         log.info("开始 ES-MySQL 索引对账...");
         LocalDateTime start = LocalDateTime.now();
@@ -118,33 +119,37 @@ public class IndexReconciler {
         try {
             // 使用 scroll 查询 ES 中所有文档 ID
             List<String> esIds = new ArrayList<>();
-            String scrollId = null;
             SearchResponse<ArticleDocument> response = esClient.search(s -> s
                     .index(INDEX)
                     .query(MatchAllQuery.of(m -> m)._toQuery())
                     .size(ES_SCROLL_SIZE)
                     .scroll(t -> t.time("2m")),
                     ArticleDocument.class);
-            scrollId = response.scrollId();
+            String scrollId = response.scrollId();
 
-            while (true) {
-                List<String> batchIds = response.hits().hits().stream()
+            // 处理第一批
+            List<String> batchIds = response.hits().hits().stream()
+                    .map(Hit::id)
+                    .collect(Collectors.toList());
+            esIds.addAll(batchIds);
+
+            // 继续 scroll
+            while (!batchIds.isEmpty() && batchIds.size() >= ES_SCROLL_SIZE) {
+                String sid = scrollId;
+                var scrollResponse = esClient.scroll(s -> s.scrollId(sid).scroll(t -> t.time("2m")),
+                        ArticleDocument.class);
+                scrollId = scrollResponse.scrollId();
+                batchIds = scrollResponse.hits().hits().stream()
                         .map(Hit::id)
                         .collect(Collectors.toList());
                 esIds.addAll(batchIds);
-                if (batchIds.isEmpty() || batchIds.size() < ES_SCROLL_SIZE) {
-                    break;
-                }
-                String sid = scrollId;
-                response = esClient.scroll(s -> s.scrollId(sid).scroll(t -> t.time("2m")),
-                        ArticleDocument.class);
-                scrollId = response.scrollId();
             }
 
             // 清理 scroll
-            if (scrollId != null) {
+            String finalScrollId = scrollId;
+            if (finalScrollId != null) {
                 try {
-                    esClient.clearScroll(c -> c.scrollId(scrollId));
+                    esClient.clearScroll(c -> c.scrollId(finalScrollId));
                 } catch (Exception ignored) {
                 }
             }
