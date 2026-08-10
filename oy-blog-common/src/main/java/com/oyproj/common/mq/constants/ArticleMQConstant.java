@@ -6,4 +6,9 @@ public class ArticleMQConstant {
     public static final String ARTICLE_DELETE_QUEUE = "article.delete.queue";
     public static final String ARTICLE_INDEX_ROUTING_KEY = "article.index";
     public static final String ARTICLE_DELETE_ROUTING_KEY = "article.delete";
+
+    // 死信队列
+    public static final String ARTICLE_INDEX_DLX = "article.index.dlx";
+    public static final String ARTICLE_INDEX_DLQ = "article.index.dlq";
+    public static final String ARTICLE_INDEX_DLQ_ROUTING_KEY = "article.index.dlq";
 }

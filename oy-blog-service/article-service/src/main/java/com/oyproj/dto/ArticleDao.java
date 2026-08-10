@@ -31,6 +31,23 @@ public interface ArticleDao extends IService<Article> {
      * @return 发布文章列表
      */
     List<Article> listPublished();
+
+    /**
+     * 分页查询已发布未删除的文章
+     *
+     * @param page 页码（0-based）
+     * @param size 每页大小
+     * @return 文章列表
+     */
+    List<Article> listPublished(int page, int size);
+
+    /**
+     * 统计已发布未删除的文章数量
+     *
+     * @return 文章数量
+     */
+    Long countPublished();
+
     /**
      * 统计用户的文章数量
      *

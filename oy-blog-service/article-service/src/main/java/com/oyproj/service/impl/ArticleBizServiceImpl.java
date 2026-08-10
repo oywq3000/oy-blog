@@ -30,7 +30,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -80,6 +79,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result<Map<String, String>> publish(ArticleSaveDto dto) {
+        boolean isNew = !StringUtils.hasText(dto.getId());
         Article article = saveArticleBase(dto, "published");
         String articleId = article.getId();
         saveRevision(articleId, dto.getContentMd());
@@ -87,7 +87,8 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         parseAndSaveChapters(articleId, dto.getContentMd());
         saveRelations(articleId, dto);
         Map<String, String> result = new HashMap<>();
-        sendMessageAfterCommit(article,dto);
+        MQOperation operation = isNew ? MQOperation.CREATE : MQOperation.UPDATE;
+        sendMessageAfterCommit(article, dto, operation);
         result.put("articleId", articleId);
         return Result.ok(result);
     }
@@ -99,17 +100,15 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
     }
 
 
-    //在事务后添加同步消息
-    private void sendMessageAfterCommit(Article article,ArticleSaveDto dto) {
+    // 在事务提交后同步消息到ES
+    private void sendMessageAfterCommit(Article article, ArticleSaveDto dto, MQOperation operation) {
 
-        ArticleIndexMessage articleIndexMessage = buildArticleIndexMessage(article, dto, MQOperation.CREATE);
+        ArticleIndexMessage articleIndexMessage = buildArticleIndexMessage(article, dto, operation);
         TransactionSynchronizationManager.registerSynchronization(
                 new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        CompletableFuture.runAsync(() -> {
-                            articleMessageProducer.sendArticleIndexMessage(articleIndexMessage);
-                        });
+                        articleMessageProducer.sendArticleIndexMessage(articleIndexMessage);
                     }
                 }
         );
@@ -132,6 +131,29 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         message.setStatus(article.getStatus());
         message.setCategory(dto.getCategoryCode());
         message.setTags(dto.getTags());
+
+        // 加载文章内容
+        try {
+            ArticleContent content = contentDao.getById(article.getId());
+            if (content != null) {
+                message.setContentMd(content.getContentMd());
+            }
+        } catch (Exception e) {
+            log.warn("加载文章内容失败, articleId: {}", article.getId(), e);
+        }
+
+        // 加载统计数据
+        try {
+            ArticleStats stats = statsDao.getById(article.getId());
+            if (stats != null) {
+                message.setViewCount(stats.getViews());
+                message.setLikeCount(stats.getLikes());
+                message.setCommentCount(stats.getComments());
+            }
+        } catch (Exception e) {
+            log.warn("加载文章统计失败, articleId: {}", article.getId(), e);
+        }
+
         return message;
     }
 
@@ -150,6 +172,15 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         if (article != null) {
             article.setDeletedAt(LocalDateTime.now());
             articleDao.updateById(article);
+            // 事务提交后同步删除ES索引
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            articleMessageProducer.sendArticleDeleteMessage(id);
+                        }
+                    }
+            );
         }
         return Result.ok(true);
     }

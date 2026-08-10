@@ -50,14 +50,14 @@ public class ArticleDocument implements Serializable {
     @Field(type = FieldType.Keyword)
     private String status;
     
-    @Field(type = FieldType.Integer)
-    private Integer viewCount;
-    
-    @Field(type = FieldType.Integer)
-    private Integer likeCount;
-    
-    @Field(type = FieldType.Integer)
-    private Integer commentCount;
+    @Field(type = FieldType.Long)
+    private Long viewCount;
+
+    @Field(type = FieldType.Long)
+    private Long likeCount;
+
+    @Field(type = FieldType.Long)
+    private Long commentCount;
     
     @Field(type = FieldType.Keyword)
     private List<String> tags;

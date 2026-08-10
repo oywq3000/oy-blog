@@ -1,6 +1,7 @@
 package com.oyproj.dto.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.dto.ArticleDao;
@@ -60,6 +61,29 @@ public class ArticleDaoImpl extends ServiceImpl<ArticleMapper, Article> implemen
     @Override
     public List<Article> listPublished() {
         return baseMapper.selectList(new LambdaQueryWrapper<Article>().eq(Article::getStatus, "published"));
+    }
+
+    /**
+     * 分页查询已发布未删除的文章
+     */
+    @Override
+    public List<Article> listPublished(int page, int size) {
+        Page<Article> pageResult = baseMapper.selectPage(new Page<>(page, size),
+                new LambdaQueryWrapper<Article>()
+                        .eq(Article::getStatus, "published")
+                        .isNull(Article::getDeletedAt)
+                        .orderByDesc(Article::getCreatedAt));
+        return pageResult.getRecords();
+    }
+
+    /**
+     * 统计已发布未删除的文章数量
+     */
+    @Override
+    public Long countPublished() {
+        return baseMapper.selectCount(new LambdaQueryWrapper<Article>()
+                .eq(Article::getStatus, "published")
+                .isNull(Article::getDeletedAt));
     }
 }
 

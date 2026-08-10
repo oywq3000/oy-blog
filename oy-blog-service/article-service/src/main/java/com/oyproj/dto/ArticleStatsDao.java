@@ -43,5 +43,13 @@ public interface ArticleStatsDao extends IService<ArticleStats> {
      * @param delta 增量（正数收藏，负数取消）
      */
     void incFavorites(String articleId, long delta);
+
+    /**
+     * 更新评论数
+     *
+     * @param articleId 文章ID
+     * @param delta 增量（正数新增，负数删除）
+     */
+    void incComments(String articleId, long delta);
 }
 

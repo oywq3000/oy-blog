@@ -72,5 +72,18 @@ public class ArticleStatsDaoImpl extends ServiceImpl<ArticleStatsMapper, Article
                 .eq(ArticleStats::getArticleId, articleId)
                 .setSql("favorites = GREATEST(favorites + " + delta + ", 0)"));
     }
+
+    /**
+     * 更新评论数
+     *
+     * @param articleId 文章ID
+     * @param delta 增量（正数新增，负数删除）
+     */
+    @Override
+    public void incComments(String articleId, long delta) {
+        baseMapper.update(null, new LambdaUpdateWrapper<ArticleStats>()
+                .eq(ArticleStats::getArticleId, articleId)
+                .setSql("comments = GREATEST(comments + " + delta + ", 0)"));
+    }
 }
 

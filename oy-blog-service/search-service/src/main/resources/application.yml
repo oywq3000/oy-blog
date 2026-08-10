@@ -15,6 +15,16 @@ spring:
     publisher-returns: true
     template:
       mandatory: true
+    listener:
+      simple:
+        # 消费失败后拒绝重新入队（进入DLQ），最多重试3次
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+          multiplier: 2
+          max-interval: 10000
+        default-requeue-rejected: false
 
 # ============ Logging Configuration ============
 logging:

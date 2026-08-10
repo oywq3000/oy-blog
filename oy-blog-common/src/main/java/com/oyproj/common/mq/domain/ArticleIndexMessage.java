@@ -65,7 +65,27 @@ public class ArticleIndexMessage {
      * 分类
      */
     private String category;
-    
+
+    /**
+     * 文章内容（Markdown原文，消费者侧做清洗）
+     */
+    private String contentMd;
+
+    /**
+     * 浏览数
+     */
+    private Long viewCount;
+
+    /**
+     * 点赞数
+     */
+    private Long likeCount;
+
+    /**
+     * 评论数
+     */
+    private Long commentCount;
+
     /**
      * 操作时间
      */

@@ -13,6 +13,7 @@ import com.oyproj.domain.entity.CommentReply;
 import com.oyproj.domain.vo.CommentReplyVo;
 import com.oyproj.domain.vo.CommentVo;
 import com.oyproj.domain.vo.CommentWrapperVo;
+import com.oyproj.dto.ArticleStatsDao;
 import com.oyproj.dto.CommentDao;
 import com.oyproj.dto.CommentReactionDao;
 import com.oyproj.dto.CommentReplyDao;
@@ -51,6 +52,7 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
     @NotNull private final CommentReplyDao replyDao;
     @NotNull private final CommentReactionDao reactionDao;
     @NotNull private final UserClient userClient;
+    @NotNull private final ArticleStatsDao statsDao;
 
     /**
      * 统计文章评论数量
@@ -324,6 +326,8 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         comment.setFloor(maxFloor != null ? maxFloor + 1 : 1);
 
         commentDao.save(comment);
+        // 更新文章评论统计
+        statsDao.incComments(comment.getArticleId(), 1);
         return Result.ok();
     }
 
