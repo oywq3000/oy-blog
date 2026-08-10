@@ -9,6 +9,7 @@ import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.mq.constants.MQOperation;
 import com.oyproj.common.mq.domain.ArticleIndexMessage;
+import com.oyproj.common.util.MarkdownSanitizer;
 import com.oyproj.common.utils.UUIDUtils;
 import com.oyproj.dao.UserArticleStatDao;
 import com.oyproj.domain.dto.ArticleSaveDto;
@@ -132,11 +133,11 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         message.setCategory(dto.getCategoryCode());
         message.setTags(dto.getTags());
 
-        // 加载文章内容
+        // 加载文章内容（清洗 Markdown 为纯文本）
         try {
             ArticleContent content = contentDao.getById(article.getId());
             if (content != null) {
-                message.setContentMd(content.getContentMd());
+                message.setContentMd(MarkdownSanitizer.sanitize(content.getContentMd()));
             }
         } catch (Exception e) {
             log.warn("加载文章内容失败, articleId: {}", article.getId(), e);

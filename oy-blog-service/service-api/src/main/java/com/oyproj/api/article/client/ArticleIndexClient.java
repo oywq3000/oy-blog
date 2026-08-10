@@ -14,7 +14,7 @@ import java.util.List;
  * 文章索引数据 Feign 客户端
  * 供 search-service 对账重建索引用
  */
-@FeignClient(value = "article-service", fallbackFactory = ArticleIndexClientFallbackFactory.class)
+@FeignClient(value = "article-service", contextId = "article-index-client", fallbackFactory = ArticleIndexClientFallbackFactory.class)
 public interface ArticleIndexClient {
 
     /**

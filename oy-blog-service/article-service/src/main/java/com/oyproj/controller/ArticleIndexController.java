@@ -4,6 +4,7 @@ import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.common.mq.constants.MQOperation;
 import com.oyproj.common.mq.domain.ArticleIndexMessage;
+import com.oyproj.common.util.MarkdownSanitizer;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.domain.entity.ArticleContent;
 import com.oyproj.domain.entity.ArticleStats;
@@ -75,7 +76,7 @@ public class ArticleIndexController {
 
             ArticleContent content = contentMap.get(article.getId());
             if (content != null) {
-                msg.setContentMd(content.getContentMd());
+                msg.setContentMd(MarkdownSanitizer.sanitize(content.getContentMd()));
             }
 
             ArticleStats stats = statsMap.get(article.getId());

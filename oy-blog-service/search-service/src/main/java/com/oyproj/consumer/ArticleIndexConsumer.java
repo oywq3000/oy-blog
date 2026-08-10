@@ -4,7 +4,6 @@ import com.oyproj.Repository.ArticleSearchRepository;
 import com.oyproj.common.mq.constants.ArticleMQConstant;
 import com.oyproj.common.mq.domain.ArticleIndexMessage;
 import com.oyproj.domain.entity.ArticleDocument;
-import com.oyproj.util.MarkdownSanitizer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -106,8 +105,8 @@ public class ArticleIndexConsumer {
         document.setTags(message.getTags());
         document.setCategory(message.getCategory());
 
-        // 清洗 Markdown 内容为纯文本，供 IK 分词索引
-        document.setContent(MarkdownSanitizer.sanitize(message.getContentMd()));
+        // 内容已在生产者侧清洗为纯文本
+        document.setContent(message.getContentMd());
 
         // 统计数据（带 null 保护，兼容旧版本消息）
         document.setViewCount(message.getViewCount() != null ? message.getViewCount() : 0L);

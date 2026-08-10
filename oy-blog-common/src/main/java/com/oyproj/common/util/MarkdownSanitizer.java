@@ -1,8 +1,9 @@
-package com.oyproj.util;
+package com.oyproj.common.util;
 
 /**
  * Markdown 文本清洗工具
  * 将 Markdown 内容转为纯文本，供 Elasticsearch IK 分词器索引。
+ * 在生产者侧调用，确保 MQ 消息中已为清洗后的纯文本。
  */
 public class MarkdownSanitizer {
 

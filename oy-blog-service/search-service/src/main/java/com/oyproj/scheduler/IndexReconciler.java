@@ -10,7 +10,6 @@ import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.common.mq.domain.ArticleIndexMessage;
 import com.oyproj.domain.entity.ArticleDocument;
-import com.oyproj.util.MarkdownSanitizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -179,7 +178,7 @@ public class IndexReconciler {
         ArticleDocument doc = new ArticleDocument();
         doc.setId(message.getArticleId());
         doc.setTitle(message.getTitle());
-        doc.setContent(MarkdownSanitizer.sanitize(message.getContentMd()));
+        doc.setContent(message.getContentMd());
         doc.setSummary(message.getSummary());
         doc.setAuthor(message.getAuthor());
         doc.setAuthorId(message.getAuthorId());
