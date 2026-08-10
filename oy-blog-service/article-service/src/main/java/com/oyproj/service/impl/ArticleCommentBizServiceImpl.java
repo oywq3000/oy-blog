@@ -105,60 +105,57 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
     }
 
     /**
-     * 按热度排序查询评论（全量查询 → 聚合 → 内存排序 → 手动分页）
-     * 因为 likeCount 不在 comment 表中，需聚合后排序
+     * 按热度排序查询评论（SQL 层排序 + 分页，只返回当前页 20 条）
+     * 排序规则：置顶优先 + (likeCount + replyCount*2) DESC
      */
     private Result<PageVo<CommentWrapperVo>> listCommentsByHot(String articleId) {
-        // 1. 全量查询（不走 PageHelper，直接查全部）
-        List<Comment> allComments = commentDao.listAllByArticle(articleId);
-
-        if (allComments.isEmpty()) {
-            PageVo<CommentWrapperVo> emptyPage = new PageVo<>(1, 20, 0L, 0, new CommentWrapperVo(0, new ArrayList<>()));
+        int[] pageParm = getPageParamFromRequest();
+        int pageNum = pageParm[0];
+        int pageSize = pageParm[1];
+        int offset = (pageNum - 1) * pageSize;
+        // 1. 总数
+        long total = commentDao.countByArticle(articleId);
+        if (total == 0) {
+            PageVo<CommentWrapperVo> emptyPage = new PageVo<>(pageNum, pageSize, 0L, 0,
+                    new CommentWrapperVo(0, new ArrayList<>()));
             return Result.ok(emptyPage);
         }
-
-        // 2. 聚合 reaction 计数 + 用户信息 + 回复数
-        List<CommentVo> voList = assembleCommentVos(allComments);
-
-        // 3. 按热度排序：置顶优先 + 热度分 DESC
-        voList.sort((a, b) -> {
-            if (a.getIsPinned() == 1 && b.getIsPinned() != 1) return -1;
-            if (a.getIsPinned() != 1 && b.getIsPinned() == 1) return 1;
-            long hotA = a.getLikeCount() + a.getReplyCount() * 2;
-            long hotB = b.getLikeCount() + b.getReplyCount() * 2;
-            return Long.compare(hotB, hotA);
-        });
-
-        // 4. 手动分页（默认 pageSize=20）
-        int pageNum = getPageNumFromRequest();
-        int pageSize = 20;
-        int total = voList.size();
+        // 2. SQL 层：热度排序 + 分页，只返回当前页 20 条
+        List<Comment> commentList = commentDao.listByArticleOrderByHot(articleId, offset, pageSize);
+        if (commentList.isEmpty()) {
+            PageVo<CommentWrapperVo> emptyPage = new PageVo<>(pageNum, pageSize, total, 0,
+                    new CommentWrapperVo(0, new ArrayList<>()));
+            return Result.ok(emptyPage);
+        }
+        // 3. 只为当前页 20 条聚合 reaction/用户信息/回复数
+        List<CommentVo> voList = assembleCommentVos(commentList);
         int totalPages = (int) Math.ceil((double) total / pageSize);
-        int fromIndex = Math.min((pageNum - 1) * pageSize, total);
-        int toIndex = Math.min(fromIndex + pageSize, total);
-        List<CommentVo> pageList = voList.subList(fromIndex, toIndex);
-
         long totalReplyCount = replyDao.countByArticleId(articleId);
-        long totalCommentCount = (long) total + totalReplyCount;
-        CommentWrapperVo wrapper = new CommentWrapperVo(totalCommentCount, pageList);
-        PageVo<CommentWrapperVo> resultPage = new PageVo<>(pageNum, pageSize, (long) total, totalPages, wrapper);
+        long totalCommentCount = total + totalReplyCount;
+        CommentWrapperVo wrapper = new CommentWrapperVo(totalCommentCount, voList);
+        PageVo<CommentWrapperVo> resultPage = new PageVo<>(pageNum, pageSize, total, totalPages, wrapper);
         return Result.ok(resultPage);
     }
 
     /**
      * 从请求中读取 pageNum，默认 1
      */
-    private int getPageNumFromRequest() {
+    private int[] getPageParamFromRequest() {
+        int[] param = new int[]{1,1};
         try {
             jakarta.servlet.http.HttpServletRequest request =
                 ((org.springframework.web.context.request.ServletRequestAttributes)
                     org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()).getRequest();
             String pageNumStr = request.getParameter("pageNum");
+            String pageSizeStr = request.getParameter("pageSize");
             if (pageNumStr != null && !pageNumStr.isEmpty()) {
-                return Integer.parseInt(pageNumStr);
+                param[0]=Integer.parseInt(pageNumStr);
+                param[1] = Integer.parseInt(pageSizeStr);
             }
-        } catch (Exception ignored) {}
-        return 1;
+        } catch (Exception ignored) {
+
+        }
+        return param;
     }
 
     /**

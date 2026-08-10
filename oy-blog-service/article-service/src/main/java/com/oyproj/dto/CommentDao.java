@@ -36,6 +36,17 @@ public interface CommentDao extends IService<Comment> {
     List<Comment> listByArticleOrderByNewest(String articleId);
 
     /**
+     * 根据文章ID + 热度排序分页查询评论
+     * 排序规则：置顶优先，然后按 likeCount + replyCount*2 降序
+     *
+     * @param articleId 文章ID
+     * @param offset    偏移量
+     * @param size      页大小
+     * @return 当前页评论列表（已排序）
+     */
+    List<Comment> listByArticleOrderByHot(String articleId, int offset, int size);
+
+    /**
      * 根据文章ID查询全部评论（无排序，供热度排序后内存处理）
      *
      * @param articleId 文章ID

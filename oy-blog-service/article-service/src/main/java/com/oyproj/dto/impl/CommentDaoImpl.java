@@ -63,6 +63,20 @@ public class CommentDaoImpl extends ServiceImpl<CommentMapper, Comment> implemen
     }
 
     /**
+     * 根据文章ID + 热度排序分页查询评论
+     * SQL 层完成排序 + 分页，不再全量拉取到内存
+     *
+     * @param articleId 文章ID
+     * @param offset    偏移量
+     * @param size      页大小
+     * @return 当前页评论列表（已排序）
+     */
+    @Override
+    public List<Comment> listByArticleOrderByHot(String articleId, int offset, int size) {
+        return commentMapper.selectHotPage(articleId, offset, size);
+    }
+
+    /**
      * 根据文章ID查询全部评论（无排序，供热度排序后内存处理）
      *
      * @param articleId 文章ID

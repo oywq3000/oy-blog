@@ -51,7 +51,7 @@ public class ArticleCommentController {
     @Operation(summary = "查询评论列表", description = "查询文章的评论列表（不含回复），支持 newest/hot 排序")
     public Result<PageVo<CommentWrapperVo>> listComments(
             @PathVariable("articleId") String articleId,
-            @RequestParam(defaultValue = "newest") String sortBy) {
+            @RequestParam(defaultValue = "hot") String sortBy) {
         return biz.listComments(articleId, sortBy);
     }
 
