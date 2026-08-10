@@ -22,9 +22,26 @@ public interface CommentDao extends IService<Comment> {
      * 根据文章ID查询评论列表
      *
      * @param articleId 文章ID
-     * @return 评论列表
+     * @return 评论列表（按楼层升序）
      */
     List<Comment> listByArticle(String articleId);
+
+    /**
+     * 根据文章ID查询评论列表（按最新排序）
+     * 置顶优先，然后按评论时间倒序
+     *
+     * @param articleId 文章ID
+     * @return 评论列表
+     */
+    List<Comment> listByArticleOrderByNewest(String articleId);
+
+    /**
+     * 根据文章ID查询全部评论（无排序，供热度排序后内存处理）
+     *
+     * @param articleId 文章ID
+     * @return 全量评论列表
+     */
+    List<Comment> listAllByArticle(String articleId);
 
     /**
      * 置顶评论

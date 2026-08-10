@@ -38,13 +38,40 @@ public class CommentDaoImpl extends ServiceImpl<CommentMapper, Comment> implemen
      * 根据文章ID查询评论列表
      *
      * @param articleId 文章ID
-     * @return 评论列表
+     * @return 评论列表（按楼层升序）
      */
     @Override
     public List<Comment> listByArticle(String articleId) {
         return baseMapper.selectList(new LambdaQueryWrapper<Comment>()
                 .eq(Comment::getArticleId, articleId)
                 .orderByAsc(Comment::getFloor));
+    }
+
+    /**
+     * 根据文章ID查询评论列表（按最新排序）
+     * 置顶优先，然后按评论时间倒序
+     *
+     * @param articleId 文章ID
+     * @return 评论列表
+     */
+    @Override
+    public List<Comment> listByArticleOrderByNewest(String articleId) {
+        return baseMapper.selectList(new LambdaQueryWrapper<Comment>()
+                .eq(Comment::getArticleId, articleId)
+                .orderByDesc(Comment::getIsPinned)
+                .orderByDesc(Comment::getCommentAt));
+    }
+
+    /**
+     * 根据文章ID查询全部评论（无排序，供热度排序后内存处理）
+     *
+     * @param articleId 文章ID
+     * @return 全量评论列表
+     */
+    @Override
+    public List<Comment> listAllByArticle(String articleId) {
+        return baseMapper.selectList(new LambdaQueryWrapper<Comment>()
+                .eq(Comment::getArticleId, articleId));
     }
 
     /**

@@ -58,6 +58,7 @@ auth:
   whitelist:
     - /user-service/auth/login
     - /user-service/auth/register
+    - /user-service/auth/refresh
     - /user-service/profile/info/**
     - /article-service/article/read/**
     - /article-service/article/comment/*/comment-count

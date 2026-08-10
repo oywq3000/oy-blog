@@ -30,6 +30,14 @@ public interface UserAuthBizService {
     Result<Object> register(RegisterDto req);
 
     /**
+     * 刷新令牌
+     *
+     * @param refreshToken 刷新令牌
+     * @return 新的令牌信息
+     */
+    Result<TokenInfo> refresh(String refreshToken);
+
+    /**
      * 用户注销
      *
      * @return 注销结果

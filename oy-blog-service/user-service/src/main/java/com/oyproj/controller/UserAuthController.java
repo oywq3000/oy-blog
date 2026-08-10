@@ -6,9 +6,11 @@ import com.oyproj.common.base.Result;
 import com.oyproj.common.exception.ForbiddenException;
 import com.oyproj.common.exception.ValidationException;
 import com.oyproj.domain.dto.LoginDto;
+import com.oyproj.domain.dto.RefreshTokenDto;
 import com.oyproj.domain.dto.RegisterDto;
 import com.oyproj.domain.dto.TokenInfo;
 import com.oyproj.domain.dto.UpdatePasswordDto;
+import jakarta.validation.Valid;
 import com.oyproj.service.UserAuthBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,6 +36,16 @@ public class UserAuthController {
     @Operation(summary = "用户登录", description = "用户通过用户名和密码登录系统")
     public Result<TokenInfo> doLogin(@RequestBody LoginDto req) {
         return authBiz.login(req);
+    }
+
+    /**
+     * 刷新令牌
+     */
+    @PostMapping("/refresh")
+    @OpLog(action = "refresh", func = "auth.refresh")
+    @Operation(summary = "刷新令牌", description = "使用 refresh token 换取新的 access token 和 refresh token")
+    public Result<TokenInfo> refresh(@RequestBody @Valid RefreshTokenDto req) {
+        return authBiz.refresh(req.getRefreshToken());
     }
 
     /**

@@ -12,11 +12,13 @@ import com.oyproj.common.exception.NotFoundException;
 import com.oyproj.common.exception.ValidationException;
 import com.oyproj.common.service.CommonCache;
 import com.oyproj.common.utils.BeanCopyUtils;
+import com.oyproj.common.utils.JwtUtil;
 import com.oyproj.dao.UserDao;
 import com.oyproj.domain.dto.*;
 import com.oyproj.domain.entity.User;
 import com.oyproj.service.UserAuthBizService;
 import com.oyproj.utils.SecurityUtil;
+import io.jsonwebtoken.Claims;
 
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -66,8 +68,11 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
         SecurityUtil.login(userDTO,null);
         //存储对象到Redis中
         TokenInfo tokenInfo = SecurityUtil.getTokenInfo();
-        //将当前信息存储到Redis中,还有一个含义代表当前用户已经登录，登出时需要把它从redis中删除
-        commonCache.put(CachePrefix.USER_ID.getPrefix()+userDTO.getId(),userDTO,tokenInfo.getExpiresIn());
+        //将当前信息存储到Redis中，还有一个含义代表当前用户已经登录，登出时需要把它从redis中删除
+        commonCache.put(CachePrefix.USER_ID.getPrefix() + userDTO.getId(), userDTO, tokenInfo.getExpiresIn());
+        //存储 refresh token 到 Redis，用于刷新时校验（旋转策略）
+        commonCache.put(CachePrefix.REFRESH_TOKEN.getPrefix() + userDTO.getId(),
+                tokenInfo.getRefreshToken(), tokenInfo.getRefreshTokenExpiresIn());
         return Result.ok(tokenInfo);
     }
 
@@ -91,8 +96,64 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
     }
 
     @Override
+    public Result<TokenInfo> refresh(String refreshToken) {
+        // 1. 解析 refresh token，验证签名和过期
+        Claims claims;
+        try {
+            claims = JwtUtil.parseToken(refreshToken);
+        } catch (Exception e) {
+            return Result.error("刷新令牌无效或已过期");
+        }
+
+        // 2. 校验 token 类型必须为 refresh
+        String tokenType = JwtUtil.getTokenType(claims);
+        if (!JwtUtil.TOKEN_TYPE_REFRESH.equals(tokenType)) {
+            return Result.error("令牌类型错误，需要刷新令牌");
+        }
+
+        String userId = claims.getSubject();
+
+        // 3. 对比 Redis 中存储的 refresh token（防重放，实现旋转策略）
+        String storedToken = commonCache.getString(CachePrefix.REFRESH_TOKEN.getPrefix() + userId);
+        if (storedToken == null) {
+            return Result.error("刷新令牌已失效，请重新登录");
+        }
+        if (!storedToken.equals(refreshToken)) {
+            // 令牌不匹配，可能被重放攻击，清除已失效的 token
+            commonCache.remove(CachePrefix.REFRESH_TOKEN.getPrefix() + userId);
+            commonCache.remove(CachePrefix.USER_ID.getPrefix() + userId);
+            return Result.error("刷新令牌无效，请重新登录");
+        }
+
+        // 4. 生成新 token（旋转：旧 refresh token 立即失效）
+        String newAccessToken = JwtUtil.generateAccessToken(userId);
+        String newRefreshToken = JwtUtil.generateRefreshToken(userId);
+
+        // 5. 更新 Redis
+        // 续期 session
+        commonCache.put(CachePrefix.USER_ID.getPrefix() + userId,
+                commonCache.get(CachePrefix.USER_ID.getPrefix() + userId),
+                JwtUtil.getAccessTokenExpireTime());
+        // 替换 refresh token
+        commonCache.put(CachePrefix.REFRESH_TOKEN.getPrefix() + userId,
+                newRefreshToken, JwtUtil.getRefreshTokenExpireTime());
+
+        // 6. 返回新 TokenInfo
+        TokenInfo tokenInfo = new TokenInfo();
+        tokenInfo.setAccessToken(newAccessToken);
+        tokenInfo.setTokenType("Bearer");
+        tokenInfo.setExpiresIn(JwtUtil.getAccessTokenExpireTime());
+        tokenInfo.setRefreshToken(newRefreshToken);
+        tokenInfo.setRefreshTokenExpiresIn(JwtUtil.getRefreshTokenExpireTime());
+        tokenInfo.setUserId(userId);
+        return Result.ok(tokenInfo);
+    }
+
+    @Override
     public Result<Object> logout() {
-        commonCache.remove(CachePrefix.USER_ID.getPrefix()+getCurrentUserId()); //移除login操作
+        String userId = getCurrentUserId();
+        commonCache.remove(CachePrefix.REFRESH_TOKEN.getPrefix() + userId); // 清除 refresh token
+        commonCache.remove(CachePrefix.USER_ID.getPrefix() + userId); // 移除 login 操作
         SecurityUtil.logout();
         return Result.ok();
     }

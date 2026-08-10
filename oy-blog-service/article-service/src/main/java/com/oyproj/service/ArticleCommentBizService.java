@@ -31,9 +31,10 @@ public interface ArticleCommentBizService {
      * <p>支持请求参数 pageNum / pageSize 控制分页</p>
      *
      * @param articleId 文章ID
+     * @param sortBy 排序方式：newest（最新，默认）/ hot（热度）
      * @return 分页评论列表
      */
-    Result<PageVo<CommentWrapperVo>> listComments(String articleId);
+    Result<PageVo<CommentWrapperVo>> listComments(String articleId, String sortBy);
 
     /**
      * 查询评论回复列表（分页）

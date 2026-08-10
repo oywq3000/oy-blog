@@ -11,13 +11,20 @@ import java.util.Map;
 
 public class JwtUtil {
 
+    /** Token 类型 claim key */
+    public static final String CLAIM_TOKEN_TYPE = "type";
+    /** 访问令牌 */
+    public static final String TOKEN_TYPE_ACCESS = "access";
+    /** 刷新令牌 */
+    public static final String TOKEN_TYPE_REFRESH = "refresh";
+
     // 密钥，实际项目中应从配置文件读取
     private static SecretKey SECRET_KEY =Keys.hmacShaKeyFor("your-very-secure-secret-key-that-is-at-least-32-characters-long".getBytes());
 
-    // 访问令牌过期时间：2小时
+    // 访问令牌过期时间：2小时（毫秒）
     private static long ACCESS_TOKEN_EXPIRE_TIME = 2 * 60 * 60 * 1000;
 
-    // 刷新令牌过期时间：7天
+    // 刷新令牌过期时间：7天（毫秒）
     private static long REFRESH_TOKEN_EXPIRE_TIME = 7 * 24 * 60 * 60 * 1000;
 
     /**
@@ -28,7 +35,8 @@ public class JwtUtil {
     public static String generateAccessToken(String userId) {
         Date expiration = new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRE_TIME);
         Map<String, Object> claims = new HashMap<>();
-        claims.put(Claims.SUBJECT,userId);
+        claims.put(Claims.SUBJECT, userId);
+        claims.put(CLAIM_TOKEN_TYPE, TOKEN_TYPE_ACCESS);
         claims.put("iat", new Date());
         claims.put("exp", expiration);
         return Jwts.builder()
@@ -46,7 +54,8 @@ public class JwtUtil {
     public static String generateRefreshToken(String userId) {
         Date expiration = new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRE_TIME);
         Map<String, Object> claims = new HashMap<>();
-        claims.put(Claims.SUBJECT,userId);
+        claims.put(Claims.SUBJECT, userId);
+        claims.put(CLAIM_TOKEN_TYPE, TOKEN_TYPE_REFRESH);
         claims.put("iat", new Date());
         claims.put("exp", new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRE_TIME));
         return Jwts.builder()
@@ -74,11 +83,24 @@ public class JwtUtil {
      * @return 过期时间（秒）
      */
     public static long getAccessTokenExpireTime() {
-        return ACCESS_TOKEN_EXPIRE_TIME;
+        return ACCESS_TOKEN_EXPIRE_TIME / 1000;
     }
 
-    public static long getRefreshTokenExpireTime(){
-        return REFRESH_TOKEN_EXPIRE_TIME;
+    /**
+     * 获取刷新令牌过期时间
+     * @return 过期时间（秒）
+     */
+    public static long getRefreshTokenExpireTime() {
+        return REFRESH_TOKEN_EXPIRE_TIME / 1000;
+    }
+
+    /**
+     * 从 Claims 中获取 token 类型
+     * @param claims JWT claims
+     * @return access / refresh / null
+     */
+    public static String getTokenType(Claims claims) {
+        return (String) claims.get(CLAIM_TOKEN_TYPE);
     }
 
     //设置

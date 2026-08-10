@@ -80,6 +80,12 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         try {
             token = token.substring(7);
             Claims claims = JwtUtil.parseToken(token);
+            // 拒绝 refresh token 作为 access token 使用
+            String tokenType = JwtUtil.getTokenType(claims);
+            if (!JwtUtil.TOKEN_TYPE_ACCESS.equals(tokenType)) {
+                log.warn("非法使用 refresh token 作为访问令牌");
+                return AuthenticationResult.unauthenticated();
+            }
             String userId = claims.getSubject();
             // 验证User是否在缓存中
             if (commonCache.hasKey(CachePrefix.USER_ID.getPrefix() + userId)) {

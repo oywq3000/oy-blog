@@ -64,15 +64,24 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
     /**
      * 查询评论列表（分页，含前3条回复预览 + 表态数据）
      *
-     * 两次查询方案：
-     * 1. 分页查评论
-     * 2. 批量查回复 + reaction 聚合 + 当前用户表态
+     * @param articleId 文章ID
+     * @param sortBy 排序方式：newest（最新）/ hot（热度）
      */
     @Override
     @Transactional
-    public Result<PageVo<CommentWrapperVo>> listComments(String articleId) {
-        // ===== 第1次查询：分页查评论 =====
-        PageVo<List<Comment>> entityPage = getPageVo(() -> commentDao.listByArticle(articleId), Comment.class);
+    public Result<PageVo<CommentWrapperVo>> listComments(String articleId, String sortBy) {
+        if ("hot".equals(sortBy)) {
+            return listCommentsByHot(articleId);
+        }
+        return listCommentsByNewest(articleId);
+    }
+
+    /**
+     * 按最新排序查询评论（置顶优先 + 时间倒序 + PageHelper 分页）
+     */
+    private Result<PageVo<CommentWrapperVo>> listCommentsByNewest(String articleId) {
+        // ===== 第1次查询：分页查评论（置顶优先 + 时间倒序） =====
+        PageVo<List<Comment>> entityPage = getPageVo(() -> commentDao.listByArticleOrderByNewest(articleId), Comment.class);
         List<Comment> commentList = entityPage.getData();
 
         // 提取分页元数据
@@ -82,45 +91,108 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         Integer totalPages = entityPage.getTotalPages();
 
         if (commentList.isEmpty()) {
-            PageVo<CommentWrapperVo> emptyPage = new PageVo<>(currentPage, pageSize, total, totalPages, new CommentWrapperVo(0,new ArrayList<>()));
+            PageVo<CommentWrapperVo> emptyPage = new PageVo<>(currentPage, pageSize, total, totalPages, new CommentWrapperVo(0, new ArrayList<>()));
             return Result.ok(emptyPage);
         }
 
+        // 聚合 + 组装 VO
+        List<CommentVo> voList = assembleCommentVos(commentList);
+        long totalReplyCount = replyDao.countByArticleId(articleId);
+        long totalCommentCount = total + totalReplyCount;
+        CommentWrapperVo wrapper = new CommentWrapperVo(totalCommentCount, voList);
+        PageVo<CommentWrapperVo> resultPage = new PageVo<>(currentPage, pageSize, total, totalPages, wrapper);
+        return Result.ok(resultPage);
+    }
+
+    /**
+     * 按热度排序查询评论（全量查询 → 聚合 → 内存排序 → 手动分页）
+     * 因为 likeCount 不在 comment 表中，需聚合后排序
+     */
+    private Result<PageVo<CommentWrapperVo>> listCommentsByHot(String articleId) {
+        // 1. 全量查询（不走 PageHelper，直接查全部）
+        List<Comment> allComments = commentDao.listAllByArticle(articleId);
+
+        if (allComments.isEmpty()) {
+            PageVo<CommentWrapperVo> emptyPage = new PageVo<>(1, 20, 0L, 0, new CommentWrapperVo(0, new ArrayList<>()));
+            return Result.ok(emptyPage);
+        }
+
+        // 2. 聚合 reaction 计数 + 用户信息 + 回复数
+        List<CommentVo> voList = assembleCommentVos(allComments);
+
+        // 3. 按热度排序：置顶优先 + 热度分 DESC
+        voList.sort((a, b) -> {
+            if (a.getIsPinned() == 1 && b.getIsPinned() != 1) return -1;
+            if (a.getIsPinned() != 1 && b.getIsPinned() == 1) return 1;
+            long hotA = a.getLikeCount() + a.getReplyCount() * 2;
+            long hotB = b.getLikeCount() + b.getReplyCount() * 2;
+            return Long.compare(hotB, hotA);
+        });
+
+        // 4. 手动分页（默认 pageSize=20）
+        int pageNum = getPageNumFromRequest();
+        int pageSize = 20;
+        int total = voList.size();
+        int totalPages = (int) Math.ceil((double) total / pageSize);
+        int fromIndex = Math.min((pageNum - 1) * pageSize, total);
+        int toIndex = Math.min(fromIndex + pageSize, total);
+        List<CommentVo> pageList = voList.subList(fromIndex, toIndex);
+
+        long totalReplyCount = replyDao.countByArticleId(articleId);
+        long totalCommentCount = (long) total + totalReplyCount;
+        CommentWrapperVo wrapper = new CommentWrapperVo(totalCommentCount, pageList);
+        PageVo<CommentWrapperVo> resultPage = new PageVo<>(pageNum, pageSize, (long) total, totalPages, wrapper);
+        return Result.ok(resultPage);
+    }
+
+    /**
+     * 从请求中读取 pageNum，默认 1
+     */
+    private int getPageNumFromRequest() {
+        try {
+            jakarta.servlet.http.HttpServletRequest request =
+                ((org.springframework.web.context.request.ServletRequestAttributes)
+                    org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()).getRequest();
+            String pageNumStr = request.getParameter("pageNum");
+            if (pageNumStr != null && !pageNumStr.isEmpty()) {
+                return Integer.parseInt(pageNumStr);
+            }
+        } catch (Exception ignored) {}
+        return 1;
+    }
+
+    /**
+     * 组装 CommentVo 列表：批量拉取用户信息 + reaction 聚合 + 回复数
+     */
+    private List<CommentVo> assembleCommentVos(List<Comment> commentList) {
         // 获取当前用户ID（未登录时为 null）
         String userId = null;
         try { userId = getUserId(); } catch (Exception ignored) {}
 
         List<String> commentIds = commentList.stream().map(Comment::getId).collect(Collectors.toList());
 
-
-        // ===== 第3次查询：批量拉取所有相关用户信息 =====
+        // 批量拉取所有相关用户信息
         List<String> allUserIds = commentList.stream()
                 .map(Comment::getUserId)
                 .distinct()
                 .collect(Collectors.toCollection(ArrayList::new));
         Map<String, UserDTO> userMap = fetchUserInfoMap(allUserIds);
 
-        // ===== 第4次查询：批量查 reaction 聚合计数 + 当前用户表态 + 回复总数 =====
-        Map<String, Map<String, Long>> reactionCounts = reactionDao.getReactionCounts(commentIds,null);
-        Map<String, String> userReactions = reactionDao.getUserReactions(commentIds,null, userId);
+        // 批量查 reaction 聚合计数 + 当前用户表态 + 回复总数
+        Map<String, Map<String, Long>> reactionCounts = reactionDao.getReactionCounts(commentIds, null);
+        Map<String, String> userReactions = reactionDao.getUserReactions(commentIds, null, userId);
         Map<String, Long> replyCountMap = replyDao.countByCommentIds(commentIds);
 
-
-
-        // ===== 组装 VO =====
-        List<CommentVo> voList = commentList.stream().map(comment -> {
+        // 组装 VO
+        return commentList.stream().map(comment -> {
             CommentVo vo = copyProperties(comment, CommentVo.class);
 
-            // -- 表态统计 --
             Map<String, Long> counts = reactionCounts.getOrDefault(comment.getId(), Collections.emptyMap());
             vo.setLikeCount(counts.getOrDefault("like", 0L));
             vo.setDislikeCount(counts.getOrDefault("dislike", 0L));
             vo.setUserReaction(userReactions.get(comment.getId()));
-
-            // -- isShow: 当前用户踩过此评论则隐藏 --
             vo.setIsShow(!"dislike".equals(userReactions.get(comment.getId())));
 
-            // -- 用户信息 --
             UserDTO commentUser = userMap.get(comment.getUserId());
             if (commentUser != null) {
                 vo.setUsername(commentUser.getUsername());
@@ -128,17 +200,9 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
             } else {
                 vo.setUsername("User-" + comment.getUserId());
             }
-            // -- 回复数量（真实总数） --
             vo.setReplyCount(replyCountMap.getOrDefault(comment.getId(), 0L));
             return vo;
         }).collect(Collectors.toList());
-
-        // 总评论数 = 一级评论总数 + 文章下所有回复总数
-        long totalReplyCount = replyDao.countByArticleId(articleId);
-        long totalCommentCount = total + totalReplyCount;
-        CommentWrapperVo wrapper = new CommentWrapperVo(totalCommentCount, voList);
-        PageVo<CommentWrapperVo> resultPage = new PageVo<>(currentPage, pageSize, total, totalPages, wrapper);
-        return Result.ok(resultPage);
     }
 
     /**

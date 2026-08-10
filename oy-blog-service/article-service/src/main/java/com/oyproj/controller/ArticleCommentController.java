@@ -44,12 +44,15 @@ public class ArticleCommentController {
      * 查询评论列表
      *
      * @param articleId 文章ID
+     * @param sortBy 排序方式：newest（最新，默认）/ hot（热度）
      * @return 评论列表
      */
     @GetMapping("/{articleId}/comments")
-    @Operation(summary = "查询评论列表", description = "查询文章的评论列表（不含回复）")
-    public Result<PageVo<CommentWrapperVo>> listComments(@PathVariable("articleId") String articleId) {
-        return biz.listComments(articleId);
+    @Operation(summary = "查询评论列表", description = "查询文章的评论列表（不含回复），支持 newest/hot 排序")
+    public Result<PageVo<CommentWrapperVo>> listComments(
+            @PathVariable("articleId") String articleId,
+            @RequestParam(defaultValue = "newest") String sortBy) {
+        return biz.listComments(articleId, sortBy);
     }
 
     /**
