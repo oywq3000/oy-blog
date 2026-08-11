@@ -65,6 +65,7 @@ auth:
     - /article-service/article/comment/*/comments
     - /article-service/article/comment/*/replies
     - /article-service/article/interaction/*/view
+    - /search-service/essearch/**
     - /health
     - /swagger-ui/**
     - /v3/api-docs/**
