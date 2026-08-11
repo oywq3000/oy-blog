@@ -45,6 +45,8 @@
     <validation.version>3.0.2</validation.version>
     <!-- Smart-Doc 版本 -->
     <springdoc.version>2.7.0</springdoc.version>
+    <!-- Flexmark Markdown 渲染 -->
+    <flexmark.version>0.64.8</flexmark.version>
     <!-- Spring Boot AOP 支持 -->
     <spring-boot-aop.version>3.2.4</spring-boot-aop.version>
     <!-- Elasticsearch 版本 -->
@@ -112,6 +114,13 @@
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
         <version>${lombok.version}</version>
+      </dependency>
+
+      <!-- Flexmark Markdown 渲染 -->
+      <dependency>
+        <groupId>com.vladsch.flexmark</groupId>
+        <artifactId>flexmark-all</artifactId>
+        <version>${flexmark.version}</version>
       </dependency>
 
       <!-- jbcrypt -->

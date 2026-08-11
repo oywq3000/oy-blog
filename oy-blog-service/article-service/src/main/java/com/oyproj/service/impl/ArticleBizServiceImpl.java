@@ -9,6 +9,7 @@ import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.mq.constants.MQOperation;
 import com.oyproj.common.mq.domain.ArticleIndexMessage;
+import com.oyproj.common.util.MarkdownRenderer;
 import com.oyproj.common.util.MarkdownSanitizer;
 import com.oyproj.common.utils.UUIDUtils;
 import com.oyproj.dao.UserArticleStatDao;
@@ -79,6 +80,10 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result<Map<String, String>> publish(ArticleSaveDto dto) {
+        // contentHtml 为空时，自动从 contentMd 渲染
+        if (!StringUtils.hasText(dto.getContentHtml())) {
+            dto.setContentHtml(MarkdownRenderer.toHtml(dto.getContentMd()));
+        }
         boolean isNew = !StringUtils.hasText(dto.getId());
         Article article = saveArticleBase(dto, "published");
         String articleId = article.getId();

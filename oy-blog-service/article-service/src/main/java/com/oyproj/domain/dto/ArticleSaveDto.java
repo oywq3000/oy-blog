@@ -38,10 +38,9 @@ public class ArticleSaveDto {
     private String contentMd;
 
     /**
-     * 内容（HTML）
+     * 内容（HTML），为空时自动从 contentMd 渲染
      */
-    @NotBlank(message = "HTML内容不能为空")
-    @Schema(description = "文章内容(HTML)", example = "<h1>Hello World</h1>...")
+    @Schema(description = "文章内容(HTML)，为空时自动从 contentMd 渲染", example = "<h1>Hello World</h1>...")
     private String contentHtml;
 
     /**
