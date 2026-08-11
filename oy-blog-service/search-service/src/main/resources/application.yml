@@ -4,6 +4,8 @@ server:
 spring:
   elasticsearch:
     uris: http://192.168.200.130:9200
+    # 禁止 Spring Data 自动创建/修改索引，mapping 手动管理（见 doc/es-mysql-sync-mechanism.md）
+    auto-create-index: false
   rabbitmq:
     host: 192.168.200.130
     port: 5672

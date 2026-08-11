@@ -97,7 +97,8 @@ public class ArticleIndexConsumer {
         document.setId(message.getArticleId());
         document.setTitle(message.getTitle());
         document.setSummary(message.getSummary());
-        document.setAuthor(message.getAuthor());
+        document.setAuthorName(message.getAuthorName());
+        document.setAuthorAvatar(message.getAuthorAvatar());
         document.setAuthorId(message.getAuthorId());
         document.setCreatedAt(message.getCreatedAt());
         document.setUpdatedAt(message.getUpdatedAt());

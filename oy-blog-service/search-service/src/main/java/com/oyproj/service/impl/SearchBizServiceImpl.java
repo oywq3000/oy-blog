@@ -60,8 +60,11 @@ public class SearchBizServiceImpl implements SearchBizService {
                         break;
                     case AUTHOR:
                         // 作者精确匹配
-                        boolQueryBuilder.must(
-                                TermQuery.of(t -> t.field("author").value(keyword))._toQuery()
+                        boolQueryBuilder.should(
+                                TermQuery.of(t -> t.field("authorName").value(keyword))._toQuery()
+                        );
+                        boolQueryBuilder.should(
+                                TermQuery.of(t -> t.field("authorId").value(keyword))._toQuery()
                         );
                         hasSearchCondition = true;
                         break;
@@ -87,7 +90,7 @@ public class SearchBizServiceImpl implements SearchBizService {
                                 TermQuery.of(t -> t.field("tags").value(keyword))._toQuery()
                         );
                         boolQueryBuilder.should(
-                                TermQuery.of(t -> t.field("author").value(keyword))._toQuery()
+                                TermQuery.of(t -> t.field("authorName").value(keyword))._toQuery()
                         );
                         hasSearchCondition = true;
                         break;

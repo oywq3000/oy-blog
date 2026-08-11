@@ -34,8 +34,13 @@ public class ArticleIndexMessage {
     /**
      * 作者
      */
-    private String author;
-    
+    private String authorName;
+
+    /**
+     * 作者头像
+     */
+    private String authorAvatar;
+
     /**
      * 作者ID
      */

@@ -180,7 +180,8 @@ public class IndexReconciler {
         doc.setTitle(message.getTitle());
         doc.setContent(message.getContentMd());
         doc.setSummary(message.getSummary());
-        doc.setAuthor(message.getAuthor());
+        doc.setAuthorName(message.getAuthorName());
+        doc.setAuthorAvatar(message.getAuthorAvatar());
         doc.setAuthorId(message.getAuthorId());
         doc.setCreatedAt(message.getCreatedAt());
         doc.setUpdatedAt(message.getUpdatedAt());

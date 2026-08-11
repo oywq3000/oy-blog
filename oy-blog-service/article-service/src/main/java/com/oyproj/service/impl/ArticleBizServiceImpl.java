@@ -14,7 +14,6 @@ import com.oyproj.common.utils.UUIDUtils;
 import com.oyproj.dao.UserArticleStatDao;
 import com.oyproj.domain.dto.ArticleSaveDto;
 import com.oyproj.domain.entity.*;
-import com.oyproj.domain.vo.UserArticleStatsVo;
 import com.oyproj.dto.*;
 import com.oyproj.mapper.ArticleCategoryMapper;
 import com.oyproj.mapper.ArticleTagMapper;
@@ -125,8 +124,16 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         message.setTitle(article.getTitle());
         message.setSummary(article.getSummary());
         message.setAuthorId(article.getAuthorId());
-        Result<UserDTO> userDTO = userClient.getUserDTO(article.getAuthorId());
-        message.setAuthor(userDTO.getData().getUsername());
+        try {
+            Result<UserDTO> userDTO = userClient.getUserDTO(article.getAuthorId());
+            if (userDTO != null && userDTO.getData() != null) {
+                message.setAuthorName(userDTO.getData().getUsername());
+                message.setAuthorAvatar(userDTO.getData().getAvatarUrl());
+            }
+        } catch (Exception e) {
+            log.warn("获取作者信息失败, authorId: {}", article.getAuthorId(), e);
+            message.setAuthorName(article.getAuthorId()); // 兜底：用 authorId
+        }
         message.setCreatedAt(article.getCreatedAt());
         message.setUpdatedAt(article.getUpdatedAt());
         message.setStatus(article.getStatus());

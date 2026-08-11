@@ -7,23 +7,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 /**
- * 文章搜索Repository
+ * 文章搜索 Repository
+ * 查询全部通过 SearchBizServiceImpl 使用 ElasticsearchClient 原生 API，此处仅提供 CRUD 基础能力。
  */
 @Repository
 public interface ArticleSearchRepository extends ElasticsearchRepository<ArticleDocument, String> {
-    
-    /**
-     * 根据标题或内容搜索
-     */
-    List<ArticleDocument> findByTitleContainingOrContentContaining(String title, String content);
-    
-    /**
-     * 根据作者搜索
-     */
-    List<ArticleDocument> findByAuthorContaining(String author);
-    
-    /**
-     * 根据标签搜索
-     */
-    List<ArticleDocument> findByTagsContaining(String tag);
 }

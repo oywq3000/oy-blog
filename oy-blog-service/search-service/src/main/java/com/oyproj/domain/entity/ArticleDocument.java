@@ -34,8 +34,11 @@ public class ArticleDocument implements Serializable {
     private String summary;
     
     @Field(type = FieldType.Keyword)
-    private String author;
-    
+    private String authorName;
+
+    @Field(type = FieldType.Keyword)
+    private String authorAvatar;
+
     @Field(type = FieldType.Keyword)
     private String authorId;
     
