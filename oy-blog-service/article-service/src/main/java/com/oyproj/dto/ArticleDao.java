@@ -55,5 +55,23 @@ public interface ArticleDao extends IService<Article> {
      * @return 文章数量
      */
     Long countByAuthorId(String authorId);
+
+    /**
+     * 按作者和状态分页查询文章
+     *
+     * @param authorId 作者ID
+     * @param status 文章状态 (published/draft)
+     * @return 文章列表
+     */
+    List<Article> listByAuthorAndStatus(String authorId, String status);
+
+    /**
+     * 按作者和状态统计文章数量
+     *
+     * @param authorId 作者ID
+     * @param status 文章状态 (published/draft)
+     * @return 文章数量
+     */
+    Long countByAuthorAndStatus(String authorId, String status);
 }
 

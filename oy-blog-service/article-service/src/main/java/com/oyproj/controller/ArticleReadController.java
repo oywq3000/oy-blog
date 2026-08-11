@@ -1,18 +1,21 @@
 package com.oyproj.controller;
 import com.oyproj.common.base.OpLog;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.vo.ArticleChapterVo;
 import com.oyproj.domain.vo.ArticleContentVo;
 import com.oyproj.domain.vo.ArticleInfoVo;
 import com.oyproj.domain.vo.TagStatVo;
 import com.oyproj.service.ArticleReadBizService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -111,6 +114,20 @@ public class ArticleReadController {
     @Operation(summary = "查询热门标签", description = "查询热门标签列表")
     public Result<List<TagStatVo>> listPopularTags() {
         return biz.listPopularTags();
+    }
+
+    /**
+     * 查询当前用户的文章列表（按状态分页）
+     *
+     * @param status 文章状态：published（已发布）或 draft（草稿），默认 published
+     * @return 分页的文章列表（含 total / currentPage / totalPages）
+     */
+    @GetMapping("/me")
+    @Operation(summary = "查询当前用户的文章列表", description = "按状态分页查询当前登录用户的文章，支持 published 和 draft")
+    public Result<PageVo<List<ArticleInfoVo>>> listMine(
+            @Parameter(description = "文章状态：published 或 draft", example = "published")
+            @RequestParam(defaultValue = "published") String status) {
+        return biz.listMine(status);
     }
 }
 

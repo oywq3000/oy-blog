@@ -2,6 +2,7 @@ package com.oyproj.service;
 
 
 import com.oyproj.common.base.Result;
+import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.vo.ArticleChapterVo;
 import com.oyproj.domain.vo.ArticleContentVo;
 import com.oyproj.domain.vo.ArticleInfoVo;
@@ -66,5 +67,13 @@ public interface ArticleReadBizService {
      * @return 文章信息
      */
     Result<ArticleInfoVo> getById(String articleId);
+
+    /**
+     * 查询当前用户的文章列表（按状态分页）
+     *
+     * @param status 文章状态 (published/draft)
+     * @return 分页的文章列表
+     */
+    Result<PageVo<List<ArticleInfoVo>>> listMine(String status);
 }
 

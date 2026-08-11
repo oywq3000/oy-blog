@@ -4,6 +4,7 @@ import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.dto.UserDTO;
+import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.domain.entity.ArticleStats;
 import com.oyproj.domain.entity.Tag;
@@ -202,6 +203,23 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         ArticleInfoVo vo = copyProperties(articleDao.getById(articleId), ArticleInfoVo.class);
         enrichWithAuthorInfo(Collections.singletonList(vo));
         return Result.ok(vo);
+    }
+
+    /**
+     * 查询当前用户的文章列表（按状态分页，含分页元数据）
+     *
+     * @param status 文章状态 (published/draft)
+     * @return 分页的文章列表
+     */
+    @Override
+    public Result<PageVo<List<ArticleInfoVo>>> listMine(String status) {
+        String userId = getUserId();
+        PageVo<List<ArticleInfoVo>> pageVo = getPageVo(
+                () -> articleDao.listByAuthorAndStatus(userId, status),
+                ArticleInfoVo.class);
+        enrichWithStats(pageVo.getData());
+        enrichWithAuthorInfo(pageVo.getData());
+        return Result.ok(pageVo);
     }
 }
 

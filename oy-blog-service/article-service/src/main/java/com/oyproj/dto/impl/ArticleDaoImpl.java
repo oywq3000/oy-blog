@@ -85,5 +85,28 @@ public class ArticleDaoImpl extends ServiceImpl<ArticleMapper, Article> implemen
                 .eq(Article::getStatus, "published")
                 .isNull(Article::getDeletedAt));
     }
+
+    /**
+     * 按作者和状态分页查询文章
+     */
+    @Override
+    public List<Article> listByAuthorAndStatus(String authorId, String status) {
+        return baseMapper.selectList(new LambdaQueryWrapper<Article>()
+                .eq(Article::getAuthorId, authorId)
+                .eq(Article::getStatus, status)
+                .isNull(Article::getDeletedAt)
+                .orderByDesc(Article::getUpdatedAt));
+    }
+
+    /**
+     * 按作者和状态统计文章数量
+     */
+    @Override
+    public Long countByAuthorAndStatus(String authorId, String status) {
+        return baseMapper.selectCount(new LambdaQueryWrapper<Article>()
+                .eq(Article::getAuthorId, authorId)
+                .eq(Article::getStatus, status)
+                .isNull(Article::getDeletedAt));
+    }
 }
 
