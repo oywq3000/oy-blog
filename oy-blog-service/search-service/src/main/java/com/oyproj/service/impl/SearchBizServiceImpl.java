@@ -5,12 +5,14 @@ import co.elastic.clients.elasticsearch._types.SortOptions;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.oyproj.Repository.ArticleSearchRepository;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.common.SearchFitter;
 import com.oyproj.domain.dto.SearchQueryDTO;
 import com.oyproj.domain.entity.ArticleDocument;
+import com.oyproj.domain.vo.ArticleSearchVO;
 import com.oyproj.service.SearchBizService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +23,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -37,7 +41,7 @@ public class SearchBizServiceImpl implements SearchBizService {
 
     @NotNull private final ElasticsearchClient client;
 
-    public Result<PageVo<List<ArticleDocument>>> searchArticles(SearchQueryDTO queryDTO) {
+    public Result<PageVo<List<ArticleSearchVO>>> searchArticles(SearchQueryDTO queryDTO) {
         // 构建复杂查询
         try{
             // 检查是否有任何搜索条件
@@ -129,6 +133,9 @@ public class SearchBizServiceImpl implements SearchBizService {
             int pageNum = queryDTO.getPage() != null ? queryDTO.getPage(): 0;
             int pageSize = queryDTO.getSize() != null ? queryDTO.getSize() : 10;
             int from = pageNum * pageSize;
+            // 是否有关键词搜索条件（只有关键词搜索才需要高亮）
+            boolean hasKeywordQuery = hasKeyword && (filter == SearchFitter.ALL || filter == SearchFitter.ARTICLE);
+
             // 执行搜索
             SortOptions sortOptions = buildSortOptions(queryDTO);
             SearchResponse<ArticleDocument> response = client.search(s -> {
@@ -139,23 +146,106 @@ public class SearchBizServiceImpl implements SearchBizService {
                 if (sortOptions != null) {
                     s.sort(sortOptions);
                 }
+                // 高亮配置：仅有关键词搜索时启用
+                if (hasKeywordQuery) {
+                    s.highlight(h -> h
+                            // title 高亮
+                            .fields("title", hf -> hf
+                                    .preTags("<em class=\"highlight\">")
+                                    .postTags("</em>")
+                                    .numberOfFragments(0)
+                            )
+                            // content 高亮：返回 200 字上下文片段
+                            .fields("content", hf -> hf
+                                    .preTags("<em class=\"highlight\">")
+                                    .postTags("</em>")
+                                    .fragmentSize(200)
+                                    .numberOfFragments(1)
+                            )
+                            // summary 高亮：返回 200 字上下文片段
+                            .fields("summary", hf -> hf
+                                    .preTags("<em class=\"highlight\">")
+                                    .postTags("</em>")
+                                    .fragmentSize(200)
+                                    .numberOfFragments(1)
+                            )
+                    );
+                }
                 return s;
             }, ArticleDocument.class);
-            List<ArticleDocument> collect = response.hits().hits().stream()
-                    .map(hit -> hit.source())
-                    .collect(Collectors.toList());
+
+            // 提取高亮并映射为 ArticleSearchVO
+            List<ArticleSearchVO> collect = mapToSearchResults(response);
             // 获取总记录数 - 从response.hits().total()获取
             Long total = response.hits().total() != null ? response.hits().total().value() : 0L;
             Integer totalPages = (int) Math.ceil((double) total / pageSize);
             // 构建分页结果
-            PageVo<List<ArticleDocument>> pageVo = new PageVo<>(pageNum, pageSize, total, totalPages, collect);
+            PageVo<List<ArticleSearchVO>> pageVo = new PageVo<>(pageNum, pageSize, total, totalPages, collect);
             return Result.ok(pageVo);
         }catch (Exception e) {
             log.error("搜索文章失败: {}", e.getMessage(), e);
-            PageVo<List<ArticleDocument>> pageVo = new PageVo<>(0,0 , 0L, 0, null);
+            PageVo<List<ArticleSearchVO>> pageVo = new PageVo<>(0,0 , 0L, 0, null);
             return Result.ok(pageVo);
 
         }
+    }
+
+    /**
+     * 将 ES 搜索结果映射为 ArticleSearchVO 列表，提取高亮片段。
+     * <p>
+     * 高亮优先级：content → summary → null
+     */
+    private List<ArticleSearchVO> mapToSearchResults(SearchResponse<ArticleDocument> response) {
+        List<ArticleSearchVO> results = new ArrayList<>();
+        for (Hit<ArticleDocument> hit : response.hits().hits()) {
+            ArticleSearchVO vo = new ArticleSearchVO();
+            ArticleDocument source = hit.source();
+            if (source != null) {
+                // 复制所有字段
+                copyDocumentFields(source, vo);
+            }
+
+            // 提取高亮片段
+            Map<String, List<String>> highlights = hit.highlight();
+            if (highlights != null && !highlights.isEmpty()) {
+                // highlightTitle
+                List<String> titleFrags = highlights.get("title");
+                if (titleFrags != null && !titleFrags.isEmpty()) {
+                    vo.setHighlightTitle(titleFrags.get(0));
+                }
+                // highlightSnippet: 优先 content，其次 summary
+                List<String> contentFrags = highlights.get("content");
+                List<String> summaryFrags = highlights.get("summary");
+                if (contentFrags != null && !contentFrags.isEmpty()) {
+                    vo.setHighlightSnippet(contentFrags.get(0));
+                } else if (summaryFrags != null && !summaryFrags.isEmpty()) {
+                    vo.setHighlightSnippet(summaryFrags.get(0));
+                }
+            }
+            results.add(vo);
+        }
+        return results;
+    }
+
+    /**
+     * 将 ArticleDocument 字段复制到 ArticleSearchVO。
+     */
+    private void copyDocumentFields(ArticleDocument src, ArticleSearchVO dst) {
+        dst.setId(src.getId());
+        dst.setTitle(src.getTitle());
+        dst.setContent(src.getContent());
+        dst.setSummary(src.getSummary());
+        dst.setAuthorName(src.getAuthorName());
+        dst.setAuthorAvatar(src.getAuthorAvatar());
+        dst.setAuthorId(src.getAuthorId());
+        dst.setCreatedAt(src.getCreatedAt());
+        dst.setUpdatedAt(src.getUpdatedAt());
+        dst.setStatus(src.getStatus());
+        dst.setViewCount(src.getViewCount());
+        dst.setLikeCount(src.getLikeCount());
+        dst.setCommentCount(src.getCommentCount());
+        dst.setTags(src.getTags());
+        dst.setCategory(src.getCategory());
     }
 
     /**

@@ -1,0 +1,123 @@
+server:
+  port: 8095
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.200.130:3306/oyblog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8&allowMultiQueries=true
+    username: root
+    password: root
+  data:
+    redis:
+      host: 192.168.200.130
+      timeout: 10000
+      client-type: lettuce
+      lettuce:
+        pool:
+          max-active: 8 # 最大连接数
+          max-wait: -1 # 最大阻塞等待时间（负数表示无限制）
+          max-idle: 8 # 最大空闲连接数
+          min-idle: 0 # 最小空闲连接数
+  mvc:
+    async:
+      # Tomcat 异步请求默认 30s 超时会掐断 SSE 长流，必须调大；SseEmitter(0L) 双保险
+      request-timeout: 600000
+# ============ Logging Configuration ============
+logging:
+  level:
+    com.oyproj: DEBUG
+    org.springframework: WARN
+  file:
+    path: ./logs
+# ============ Agent Configuration ============
+agent:
+  python:
+    # Python Agent 服务地址（内网直连，无鉴权；协议见 oy-blog/scripts/agent_stub.py）
+    base-url: http://localhost:8001
+  # 推荐问题（前端 GET /suggestions；后续可改为优先询问 Python，失败回落本配置）
+  suggestions:
+    - icon: idea
+      text: 帮我写一篇关于 Java 集合框架的博客
+    - icon: book
+      text: 解释一下什么是 BFF 架构模式
+    - icon: code
+      text: 给一段 MyBatis-Plus 分页查询的示例代码
+    - icon: art
+      text: 推荐一些前端学习路线
+    - icon: search
+      text: 博客里有没有关于微服务的文章?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

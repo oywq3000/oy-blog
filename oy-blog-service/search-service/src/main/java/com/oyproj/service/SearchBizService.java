@@ -5,6 +5,7 @@ import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.dto.SearchQueryDTO;
 import com.oyproj.domain.entity.ArticleDocument;
+import com.oyproj.domain.vo.ArticleSearchVO;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,7 +17,7 @@ import java.util.Map;
 public interface SearchBizService {
 
 
-    Result<PageVo<List<ArticleDocument>>> searchArticles(SearchQueryDTO queryDTO);
+    Result<PageVo<List<ArticleSearchVO>>> searchArticles(SearchQueryDTO queryDTO);
     void indexArticle(ArticleDocument article);
     void deleteArticleIndex(Long articleId);
     void bulkIndexArticles(List<ArticleDocument> articles);

@@ -47,7 +47,9 @@ public final class LoggingUtils {
             "/swagger-resources",
             "/webjars",
             "/favicon.ico",
-            "/health"
+            "/health",
+            // SSE 流式接口：ContentCachingResponseWrapper 会缓冲整个流，必须绕过
+            "/chat/stream"
     );
 
     // ==================== 脱敏 ====================

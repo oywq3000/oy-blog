@@ -33,6 +33,16 @@ spring:
             - Path=/search-service/**
           filters:
             - StripPrefix=1
+        - id: agent-service
+          uri: lb://agent-service
+          predicates:
+            - Path=/agent-service/**
+          filters:
+            - StripPrefix=1
+          metadata:
+            connect-timeout: 5000
+            # SSE 长流（深度思考可能 30 秒以上无首包），SCG 默认 response-timeout 30s 会掐断，按路由调大
+            response-timeout: 600000
   data:
     redis:
       host: 192.168.200.130
@@ -66,6 +76,9 @@ auth:
     - /article-service/article/comment/*/replies
     - /article-service/article/interaction/*/view
     - /search-service/essearch/**
+    # AI 助手：游客可聊（前端 SSE 用 fetch 手拼 token，游客为空），由 AuthenticationFilter 注入 x-user-id（真实 userId 或 guestId）
+    # 安全底线：agent-service 内部所有写接口必须按 x-user-id 做 owner 校验
+    - /agent/**
     - /health
     - /swagger-ui/**
     - /v3/api-docs/**
