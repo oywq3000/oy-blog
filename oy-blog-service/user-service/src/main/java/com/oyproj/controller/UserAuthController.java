@@ -8,6 +8,7 @@ import com.oyproj.common.exception.ValidationException;
 import com.oyproj.domain.dto.LoginDto;
 import com.oyproj.domain.dto.RefreshTokenDto;
 import com.oyproj.domain.dto.RegisterDto;
+import com.oyproj.domain.dto.ResetPasswordDto;
 import com.oyproj.domain.dto.TokenInfo;
 import com.oyproj.domain.dto.UpdatePasswordDto;
 import jakarta.validation.Valid;
@@ -82,6 +83,19 @@ public class UserAuthController {
     @Operation(summary = "更新用户密码", description = "用户通过旧密码更新为新密码")
     public Result<Object> updatePassword(@RequestBody UpdatePasswordDto req) {
         return authBiz.updatePassword(req);
+    }
+
+    /**
+     * 忘记密码：通过邮箱验证码重置密码（未登录可用）
+     *
+     * @param req 重置密码请求参数
+     * @return 重置结果
+     */
+    @PostMapping("/password/reset")
+    @OpLog(action = "reset_password", func = "user.auth.resetPassword")
+    @Operation(summary = "重置密码", description = "未登录用户通过邮箱验证码重置密码")
+    public Result<Object> resetPassword(@RequestBody @Valid ResetPasswordDto req) {
+        return authBiz.resetPassword(req);
     }
 
 

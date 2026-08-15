@@ -204,6 +204,37 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
     }
 
     @Override
+    public Result<Object> resetPassword(ResetPasswordDto req) {
+        // 1. 邮箱必须已注册
+        User user = userDao.getByEmail(req.getEmail());
+        if (user == null) {
+            throw new NotFoundException(I18n("user.notfound"));
+        }
+
+        // 2. 两次密码一致（先于验证码比对，避免误消耗验证码）
+        if (!req.getNewPassword().equals(req.getConfirmPassword())) {
+            throw new ValidationException(I18n("password.mismatch"));
+        }
+
+        // 3. 校验邮箱验证码（5 分钟有效，比对成功后删除防重用）
+        String codeKey = CachePrefix.EMAIL_RESET_CODE.getPrefix() + req.getEmail();
+        String cachedCode = commonCache.getString(codeKey);
+        if (cachedCode == null || !cachedCode.equals(req.getEmailCode())) {
+            throw new ValidationException(I18n("email.code.invalid"));
+        }
+        commonCache.remove(codeKey);
+
+        // 4. 加密新密码并落库
+        user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        userDao.updateById(user);
+
+        // 5. 清除该用户全部旧会话（与 logout 一致），重置后旧 token 全部失效
+        commonCache.remove(CachePrefix.REFRESH_TOKEN.getPrefix() + user.getId());
+        commonCache.remove(CachePrefix.USER_ID.getPrefix() + user.getId());
+        return Result.ok(I18n("password.reset.success"));
+    }
+
+    @Override
     public Result<String> test() {
         return Result.ok(getCurrentUserId());
     }

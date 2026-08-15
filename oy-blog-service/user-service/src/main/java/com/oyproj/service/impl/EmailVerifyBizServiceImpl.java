@@ -48,11 +48,19 @@ public class EmailVerifyBizServiceImpl extends UserBizBase implements EmailVerif
     @Override
     public Result<Object> sendCode(EmailCodeSendDto dto) {
         String email = dto.getEmail();
+        boolean isReset = "reset".equals(dto.getPurpose());
 
-        // 1. 邮箱必须未被注册
-        //if (userDao.getByEmail(email) != null) {
-        //    throw new BaseException(ResultCode.EMAIL_DUPLICATE);
-       // }
+        // 1. 按用途校验邮箱注册状态：注册要求未注册，重置要求已注册
+        User existing = userDao.getByEmail(email);
+        if (isReset) {
+            if (existing == null) {
+                throw new NotFoundException(I18n("user.notfound"));
+            }
+        } else {
+            if (existing != null) {
+                throw new BaseException(ResultCode.EMAIL_DUPLICATE);
+            }
+        }
 
         // 2. 防刷：60 秒内最多 1 次 + 每日上限
         String sendKey = CachePrefix.EMAIL_VERIFY_CODE.getPrefix() + "SEND_" + email;
@@ -64,12 +72,18 @@ public class EmailVerifyBizServiceImpl extends UserBizBase implements EmailVerif
             throw new ValidationException(I18n("email.code.send.limit"));
         }
 
-        // 3. 生成验证码并缓存 5 分钟
+        // 3. 生成验证码并缓存 5 分钟（注册 / 重置密码分别使用独立前缀，互不串用）
         String code = VerifyCodeUtils.genCode();
-        cache.put(CachePrefix.EMAIL_VERIFY_CODE.getPrefix() + email, code, CODE_TTL_SECONDS);
+        String codePrefix = isReset ? CachePrefix.EMAIL_RESET_CODE.getPrefix()
+                : CachePrefix.EMAIL_VERIFY_CODE.getPrefix();
+        cache.put(codePrefix + email, code, CODE_TTL_SECONDS);
 
-        // 4. 发送邮件
-        emailSendService.sendVerifyCode(email, code);
+        // 4. 发送邮件（重置密码使用独立主题）
+        if (isReset) {
+            emailSendService.sendResetCode(email, code);
+        } else {
+            emailSendService.sendVerifyCode(email, code);
+        }
         return Result.ok(I18n("email.code.sent"));
     }
 

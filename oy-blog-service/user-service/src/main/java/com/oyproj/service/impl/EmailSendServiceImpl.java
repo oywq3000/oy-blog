@@ -37,6 +37,12 @@ public class EmailSendServiceImpl implements EmailSendService {
     }
 
     @Override
+    public void sendResetCode(String to, String code) {
+        sendTemplateMail(to, "【OY Blog】重置密码验证码", "mail/verify-code",
+                Map.of("code", code, "expireMinutes", 5));
+    }
+
+    @Override
     public void sendVerifyLink(String to, String verifyUrl, String username) {
         sendTemplateMail(to, "【OY Blog】邮箱验证", "mail/verify-email",
                 Map.of("verifyUrl", verifyUrl, "username", username, "expireHours", 24));

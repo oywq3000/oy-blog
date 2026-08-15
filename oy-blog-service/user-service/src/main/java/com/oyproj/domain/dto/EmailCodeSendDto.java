@@ -18,4 +18,10 @@ public class EmailCodeSendDto {
     @NotBlank(message = "{register.email.notBlank}")
     @Schema(description = "邮箱", example = "user@example.com")
     private String email;
+
+    /**
+     * 验证码用途：null=注册验证码；"reset"=重置密码验证码
+     */
+    @Schema(description = "用途：null=注册，reset=重置密码", example = "reset")
+    private String purpose;
 }

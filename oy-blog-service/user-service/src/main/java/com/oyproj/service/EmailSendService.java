@@ -14,6 +14,14 @@ public interface EmailSendService {
     void sendVerifyCode(String to, String code);
 
     /**
+     * 发送重置密码验证码邮件
+     *
+     * @param to   收件邮箱
+     * @param code 6 位数字验证码
+     */
+    void sendResetCode(String to, String code);
+
+    /**
      * 发送邮箱验证链接邮件
      *
      * @param to        收件邮箱

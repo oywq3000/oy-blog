@@ -9,7 +9,8 @@ public enum CachePrefix {
     GUEST_ID("GUEST_ID"),
     USER_ID("USER_ID"),
     EMAIL_VERIFY_CODE("EMAIL_VERIFY_CODE"),
-    EMAIL_VERIFY_TOKEN("EMAIL_VERIFY_TOKEN");
+    EMAIL_VERIFY_TOKEN("EMAIL_VERIFY_TOKEN"),
+    EMAIL_RESET_CODE("EMAIL_RESET_CODE");
 
     private final String value;
 

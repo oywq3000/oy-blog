@@ -3,6 +3,7 @@ package com.oyproj.service;
 import com.oyproj.common.base.Result;
 import com.oyproj.domain.dto.LoginDto;
 import com.oyproj.domain.dto.RegisterDto;
+import com.oyproj.domain.dto.ResetPasswordDto;
 import com.oyproj.domain.dto.TokenInfo;
 import com.oyproj.domain.dto.UpdatePasswordDto;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +52,15 @@ public interface UserAuthBizService {
      * @return 更新结果
      */
     Result<Object> updatePassword(UpdatePasswordDto req);
+
+    /**
+     * 忘记密码：未登录用户通过邮箱验证码重置密码
+     *
+     * @param req 重置密码请求参数
+     * @return 重置结果
+     */
+    @Transactional
+    Result<Object> resetPassword(ResetPasswordDto req);
 
     Result<String> test();
 
