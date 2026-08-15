@@ -130,9 +130,22 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
         String newRefreshToken = JwtUtil.generateRefreshToken(userId);
 
         // 5. 更新 Redis
-        // 续期 session
+        // 续期 session；若会话已随 access token 一起过期，则从 DB 重建，
+        // 否则网关对刷新后的新 token 永远认证失败（hasKey 检查），前端会死循环
+        Object session = commonCache.get(CachePrefix.USER_ID.getPrefix() + userId);
+        if (session == null) {
+            User user = userDao.getById(userId);
+            if (user == null) {
+                // 用户已不存在，无法恢复会话 —— 拒绝刷新，让前端走"重新登录"
+                return Result.error("用户不存在或已注销，请重新登录");
+            }
+            UserDTO userDTO = new UserDTO();
+            BeanCopyUtils.copyProperties(user, userDTO);
+            userDTO.setBlogRole(BlogRole.READER);
+            session = userDTO;
+        }
         commonCache.put(CachePrefix.USER_ID.getPrefix() + userId,
-                commonCache.get(CachePrefix.USER_ID.getPrefix() + userId),
+                session,
                 JwtUtil.getAccessTokenExpireTime());
         // 替换 refresh token
         commonCache.put(CachePrefix.REFRESH_TOKEN.getPrefix() + userId,
