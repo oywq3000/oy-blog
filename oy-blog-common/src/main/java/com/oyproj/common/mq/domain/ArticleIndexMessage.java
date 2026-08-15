@@ -20,7 +20,12 @@ public class ArticleIndexMessage {
      * 文章ID
      */
     private String articleId;
-    
+
+    /**
+     * 文章Slug（URL 友好标识）
+     */
+    private String slug;
+
     /**
      * 文章标题
      */

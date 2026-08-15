@@ -133,6 +133,7 @@ public class ArticleIndexController {
             ArticleIndexMessage msg = new ArticleIndexMessage();
             msg.setOperation(MQOperation.CREATE);
             msg.setArticleId(article.getId());
+            msg.setSlug(article.getSlug());
             msg.setTitle(article.getTitle());
             msg.setSummary(article.getSummary());
             msg.setAuthorId(article.getAuthorId());

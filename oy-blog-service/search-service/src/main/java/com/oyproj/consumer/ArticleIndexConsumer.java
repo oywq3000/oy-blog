@@ -95,6 +95,7 @@ public class ArticleIndexConsumer {
     private ArticleDocument convertToDocument(ArticleIndexMessage message) {
         ArticleDocument document = new ArticleDocument();
         document.setId(message.getArticleId());
+        document.setSlug(message.getSlug());
         document.setTitle(message.getTitle());
         document.setSummary(message.getSummary());
         document.setAuthorName(message.getAuthorName());

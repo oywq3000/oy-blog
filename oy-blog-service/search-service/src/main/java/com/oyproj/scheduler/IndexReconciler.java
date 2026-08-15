@@ -177,6 +177,7 @@ public class IndexReconciler {
     private ArticleDocument convertToDocument(ArticleIndexMessage message) {
         ArticleDocument doc = new ArticleDocument();
         doc.setId(message.getArticleId());
+        doc.setSlug(message.getSlug());
         doc.setTitle(message.getTitle());
         doc.setContent(message.getContentMd());
         doc.setSummary(message.getSummary());

@@ -126,6 +126,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         ArticleIndexMessage message = new ArticleIndexMessage();
         message.setOperation(operation);
         message.setArticleId(article.getId());
+        message.setSlug(article.getSlug());
         message.setTitle(article.getTitle());
         message.setSummary(article.getSummary());
         message.setAuthorId(article.getAuthorId());

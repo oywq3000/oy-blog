@@ -232,6 +232,7 @@ public class SearchBizServiceImpl implements SearchBizService {
      */
     private void copyDocumentFields(ArticleDocument src, ArticleSearchVO dst) {
         dst.setId(src.getId());
+        dst.setSlug(src.getSlug());
         dst.setTitle(src.getTitle());
         dst.setContent(src.getContent());
         dst.setSummary(src.getSummary());

@@ -23,7 +23,10 @@ public class ArticleDocument implements Serializable {
     
     @Id
     private String id;
-    
+
+    @Field(type = FieldType.Keyword)
+    private String slug;
+
     @Field(type = FieldType.Text, analyzer = "ik_max_word", searchAnalyzer = "ik_smart")
     private String title;
     
