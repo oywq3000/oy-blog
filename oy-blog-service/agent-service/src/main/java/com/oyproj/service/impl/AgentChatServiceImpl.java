@@ -45,7 +45,6 @@ public class AgentChatServiceImpl implements AgentChatService {
         String conversationId = req.getConversationId();         //获取会话id
         String message = req.getMessage() == null ? "" : req.getMessage().trim();
         SseEmitter emitter = new SseEmitter(0L);  //创建SSE发射器：参数是超时毫秒数，0=不设超时限制
-
         // 参数校验
         if (conversationId == null || conversationId.isBlank() || message.isEmpty()) {
             sendEvent(emitter, "error", Map.of("code", 400, "message", "参数不完整"));//推一个error事件

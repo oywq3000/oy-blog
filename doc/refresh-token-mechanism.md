@@ -158,7 +158,7 @@ async function refreshAccessToken() {
 
 | 点 | 说明 |
 |---|---|
-| 刷新接口不带 Authorization | `/auth/refresh` 在白名单中，不需要鉴权。refresh token 放在请求体里 |
+| 刷新接口可携带过期/无效的 Authorization | 白名单路径做"可选认证"：token 有效则注入 X-User-Id，无效或缺失则按游客放行，不会拒绝刷新请求。refresh token 放在请求体里，Authorization 头不影响刷新结果 |
 | 刷新后更新两个 token | 旋转策略意味着 refresh token 也变了，前端**必须**同时更新两个 token |
 | 防止并发刷新 | 多个请求同时 401 时，应该排队或缓存刷新中的 Promise，避免重复调用 |
 | 401 不一定是过期 | 也可能是 token 被篡改、用户被禁用。刷新一次失败后就该跳登录 |

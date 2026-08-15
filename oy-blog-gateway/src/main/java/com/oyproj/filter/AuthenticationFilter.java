@@ -41,7 +41,19 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         String path = request.getURI().getPath();
         log.info("转发:{}",path);
         String token = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        //优先认证用户
+        //白名单路径：可选认证（类似 permitAll）—— 无论 token 是否有效都可访问
+        if(isWhitelisted(path)){
+            AuthenticationResult authResult = authenticateUser(token);
+            if(authResult.isAuthenticated()){
+                //token 有效 → 仍按认证用户处理，注入真实用户ID
+                log.debug("认证用户访问白名单路径: {}, 用户ID: {}", path, authResult.getUserId());
+                return handleAuthenticatedUser(exchange, chain, authResult);
+            }
+            //无 token 或 token 无效/过期 → 按游客放行，绝不拒绝
+            log.debug("游客访问白名单路径: {}", path);
+            return handleGuestUser(exchange, chain);
+        }
+        //非白名单路径：严格认证，行为保持不变
         AuthenticationResult authResult = authenticateUser(token);
         if(authResult.isAuthenticated()){
             //用户认证成功
@@ -51,11 +63,6 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             //存在token，且认证失败 → 直接拒绝
             log.warn("Token认证失败，拒绝访问: {}", path);
             return Mono.error(new UnAuthorizedException("Token无效或已过期，请重新登录"));
-        }
-        //游客访问白名单路径
-        if(isWhitelisted(path)){
-            log.debug("游客访问白名单路径: {}", path);
-            return handleGuestUser(exchange, chain);
         }
         //非白名单路径需要认证
         log.warn("未认证访问受保护路径: {}", path);
