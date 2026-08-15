@@ -5,10 +5,12 @@ spring:
   application:
     name: message-service
   mail:
-    host: smtp.example.com
-    port: 587
-    username: noreply@example.com
-    password: your-email-password
+    # 真实 SMTP 通过环境变量注入，避免授权码提交进仓库
+    # QQ/163 邮箱：MAIL_PASSWORD 填授权码（不是登录密码）
+    host: ${MAIL_HOST:smtp.qq.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:

@@ -40,3 +40,7 @@ build/
 
 logs/
 .claude
+
+# env
+.env
+.env.*

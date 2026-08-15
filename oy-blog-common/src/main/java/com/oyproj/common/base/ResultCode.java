@@ -25,6 +25,8 @@ public enum ResultCode implements Serializable {
     TOO_MANY_REQUESTS(429, "请求频率过快", "error.too_many_requests"),
     UNKNOWN_ERROR(500, "未知错误", "error.unknown"),
     CUSTOM_ERROR(500, "自定义错误", "error.custom"),
+    EMAIL_DUPLICATE(410, "邮箱已被注册", "email.duplicate"),
+    EMAIL_CODE_INVALID(411, "验证码错误或已过期", "email.code.invalid"),
     SERVICE_UNAVAILABLE(501,"服务繁忙","error.unavailable" );
 
 

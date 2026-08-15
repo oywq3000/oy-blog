@@ -83,6 +83,18 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
         if(userByName!=null){
             throw new BaseException(ResultCode.USERNAME_DUPLICATE);
         }
+        // 邮箱查重（email 列有唯一索引，不查重会触发 DB 异常变 500）
+        if (userDao.getByEmail(req.getEmail()) != null) {
+            throw new BaseException(ResultCode.EMAIL_DUPLICATE);
+        }
+        // 校验邮箱验证码（5 分钟有效，比对成功后删除防重用）
+        String codeKey = CachePrefix.EMAIL_VERIFY_CODE.getPrefix() + req.getEmail();
+        String cachedCode = commonCache.getString(codeKey);
+        if (cachedCode == null || !cachedCode.equals(req.getEmailCode())) {
+            throw new ValidationException(I18n("email.code.invalid"));
+        }
+        commonCache.remove(codeKey);
+
         User user = User.builder()
                 .id(getId())
                 .username(req.getUsername())
@@ -90,6 +102,8 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
                 .email(req.getEmail())
                 .lastLoginIp(req.getIpAddress())
                 .status(1)
+                .emailVerified(1)
+                .emailVerifiedAt(LocalDateTime.now())
                 .build();
         userDao.save(user);
         return Result.ok();

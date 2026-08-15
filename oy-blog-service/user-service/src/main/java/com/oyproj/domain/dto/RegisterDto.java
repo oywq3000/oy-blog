@@ -42,4 +42,11 @@ public class RegisterDto {
     @NotBlank(message = "{register.ipAddress.notBlank}")
     @Schema(description = "注册IP地址", example = "127.0.0.1")
     private String ipAddress;
+
+    /**
+     * 邮箱验证码
+     */
+    @NotBlank(message = "{register.emailCode.notBlank}")
+    @Schema(description = "邮箱验证码", example = "123456")
+    private String emailCode;
 }

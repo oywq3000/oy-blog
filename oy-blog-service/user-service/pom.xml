@@ -31,6 +31,16 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- 邮箱验证码/验证邮件发送 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.oyproj</groupId>
             <artifactId>service-api</artifactId>

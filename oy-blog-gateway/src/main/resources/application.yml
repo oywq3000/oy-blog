@@ -69,6 +69,8 @@ auth:
     - /user-service/auth/login
     - /user-service/auth/register
     - /user-service/auth/refresh
+    # 邮箱验证：send-code/confirm 供未登录用户使用；request 对游客在业务层返回 400 友好提示
+    - /user-service/email/verification/**
     - /user-service/profile/info/**
     - /article-service/article/read/**
     - /article-service/article/comment/*/comment-count
