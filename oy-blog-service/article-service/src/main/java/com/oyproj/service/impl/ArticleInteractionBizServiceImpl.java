@@ -1,12 +1,16 @@
 package com.oyproj.service.impl;
 
 
+import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.constant.CachePrefix;
+import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.service.CommonCache;
 import com.oyproj.domain.entity.Article;
+import com.oyproj.domain.entity.ArticleFavorite;
 import com.oyproj.domain.entity.ArticleStats;
+import com.oyproj.domain.vo.ArticleInfoVo;
 import com.oyproj.dto.ArticleDao;
 import com.oyproj.dto.ArticleFavoriteDao;
 import com.oyproj.dto.ArticleLikeDao;
@@ -16,15 +20,26 @@ import com.oyproj.service.ArticleInteractionBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 /**
  * 文章互动业务服务实现类
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService implements ArticleInteractionBizService {
@@ -35,6 +50,7 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
     @NotNull private final ArticleFavoriteDao favoriteDao;
     @NotNull private final ArticleDao articleDao;
     @NotNull private final CommonCache<Object> commonCache;
+    @NotNull private final UserClient userClient;
 
     /**
      * 点赞文章
@@ -247,5 +263,98 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
             return ip;
         }
         return request.getRemoteAddr();
+    }
+
+    /**
+     * 查询当前用户收藏的文章列表（仅认证用户）
+     *
+     * @return 收藏文章列表（按收藏时间倒序，含 favoritedAt）
+     */
+    @Override
+    public Result<List<ArticleInfoVo>> listFavorites() {
+        if (isGuest()) {
+            return Result.error("游客不支持收藏");
+        }
+        String userId = getUserId();
+        List<ArticleFavorite> favorites = getPage(() -> favoriteDao.listFavorites(userId), ArticleFavorite.class);
+        if (favorites.isEmpty()) {
+            return Result.ok(Collections.emptyList());
+        }
+        List<String> articleIds = favorites.stream()
+                .map(ArticleFavorite::getArticleId)
+                .collect(Collectors.toList());
+        Map<String, LocalDateTime> favoritedAtMap = favorites.stream()
+                .collect(Collectors.toMap(ArticleFavorite::getArticleId,
+                        ArticleFavorite::getFavoritedAt, (a, b) -> a));
+        List<Article> articles = articleDao.listByIds(articleIds);
+        List<Article> sortedArticles = new ArrayList<>();
+        for (String id : articleIds) {
+            articles.stream().filter(a -> a.getId().equals(id)).findFirst().ifPresent(sortedArticles::add);
+        }
+        List<ArticleInfoVo> voList = copyList(sortedArticles, ArticleInfoVo.class);
+        for (ArticleInfoVo vo : voList) {
+            vo.setFavoritedAt(favoritedAtMap.get(vo.getId()));
+        }
+        enrichWithStats(voList);
+        enrichWithAuthorInfo(voList);
+        return Result.ok(voList);
+    }
+
+    /**
+     * 为文章VO列表批量注入统计数据
+     *
+     * @param voList 文章VO列表
+     */
+    private void enrichWithStats(List<ArticleInfoVo> voList) {
+        if (voList == null || voList.isEmpty()) {
+            return;
+        }
+        List<String> articleIds = voList.stream()
+                .map(ArticleInfoVo::getId)
+                .collect(Collectors.toList());
+        List<ArticleStats> statsList = statsDao.listByArticleIds(articleIds);
+        Map<String, ArticleStats> statsMap = statsList.stream()
+                .collect(Collectors.toMap(ArticleStats::getArticleId, Function.identity()));
+        for (ArticleInfoVo vo : voList) {
+            ArticleStats stats = statsMap.get(vo.getId());
+            if (stats != null) {
+                vo.setViewCount(stats.getViews());
+                vo.setLikeCount(stats.getLikes());
+                vo.setCommentCount(stats.getComments());
+                vo.setFavorites(stats.getFavorites());
+            }
+        }
+    }
+
+    /**
+     * 为文章VO列表批量注入作者信息（名称和头像）
+     *
+     * @param voList 文章VO列表
+     */
+    private void enrichWithAuthorInfo(List<ArticleInfoVo> voList) {
+        if (voList == null || voList.isEmpty()) {
+            return;
+        }
+        List<String> authorIds = voList.stream()
+                .map(ArticleInfoVo::getAuthorId)
+                .filter(id -> id != null && !id.isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, UserDTO> userMap = new HashMap<>();
+        try {
+            Result<List<UserDTO>> result = userClient.getUserDTOs(authorIds);
+            if (result != null && result.getIsSuccess() && result.getData() != null) {
+                result.getData().forEach(dto -> userMap.put(dto.getId(), dto));
+            }
+        } catch (Exception e) {
+            log.warn("批量获取作者信息失败, authorIds: {}", authorIds, e);
+        }
+        for (ArticleInfoVo vo : voList) {
+            UserDTO user = userMap.get(vo.getAuthorId());
+            if (user != null) {
+                vo.setAuthorName(user.getUsername());
+                vo.setAuthorAvatar(user.getAvatarUrl());
+            }
+        }
     }
 }

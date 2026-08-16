@@ -2,6 +2,9 @@ package com.oyproj.service;
 
 
 import com.oyproj.common.base.Result;
+import com.oyproj.domain.vo.ArticleInfoVo;
+
+import java.util.List;
 
 /**
  * 文章互动业务服务接口
@@ -55,6 +58,13 @@ public interface ArticleInteractionBizService {
      * @return 是否收藏
      */
     Result<Boolean> isFavorited(String articleId);
+
+    /**
+     * 查询当前用户收藏的文章列表
+     *
+     * @return 收藏文章列表（按收藏时间倒序）
+     */
+    Result<List<ArticleInfoVo>> listFavorites();
 
     /**
      * 统计文章点赞数量

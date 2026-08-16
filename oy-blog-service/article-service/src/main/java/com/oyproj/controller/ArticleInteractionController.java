@@ -1,11 +1,14 @@
 package com.oyproj.controller;
 import com.oyproj.common.base.Result;
+import com.oyproj.domain.vo.ArticleInfoVo;
 import com.oyproj.service.ArticleInteractionBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 文章互动控制器
@@ -124,6 +127,17 @@ public class ArticleInteractionController {
     @Operation(summary = "记录文章观看", description = "记录文章观看次数，含IP/用户去重")
     public Result<Long> view(@PathVariable("articleId") String articleId) {
         return biz.view(articleId);
+    }
+
+    /**
+     * 查询当前用户收藏的文章列表
+     *
+     * @return 收藏文章列表
+     */
+    @GetMapping("/favorites")
+    @Operation(summary = "查询我的收藏", description = "查询当前登录用户收藏的文章列表（按收藏时间倒序）")
+    public Result<List<ArticleInfoVo>> listFavorites() {
+        return biz.listFavorites();
     }
 }
 

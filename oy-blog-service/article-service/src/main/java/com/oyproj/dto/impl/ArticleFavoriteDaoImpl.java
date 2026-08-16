@@ -9,6 +9,8 @@ import com.oyproj.mapper.ArticleFavoriteMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * @author LX
  * @date 2025/12/03
@@ -73,6 +75,20 @@ public class ArticleFavoriteDaoImpl extends ServiceImpl<ArticleFavoriteMapper, A
     public long favoriteCount(String articleId) {
         return baseMapper.selectCount(new LambdaQueryWrapper<ArticleFavorite>()
                 .eq(ArticleFavorite::getArticleId, articleId));
+    }
+
+    /**
+     * 查询用户收藏列表（按收藏时间倒序）
+     *
+     * @param userId 用户ID
+     * @return 收藏记录列表
+     */
+    @Override
+    public List<ArticleFavorite> listFavorites(String userId) {
+        return baseMapper.selectList(new LambdaQueryWrapper<ArticleFavorite>()
+                .eq(ArticleFavorite::getUserId, userId)
+                .orderByDesc(ArticleFavorite::getFavoritedAt)
+                .orderByDesc(ArticleFavorite::getCreatedAt));
     }
 }
 

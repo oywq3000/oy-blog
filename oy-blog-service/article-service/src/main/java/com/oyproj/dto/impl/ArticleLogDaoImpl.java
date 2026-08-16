@@ -69,5 +69,20 @@ public class ArticleLogDaoImpl extends ServiceImpl<ArticleLogMapper, ArticleLog>
                 .distinct() // 内存去重
                 .collect(Collectors.toList());
     }
+
+    /**
+     * 查询用户阅读历史明细（仅 articleId + viewAt，按浏览时间倒序）
+     *
+     * @param userId 用户ID
+     * @return 阅读明细列表
+     */
+    @Override
+    public List<ArticleLog> listHistoryLogs(String userId) {
+        return baseMapper.selectList(new LambdaQueryWrapper<ArticleLog>()
+                .select(ArticleLog::getArticleId, ArticleLog::getViewAt)
+                .eq(ArticleLog::getUserId, userId)
+                .eq(ArticleLog::getAction, "view")
+                .orderByDesc(ArticleLog::getViewAt));
+    }
 }
 

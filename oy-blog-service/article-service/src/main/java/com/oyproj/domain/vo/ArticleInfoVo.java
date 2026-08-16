@@ -38,4 +38,16 @@ public class ArticleInfoVo {
 
     private String authorName;
     private String authorAvatar;
+
+    /**
+     * 最近浏览时间（仅浏览历史接口返回）
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime viewedAt;
+
+    /**
+     * 收藏时间（仅我的收藏接口返回）
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime favoritedAt;
 }

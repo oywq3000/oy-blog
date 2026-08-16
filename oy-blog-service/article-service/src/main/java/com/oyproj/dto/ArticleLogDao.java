@@ -23,5 +23,13 @@ public interface ArticleLogDao extends IService<ArticleLog> {
      * @return 文章ID列表
      */
     List<String> listHistoryArticleIds(String userId);
+
+    /**
+     * 查询用户阅读历史明细（仅 articleId + viewAt，按浏览时间倒序）
+     *
+     * @param userId 用户ID
+     * @return 阅读明细列表
+     */
+    List<ArticleLog> listHistoryLogs(String userId);
 }
 

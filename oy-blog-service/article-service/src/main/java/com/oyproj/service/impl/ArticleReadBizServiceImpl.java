@@ -6,6 +6,7 @@ import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.entity.Article;
+import com.oyproj.domain.entity.ArticleLog;
 import com.oyproj.domain.entity.ArticleStats;
 import com.oyproj.domain.entity.Tag;
 import com.oyproj.domain.vo.ArticleChapterVo;
@@ -101,9 +102,20 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
      */
     @Override
     public Result<List<ArticleInfoVo>> listHistory() {
-        List<String> articleIds = getPage(() -> viewDao.listHistoryArticleIds(getUserId()), String.class);
-        if (articleIds.isEmpty()) {
+        List<ArticleLog> logs = getPage(() -> viewDao.listHistoryLogs(getUserId()), ArticleLog.class);
+        if (logs.isEmpty()) {
             return Result.ok(Collections.emptyList());
+        }
+        // 按浏览时间倒序去重，并保留每条记录对应的浏览时间
+        List<String> articleIds = new ArrayList<>();
+        Map<String, java.time.LocalDateTime> viewedAtMap = new HashMap<>();
+        for (ArticleLog log : logs) {
+            String articleId = log.getArticleId();
+            if (articleId == null || viewedAtMap.containsKey(articleId)) {
+                continue;
+            }
+            articleIds.add(articleId);
+            viewedAtMap.put(articleId, log.getViewAt());
         }
         List<Article> articles = articleDao.listByIds(articleIds);
         List<Article> sortedArticles = new ArrayList<>();
@@ -111,6 +123,9 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
             articles.stream().filter(a -> a.getId().equals(id)).findFirst().ifPresent(sortedArticles::add);
         }
         List<ArticleInfoVo> voList = copyList(sortedArticles, ArticleInfoVo.class);
+        for (ArticleInfoVo vo : voList) {
+            vo.setViewedAt(viewedAtMap.get(vo.getId()));
+        }
         enrichWithStats(voList);
         enrichWithAuthorInfo(voList);
         return Result.ok(voList);

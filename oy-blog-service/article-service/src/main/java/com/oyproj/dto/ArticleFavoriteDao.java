@@ -3,6 +3,8 @@ package com.oyproj.dto;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.oyproj.domain.entity.ArticleFavorite;
 
+import java.util.List;
+
 /**
  * @author LX
  * @date 2025/12/03
@@ -42,5 +44,13 @@ public interface ArticleFavoriteDao extends IService<ArticleFavorite> {
       * @return 收藏数量
       */
     long favoriteCount(String articleId);
+
+    /**
+     * 查询用户收藏列表（按收藏时间倒序）
+     *
+     * @param userId 用户ID
+     * @return 收藏记录列表
+     */
+    List<ArticleFavorite> listFavorites(String userId);
 }
 
