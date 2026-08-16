@@ -217,6 +217,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     public Result<ArticleInfoVo> getById(String articleId) {
         ArticleInfoVo vo = copyProperties(articleDao.getById(articleId), ArticleInfoVo.class);
         enrichWithAuthorInfo(Collections.singletonList(vo));
+        enrichWithStats(Collections.singletonList(vo));
         return Result.ok(vo);
     }
 
