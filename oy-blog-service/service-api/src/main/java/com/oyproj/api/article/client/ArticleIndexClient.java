@@ -20,12 +20,12 @@ public interface ArticleIndexClient {
     /**
      * 分页获取已发布文章的索引快照数据
      *
-     * @param page 页码（0-based）
-     * @param size 每页大小
+     * @param pageNum 页码（0-based）
+     * @param pageSize 每页大小
      * @return 文章索引消息列表（含 content + stats）
      */
     @GetMapping("/internal/index/snapshot")
     Result<PageVo<List<ArticleIndexMessage>>> getIndexSnapshot(
-            @RequestParam("page") int page,
-            @RequestParam("size") int size);
+            @RequestParam("pageNum") int pageNum,
+            @RequestParam("pageSize") int pageSize);
 }

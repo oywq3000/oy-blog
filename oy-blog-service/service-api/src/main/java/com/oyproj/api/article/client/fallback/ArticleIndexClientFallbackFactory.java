@@ -17,8 +17,8 @@ public class ArticleIndexClientFallbackFactory implements FallbackFactory<Articl
     public ArticleIndexClient create(Throwable cause) {
         return new ArticleIndexClient() {
             @Override
-            public Result<PageVo<List<ArticleIndexMessage>>> getIndexSnapshot(int page, int size) {
-                log.error("获取文章索引快照失败, page: {}, size: {}", page, size, cause);
+            public Result<PageVo<List<ArticleIndexMessage>>> getIndexSnapshot(int pageNum, int pageSize) {
+                log.error("获取文章索引快照失败, pageNum: {}, pageSize: {}", pageNum, pageSize, cause);
                 return null;
             }
         };

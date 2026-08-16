@@ -130,8 +130,8 @@ public class SearchBizServiceImpl implements SearchBizService {
             }
 
             // 分页设置
-            int pageNum = queryDTO.getPage() != null ? queryDTO.getPage(): 0;
-            int pageSize = queryDTO.getSize() != null ? queryDTO.getSize() : 10;
+            int pageNum = queryDTO.getPageNum() != null ? queryDTO.getPageNum(): 0;
+            int pageSize = queryDTO.getPageSize() != null ? queryDTO.getPageSize() : 10;
             int from = pageNum * pageSize;
             // 是否有关键词搜索条件（只有关键词搜索才需要高亮）
             boolean hasKeywordQuery = hasKeyword && (filter == SearchFitter.ALL || filter == SearchFitter.ARTICLE);

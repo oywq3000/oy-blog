@@ -4,9 +4,11 @@ import com.oyproj.api.file.domain.vo.FileVo;
 import com.oyproj.common.base.OpLog;
 import com.oyproj.common.base.Result;
 import com.oyproj.domain.dto.ArticleSaveDto;
+import com.oyproj.domain.vo.HeatmapDayVo;
 import com.oyproj.domain.vo.UserArticleStatsVo;
 import com.oyproj.service.ArticleBizService;
 import com.oyproj.service.ArticleCommonBizService;
+import com.oyproj.service.ArticleStatsBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotNull;
@@ -14,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.oyproj.api.article.domain.UserArticleStatDto;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -27,6 +30,7 @@ public class ArticleController {
 
     @NotNull private final ArticleBizService biz;
     @NotNull private final ArticleCommonBizService commonBiz;
+    @NotNull private final ArticleStatsBizService statsBiz;
 
     /**
      * 保存草稿
@@ -113,6 +117,17 @@ public class ArticleController {
     @Operation(summary = "获取当前用户文章统计", description = "获取当前登录用户的文章统计信息")
     public Result<UserArticleStatDto> getMyStats() {
         return biz.getMyStats();
+    }
+
+    /**
+     * 获取当前用户活跃度热力图
+     *
+     * @return 最近12个月每日活跃数据（发文章/评论/回复/点赞/收藏），游客返回空列表
+     */
+    @GetMapping("/stats/heatmap/me")
+    @Operation(summary = "获取当前用户活跃度热力图", description = "最近12个月发文章/评论/回复/点赞/收藏的每日活跃数据，游客返回空列表")
+    public Result<List<HeatmapDayVo>> getMyHeatmap() {
+        return statsBiz.getMyHeatmap();
     }
 
     /**

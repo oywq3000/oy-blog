@@ -22,11 +22,11 @@ public class EsSearchController {
     @Operation(summary = "EsSearchController",description = "")
     public Result<PageVo<List<ArticleSearchVO>>> esSearch(SearchQueryDTO searchQueryDTO){
 
-        //参数修正，前端传入的page参数从1开始
-        if(searchQueryDTO.getPage()>=1){
-            searchQueryDTO.setPage(searchQueryDTO.getPage()-1);
+        //参数修正，前端传入的pageNum参数从1开始
+        if(searchQueryDTO.getPageNum()>=1){
+            searchQueryDTO.setPageNum(searchQueryDTO.getPageNum()-1);
         }else{
-            searchQueryDTO.setPage(0);
+            searchQueryDTO.setPageNum(0);
         }
         return searchBizService.searchArticles(searchQueryDTO);
     }

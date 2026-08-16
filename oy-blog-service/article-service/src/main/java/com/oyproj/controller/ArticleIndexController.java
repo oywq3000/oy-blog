@@ -57,16 +57,16 @@ public class ArticleIndexController {
      */
     @GetMapping("/internal/index/snapshot")
     public Result<PageVo<List<ArticleIndexMessage>>> getIndexSnapshot(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "100") int size) {
+            @RequestParam(defaultValue = "0") int pageNum,
+            @RequestParam(defaultValue = "100") int pageSize) {
 
         // 分页查询已发布、未删除的文章
-        List<Article> articles = articleDao.listPublished(page, size);
+        List<Article> articles = articleDao.listPublished(pageNum, pageSize);
         long total = articleDao.countPublished();
 
         if (articles.isEmpty()) {
-            PageVo<List<ArticleIndexMessage>> pageVo = new PageVo<>(page, size, total,
-                    (int) Math.ceil((double) total / size), new ArrayList<>());
+            PageVo<List<ArticleIndexMessage>> pageVo = new PageVo<>(pageNum, pageSize, total,
+                    (int) Math.ceil((double) total / pageSize), new ArrayList<>());
             return Result.ok(pageVo);
         }
 
@@ -160,8 +160,8 @@ public class ArticleIndexController {
             return msg;
         }).collect(Collectors.toList());
 
-        int totalPages = (int) Math.ceil((double) total / size);
-        PageVo<List<ArticleIndexMessage>> pageVo = new PageVo<>(page, size, total, totalPages, messages);
+        int totalPages = (int) Math.ceil((double) total / pageSize);
+        PageVo<List<ArticleIndexMessage>> pageVo = new PageVo<>(pageNum, pageSize, total, totalPages, messages);
         return Result.ok(pageVo);
     }
 }

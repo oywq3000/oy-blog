@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.oyproj.dao.UserActivityHeatmapDao">
+    <!-- 5 张行为表 UNION ALL 后按天聚合；窗口下界由 Java 侧传入（LocalDate.now().minusMonths(12)），
+         避免依赖 DB 服务器时区（NOW()/CURDATE() 取 DB 本地时间） -->
+    <select id="listActivityDays" resultType="com.oyproj.domain.vo.HeatmapDayVo">
+        SELECT event_date AS date, SUM(day_cnt) AS count
+        FROM (
+            SELECT DATE(publish_at) AS event_date, COUNT(*) AS day_cnt
+            FROM article
+            WHERE author_id = #{userId}
+              AND status = 'published'
+              AND deleted_at IS NULL
+              AND publish_at &gt;= #{startDate}
+            GROUP BY DATE(publish_at)
+            UNION ALL
+            SELECT DATE(comment_at), COUNT(*)
+            FROM comment
+            WHERE user_id = #{userId} AND comment_at &gt;= #{startDate}
+            GROUP BY DATE(comment_at)
+            UNION ALL
+            SELECT DATE(reply_at), COUNT(*)
+            FROM comment_reply
+            WHERE user_id = #{userId} AND reply_at &gt;= #{startDate}
+            GROUP BY DATE(reply_at)
+            UNION ALL
+            SELECT DATE(liked_at), COUNT(*)
+            FROM article_like
+            WHERE user_id = #{userId} AND liked_at &gt;= #{startDate}
+            GROUP BY DATE(liked_at)
+            UNION ALL
+            SELECT DATE(favorited_at), COUNT(*)
+            FROM article_favorite
+            WHERE user_id = #{userId} AND favorited_at &gt;= #{startDate}
+            GROUP BY DATE(favorited_at)
+        ) t
+        GROUP BY event_date
+        ORDER BY event_date
+    </select>
+</mapper>
