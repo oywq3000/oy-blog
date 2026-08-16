@@ -75,10 +75,9 @@ public class UserVo {
     private LocalDateTime lastLogin;
 
     /**
-     * 设置用户最后登录IP地址
-     * @param ipAddress 用户最后登录IP地址
+     * 创建时间
      */
-    public void setIpAddress(String ipAddress) {
-        this.ipAddress = ipAddress;
-    }
+    @Schema(description = "用户创建时间", example = "2025-12-01T12:00:00")
+    private LocalDateTime createdAt;
+
 }

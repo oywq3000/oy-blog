@@ -46,6 +46,7 @@ public class CommonUserBehaviorStrategy extends UserBizBase implements UserBehav
                 .lastLogin(user.getLastLoginAt())
                 .avatarUrl(user.getAvatarUrl())
                 .emailVerified(Integer.valueOf(1).equals(user.getEmailVerified()))
+                .createdAt(user.getCreatedAt())
                 .build();
         try{
             String ipAddress = ipParseApi.parseIpAddress(user.getLastLoginIp()).getRegion();
