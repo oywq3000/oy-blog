@@ -9,6 +9,7 @@ import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.service.CommonCache;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.domain.entity.ArticleFavorite;
+import com.oyproj.domain.entity.ArticleLog;
 import com.oyproj.domain.entity.ArticleStats;
 import com.oyproj.domain.vo.ArticleInfoVo;
 import com.oyproj.dto.ArticleDao;
@@ -211,7 +212,27 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
             commonCache.put(userKey, "1", 1800L);
         }
 
-        // 3. 确保统计记录存在并递增
+        // 3. 记录浏览历史（仅登录用户；游客匿名浏览不写历史）
+        if (userId != null && !userId.startsWith(CachePrefix.GUEST_ID.getPrefix())) {
+            try {
+                ArticleLog viewLog = ArticleLog.builder()
+                        .id(getId())
+                        .articleId(articleId)
+                        .userId(userId)
+                        .action("view")
+                        .ip(clientIp)
+                        .ua(getRequestHeader("User-Agent"))
+                        .referer(getRequestHeader("Referer"))
+                        .viewAt(LocalDateTime.now())
+                        .build();
+                viewDao.appendView(viewLog);
+            } catch (Exception e) {
+                // 历史日志是辅助数据，写入失败不影响浏览计数
+                log.warn("记录浏览历史失败, articleId: {}, userId: {}", articleId, userId, e);
+            }
+        }
+
+        // 4. 确保统计记录存在并递增
         ArticleStats stats = statsDao.getById(articleId);
         if (stats == null) {
             try {
@@ -232,7 +253,7 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
             statsDao.incViews(articleId, 1);
         }
 
-        // 4. 返回递增后的观看次数
+        // 5. 返回递增后的观看次数
         //stats = statsDao.getById(articleId);
         return Result.ok(stats != null ? stats.getViews()+1 : 1L);
     }
@@ -263,6 +284,17 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
             return ip;
         }
         return request.getRemoteAddr();
+    }
+
+    /**
+     * 获取指定请求头（无请求上下文时返回 null）
+     */
+    private String getRequestHeader(String name) {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes == null) {
+            return null;
+        }
+        return attributes.getRequest().getHeader(name);
     }
 
     /**
