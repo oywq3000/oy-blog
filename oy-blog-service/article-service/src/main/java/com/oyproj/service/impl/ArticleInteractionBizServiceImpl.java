@@ -190,29 +190,12 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
             return Result.error("文章不存在");
         }
 
-        // 2. 去重检查
         String userId = getUserId();
         String clientIp = getClientIp();
 
-        // IP 去重：同一IP对同一文章 5 分钟内只计一次
-        if (clientIp != null && !clientIp.isEmpty()) {
-            String ipKey = "view:article:" + articleId + ":ip:" + clientIp;
-            if (commonCache.hasKey(ipKey)) {
-                return getCurrentViewCount(articleId);
-            }
-            commonCache.put(ipKey, "1", 300L);
-        }
-
-        // 用户去重：登录用户 30 分钟内只计一次
-        if (userId != null && !userId.startsWith(CachePrefix.GUEST_ID.getPrefix())) {
-            String userKey = "view:article:" + articleId + ":user:" + userId;
-            if (commonCache.hasKey(userKey)) {
-                return getCurrentViewCount(articleId);
-            }
-            commonCache.put(userKey, "1", 1800L);
-        }
-
-        // 3. 记录浏览历史（仅登录用户；游客匿名浏览不写历史）
+        // 2. 记录浏览历史（仅登录用户；游客匿名浏览不写历史）
+        // 必须先于计数去重：即使命中 Redis 去重窗口，也要刷新 viewAt，
+        // 保证"刚浏览的文章排在历史第一位"（历史去重靠一人一文章一行）
         if (userId != null && !userId.startsWith(CachePrefix.GUEST_ID.getPrefix())) {
             try {
                 ArticleLog viewLog = ArticleLog.builder()
@@ -230,6 +213,25 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
                 // 历史日志是辅助数据，写入失败不影响浏览计数
                 log.warn("记录浏览历史失败, articleId: {}, userId: {}", articleId, userId, e);
             }
+        }
+
+        // 3. 计数去重检查
+        // IP 去重：同一IP对同一文章 5 分钟内只计一次
+        if (clientIp != null && !clientIp.isEmpty()) {
+            String ipKey = "view:article:" + articleId + ":ip:" + clientIp;
+            if (commonCache.hasKey(ipKey)) {
+                return getCurrentViewCount(articleId);
+            }
+            commonCache.put(ipKey, "1", 300L);
+        }
+
+        // 用户去重：登录用户 30 分钟内只计一次
+        if (userId != null && !userId.startsWith(CachePrefix.GUEST_ID.getPrefix())) {
+            String userKey = "view:article:" + articleId + ":user:" + userId;
+            if (commonCache.hasKey(userKey)) {
+                return getCurrentViewCount(articleId);
+            }
+            commonCache.put(userKey, "1", 1800L);
         }
 
         // 4. 确保统计记录存在并递增
