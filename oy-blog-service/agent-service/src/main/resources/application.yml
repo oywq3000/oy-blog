@@ -32,7 +32,8 @@ logging:
 agent:
   python:
     # Python Agent 服务地址（内网直连，无鉴权；协议见 oy-blog/scripts/agent_stub.py）
-    base-url: http://localhost:8001
+    # 容器部署时用环境变量 AGENT_PYTHON_URL 覆盖（localhost 在容器里指向容器自身）
+    base-url: ${AGENT_PYTHON_URL:http://localhost:8001}
   # 推荐问题（前端 GET /suggestions；后续可改为优先询问 Python，失败回落本配置）
   suggestions:
     - icon: idea

@@ -2,7 +2,7 @@ server:
   port: 8093
 
 app:
-  host: http://localhost:5173 # 邮件验证链接前缀（指向前端 dev origin，生产改为部署域名）
+  host: ${APP_HOST:http://localhost:5173} # 邮件验证链接前缀（指向前端 dev origin，前端部署后设 APP_HOST 环境变量）
 
 spring:
   datasource:

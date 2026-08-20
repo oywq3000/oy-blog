@@ -1,0 +1,109 @@
+# oy-blog 服务编排（部署在 Linux 服务器 /opt/oy-blog/）
+# 前提：MySQL/Redis/Nacos/ES/RabbitMQ/MinIO/Sentinel 已在宿主机 Docker 跑通并发布端口
+# 用法：docker compose up -d --build ；重建：docker compose up -d --build
+# 说明：
+#   - 所有容器通过 SERVER_IP（服务器 Tailscale IP）访问宿主机中间件，无需 extra_hosts
+#   - 业务服务不对外发布端口，全部经 gateway:8080 访问（Nacos 注册容器 IP，同网直连）
+#   - 敏感变量统一放同目录 .env（env_file 注入），见 deploy/docker-compose.env.example
+#   - 内存贴边跑（服务器空余约 2G）：.env 全局 JAVA_TOOL_OPTIONS 128m，
+#     gateway/article/search 在各自 environment 里覆盖
+#   - 若 compose < 2.20 报 name: 不支持，删掉下面这行
+name: oy-blog
+
+x-common: &common
+  restart: always
+  env_file:
+    - .env        # SERVER_IP / TZ / JAVA_TOOL_OPTIONS / MAIL_* / ES_* 等全部放 .env，避免 environment 浅合并坑
+
+services:
+  gateway:
+    <<: *common
+    image: oy-blog/gateway:1.0-SNAPSHOT
+    container_name: oy-blog-gateway
+    build:
+      context: ./build/oy-blog-gateway
+      dockerfile: ../docker/Dockerfile
+      args:
+        JAR_FILE: oy-blog-gateway-1.0-SNAPSHOT.jar
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx96m -XX:MaxMetaspaceSize=128m"   # 覆盖 .env 全局值（reactive 最轻）
+    ports:
+      - "8080:8080"          # 唯一对外端口
+    volumes:
+      - ./logs/oy-blog-gateway:/app/logs
+
+  user-service:
+    <<: *common
+    image: oy-blog/user-service:1.0-SNAPSHOT
+    container_name: oy-blog-user-service
+    build:
+      context: ./build/user-service
+      dockerfile: ../docker/Dockerfile
+      args:
+        JAR_FILE: user-service-1.0-SNAPSHOT.jar
+    volumes:
+      - ./logs/user-service:/app/logs
+
+  article-service:
+    <<: *common
+    image: oy-blog/article-service:1.0-SNAPSHOT
+    container_name: oy-blog-article-service
+    build:
+      context: ./build/article-service
+      dockerfile: ../docker/Dockerfile
+      args:
+        JAR_FILE: article-service-1.0-SNAPSHOT.jar
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:MaxMetaspaceSize=128m"   # MyBatis + MQ 较重
+    volumes:
+      - ./logs/article-service:/app/logs
+
+  file-service:
+    <<: *common
+    image: oy-blog/file-service:1.0-SNAPSHOT
+    container_name: oy-blog-file-service
+    build:
+      context: ./build/file-service
+      dockerfile: ../docker/Dockerfile
+      args:
+        JAR_FILE: file-service-1.0-SNAPSHOT.jar
+    volumes:
+      - ./logs/file-service:/app/logs
+
+  message-service:
+    <<: *common
+    image: oy-blog/message-service:1.0-SNAPSHOT
+    container_name: oy-blog-message-service
+    build:
+      context: ./build/message-service
+      dockerfile: ../docker/Dockerfile
+      args:
+        JAR_FILE: message-service-1.0-SNAPSHOT.jar
+    volumes:
+      - ./logs/message-service:/app/logs
+
+  search-service:
+    <<: *common
+    image: oy-blog/search-service:1.0-SNAPSHOT
+    container_name: oy-blog-search-service
+    build:
+      context: ./build/search-service
+      dockerfile: ../docker/Dockerfile
+      args:
+        JAR_FILE: search-service-1.0-SNAPSHOT.jar
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:MaxMetaspaceSize=128m"   # ES 客户端较重
+    volumes:
+      - ./logs/search-service:/app/logs
+
+  agent-service:
+    <<: *common
+    image: oy-blog/agent-service:1.0-SNAPSHOT
+    container_name: oy-blog-agent-service
+    build:
+      context: ./build/agent-service
+      dockerfile: ../docker/Dockerfile
+      args:
+        JAR_FILE: agent-service-1.0-SNAPSHOT.jar
+    volumes:
+      - ./logs/agent-service:/app/logs
