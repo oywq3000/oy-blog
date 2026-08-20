@@ -1,19 +1,21 @@
-# oy-blog 服务编排（部署在 Linux 服务器 /opt/oy-blog/）
-# 前提：MySQL/Redis/Nacos/ES/RabbitMQ/MinIO/Sentinel 已在宿主机 Docker 跑通并发布端口
-# 用法：docker compose up -d --build ；重建：docker compose up -d --build
+# oy-blog 服务编排（部署在服务器 /home/oy/app/oyblogdeploy/）
+# 前提：MySQL/Redis/Nacos/ES/RabbitMQ/MinIO 已在服务器 Docker 跑通并发布端口
+# 用法：cd /home/oy/app/oyblogdeploy && docker compose up -d --build
 # 说明：
-#   - 所有容器通过 SERVER_IP（服务器 Tailscale IP）访问宿主机中间件，无需 extra_hosts
-#   - 业务服务不对外发布端口，全部经 gateway:8080 访问（Nacos 注册容器 IP，同网直连）
+#   - 所有 jar 平铺放在 ./oyblog-back/ 目录（build context）
+#   - network_mode: host：容器与宿主机共享网络，中间件一律用 127.0.0.1 访问（回环不受宿主机防火墙限制）
+#   - MinIO 返回给前端的下载链接单独用 STORAGE_MINIOFILEDOMAIN 指向 Tailscale IP（浏览器可达）
+#   - 端口直接绑定宿主机：gateway 8080 对外，业务端口 8091-8099 容器网络内互通（同一 host 网络）
 #   - 敏感变量统一放同目录 .env（env_file 注入），见 deploy/docker-compose.env.example
-#   - 内存贴边跑（服务器空余约 2G）：.env 全局 JAVA_TOOL_OPTIONS 128m，
-#     gateway/article/search 在各自 environment 里覆盖
+#   - 内存贴边跑：.env 全局 JAVA_TOOL_OPTIONS 128m，gateway/article/search 在各自 environment 里覆盖
 #   - 若 compose < 2.20 报 name: 不支持，删掉下面这行
 name: oy-blog
 
 x-common: &common
   restart: always
+  network_mode: host    # 共享宿主机网络：容器访问 127.0.0.1 即宿主机端口；注意 host 模式下不能配 ports
   env_file:
-    - .env        # SERVER_IP / TZ / JAVA_TOOL_OPTIONS / MAIL_* / ES_* 等全部放 .env，避免 environment 浅合并坑
+    - .env        # SERVER_IP / TZ / JAVA_TOOL_OPTIONS / MAIL_* / ES_* / STORAGE_* 等全部放 .env
 
 services:
   gateway:
@@ -21,14 +23,12 @@ services:
     image: oy-blog/gateway:1.0-SNAPSHOT
     container_name: oy-blog-gateway
     build:
-      context: ./build/oy-blog-gateway
+      context: ./oyblog-back
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: oy-blog-gateway-1.0-SNAPSHOT.jar
     environment:
       JAVA_TOOL_OPTIONS: "-Xms64m -Xmx96m -XX:MaxMetaspaceSize=128m"   # 覆盖 .env 全局值（reactive 最轻）
-    ports:
-      - "8080:8080"          # 唯一对外端口
     volumes:
       - ./logs/oy-blog-gateway:/app/logs
 
@@ -37,7 +37,7 @@ services:
     image: oy-blog/user-service:1.0-SNAPSHOT
     container_name: oy-blog-user-service
     build:
-      context: ./build/user-service
+      context: ./oyblog-back
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: user-service-1.0-SNAPSHOT.jar
@@ -49,7 +49,7 @@ services:
     image: oy-blog/article-service:1.0-SNAPSHOT
     container_name: oy-blog-article-service
     build:
-      context: ./build/article-service
+      context: ./oyblog-back
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: article-service-1.0-SNAPSHOT.jar
@@ -63,7 +63,7 @@ services:
     image: oy-blog/file-service:1.0-SNAPSHOT
     container_name: oy-blog-file-service
     build:
-      context: ./build/file-service
+      context: ./oyblog-back
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: file-service-1.0-SNAPSHOT.jar
@@ -75,7 +75,7 @@ services:
     image: oy-blog/message-service:1.0-SNAPSHOT
     container_name: oy-blog-message-service
     build:
-      context: ./build/message-service
+      context: ./oyblog-back
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: message-service-1.0-SNAPSHOT.jar
@@ -87,7 +87,7 @@ services:
     image: oy-blog/search-service:1.0-SNAPSHOT
     container_name: oy-blog-search-service
     build:
-      context: ./build/search-service
+      context: ./oyblog-back
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: search-service-1.0-SNAPSHOT.jar
@@ -101,7 +101,7 @@ services:
     image: oy-blog/agent-service:1.0-SNAPSHOT
     container_name: oy-blog-agent-service
     build:
-      context: ./build/agent-service
+      context: ./oyblog-back
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: agent-service-1.0-SNAPSHOT.jar
