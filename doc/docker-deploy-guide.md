@@ -23,8 +23,8 @@
 ```
 
 - 服务器上的 MySQL/Redis/Nacos/ES 等中间件**已经在跑**，不用动它们
-- **业务容器用 `network_mode: host`（共享宿主机网络）**，通过 `.env` 里的 `SERVER_IP=127.0.0.1` 走回环访问中间件——这台机器的防火墙会拦"容器→宿主机 IP"方向的流量（Tailscale 规则），只有回环不受限制
-- 只有网关 8080 对外；MinIO 返回给前端的下载链接用 `STORAGE_MINIOFILEDOMAIN` 指向 Tailscale IP（浏览器可达）
+- **业务容器用 `network_mode: bridge`（docker0 网络）**，通过 `.env` 里的 `SERVER_IP=100.110.148.14`（Tailscale IP）访问宿主机已发布的中间件端口——实测这台 NAS 的防火墙**只放行 docker0 网段（172.17.x）**，自定义 docker 网络的转发会被拦截（会导致服务反复重启）
+- 服务间互访靠 Nacos 注册的容器 IP（docker0 二层直连）；只有网关 8080 对外；MinIO 返回给前端的下载链接用 `STORAGE_MINIOFILEDOMAIN` 指向 Tailscale IP（浏览器可达）
 
 ## 第 0 步：一次性准备
 
@@ -134,7 +134,7 @@ vi .env        # 或 nano .env
 
 | 变量 | 作用 | 注意事项 |
 |---|---|---|
-| SERVER_IP | 容器访问中间件的地址 | **保持 127.0.0.1**（host 网络模式走回环；填服务器真实 IP 会被宿主机防火墙拦截导致服务反复重启） |
+| SERVER_IP | 容器访问中间件的地址 | 填 `100.110.148.14`（Tailscale IP，宿主机已发布中间件端口，docker0 网段被防火墙放行） |
 | STORAGE_MINIOFILEDOMAIN | MinIO 下载链接前缀（给浏览器的） | 填 `http://100.110.148.14:9090`（Tailscale IP，浏览器可达） |
 | TZ | 时区 | 保持 Asia/Shanghai |
 | JAVA_TOOL_OPTIONS | JVM 内存上限 | 服务器空余约 2G，保持 `-Xms64m -Xmx128m -XX:MaxMetaspaceSize=128m`；gateway/article/search 在 compose 里覆盖为 96m/192m |
