@@ -1,8 +1,8 @@
-# oy-blog 服务编排（部署在服务器 /home/oy/app/oyblogdeploy/）
+# oy-blog 服务编排（部署在服务器 /home/oy/app/oyblogdeploy/oyblog-back/）
 # 前提：MySQL/Redis/Nacos/ES/RabbitMQ/MinIO 已在服务器 Docker 跑通并发布端口
-# 用法：cd /home/oy/app/oyblogdeploy && docker compose up -d --build
+# 用法：cd /home/oy/app/oyblogdeploy/oyblog-back && docker compose up -d --build
 # 说明：
-#   - 所有 jar 平铺放在 ./oyblog-back/ 目录（build context）
+#   - 所有 jar 平铺放在 ./jar/ 目录（build context）
 #   - network_mode: host：容器与宿主机共享网络，中间件一律用 127.0.0.1 访问（回环不受宿主机防火墙限制）
 #   - MinIO 返回给前端的下载链接单独用 STORAGE_MINIOFILEDOMAIN 指向 Tailscale IP（浏览器可达）
 #   - 端口直接绑定宿主机：gateway 8080 对外，业务端口 8091-8099 容器网络内互通（同一 host 网络）
@@ -23,7 +23,7 @@ services:
     image: oy-blog/gateway:1.0-SNAPSHOT
     container_name: oy-blog-gateway
     build:
-      context: ./oyblog-back
+      context: ./jar
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: oy-blog-gateway-1.0-SNAPSHOT.jar
@@ -37,7 +37,7 @@ services:
     image: oy-blog/user-service:1.0-SNAPSHOT
     container_name: oy-blog-user-service
     build:
-      context: ./oyblog-back
+      context: ./jar
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: user-service-1.0-SNAPSHOT.jar
@@ -49,7 +49,7 @@ services:
     image: oy-blog/article-service:1.0-SNAPSHOT
     container_name: oy-blog-article-service
     build:
-      context: ./oyblog-back
+      context: ./jar
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: article-service-1.0-SNAPSHOT.jar
@@ -63,7 +63,7 @@ services:
     image: oy-blog/file-service:1.0-SNAPSHOT
     container_name: oy-blog-file-service
     build:
-      context: ./oyblog-back
+      context: ./jar
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: file-service-1.0-SNAPSHOT.jar
@@ -75,7 +75,7 @@ services:
     image: oy-blog/message-service:1.0-SNAPSHOT
     container_name: oy-blog-message-service
     build:
-      context: ./oyblog-back
+      context: ./jar
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: message-service-1.0-SNAPSHOT.jar
@@ -87,7 +87,7 @@ services:
     image: oy-blog/search-service:1.0-SNAPSHOT
     container_name: oy-blog-search-service
     build:
-      context: ./oyblog-back
+      context: ./jar
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: search-service-1.0-SNAPSHOT.jar
@@ -101,7 +101,7 @@ services:
     image: oy-blog/agent-service:1.0-SNAPSHOT
     container_name: oy-blog-agent-service
     build:
-      context: ./oyblog-back
+      context: ./jar
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: agent-service-1.0-SNAPSHOT.jar

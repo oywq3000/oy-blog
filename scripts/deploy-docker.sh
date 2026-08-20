@@ -14,8 +14,8 @@ REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 JAVA_HOME="/d/DevelopKit/jdk-21.0.8"        # 本机 JDK 21（默认 JDK20 会报"不支持发行版本 21"）
 SERVER_USER="oy"                             # 服务器 SSH 用户
 SERVER_HOST="oyk40"                          # 服务器 SSH 别名（~/.ssh/config 里配置的 oyk40）
-REMOTE_DIR="/home/oy/app/oyblogdeploy"      # 服务器部署目录
-JAR_DIR="${REMOTE_DIR}/oyblog-back"         # jar 平铺目录（compose 的 build context）
+REMOTE_DIR="/home/oy/app/oyblogdeploy/oyblog-back"   # 服务器部署根目录（compose 所在）
+JAR_DIR="${REMOTE_DIR}/jar"                 # jar 平铺目录（compose 的 build context）
 
 # ---- 环境准备 ----
 export JAVA_HOME

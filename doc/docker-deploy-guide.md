@@ -13,11 +13,11 @@
 
 ```
 本机 Windows（cmd/PowerShell）           Linux 服务器 (oyk40)
-① mvn clean package 打 7 个 jar  ──② scp 上传──►  /home/oy/app/oyblogdeploy/
+① mvn clean package 打 7 个 jar  ──② scp 上传──►  /home/oy/app/oyblogdeploy/oyblog-back/
                                                   ├ docker-compose.yml
                                                   ├ .env（密钥，仅第一次配）
                                                   ├ docker/Dockerfile
-                                                  ├ oyblog-back/（7 个 jar 平铺）
+                                                  ├ jar/（7 个 jar 平铺）
                                                   └ logs/<服务>/
 ③ docker compose up -d --build（在服务器上构建镜像并启动）
 ```
@@ -90,26 +90,26 @@ mvn clean package -DskipTests
 在项目根目录执行。第一次先建目录：
 
 ```
-ssh oy@oyk40 "mkdir -p /home/oy/app/oyblogdeploy/oyblog-back /home/oy/app/oyblogdeploy/docker /home/oy/app/oyblogdeploy/logs"
+ssh oy@oyk40 "mkdir -p /home/oy/app/oyblogdeploy/oyblog-back/jar /home/oy/app/oyblogdeploy/oyblog-back/docker /home/oy/app/oyblogdeploy/oyblog-back/logs"
 ```
 
 逐个上传 7 个 jar（user-service 已传过；scp 语法：`scp 本地文件 用户@服务器:目标路径`）：
 
 ```
-scp .\oy-blog-gateway\target\oy-blog-gateway-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/
-scp .\oy-blog-service\article-service\target\article-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/
-scp .\oy-blog-service\file-service\target\file-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/
-scp .\oy-blog-service\message-service\target\message-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/
-scp .\oy-blog-service\search-service\target\search-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/
-scp .\oy-blog-service\agent-service\target\agent-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/
+scp .\oy-blog-gateway\target\oy-blog-gateway-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/oyblog-back/jar/
+scp .\oy-blog-service\article-service\target\article-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/oyblog-back/jar/
+scp .\oy-blog-service\file-service\target\file-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/oyblog-back/jar/
+scp .\oy-blog-service\message-service\target\message-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/oyblog-back/jar/
+scp .\oy-blog-service\search-service\target\search-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/oyblog-back/jar/
+scp .\oy-blog-service\agent-service\target\agent-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/oyblog-back/jar/
 ```
 
 上传部署文件（Dockerfile 和编排文件每次发版也传一次，保持最新）：
 
 ```
-scp .\deploy\docker\Dockerfile          oy@oyk40:/home/oy/app/oyblogdeploy/docker/
-scp .\deploy\docker-compose.yml         oy@oyk40:/home/oy/app/oyblogdeploy/
-scp .\deploy\docker-compose.env.example oy@oyk40:/home/oy/app/oyblogdeploy/
+scp .\deploy\docker\Dockerfile          oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/docker/
+scp .\deploy\docker-compose.yml         oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/
+scp .\deploy\docker-compose.env.example oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/
 ```
 
 > 提示：日常发版可以只传改过的那个服务的 jar，其余不动。
@@ -125,7 +125,7 @@ ssh oy@oyk40
 生成 .env 并编辑：
 
 ```bash
-cd /home/oy/app/oyblogdeploy
+cd /home/oy/app/oyblogdeploy/oyblog-back
 cp deploy.env.example .env
 vi .env        # 或 nano .env
 ```
@@ -147,7 +147,7 @@ vi .env        # 或 nano .env
 ## 第 4 步：构建镜像并启动（每次发版都做）
 
 ```
-ssh oy@oyk40 "cd /home/oy/app/oyblogdeploy && docker compose up -d --build"
+ssh oy@oyk40 "cd /home/oy/app/oyblogdeploy/oyblog-back && docker compose up -d --build"
 ```
 
 参数解释：
@@ -163,7 +163,7 @@ ssh oy@oyk40 "cd /home/oy/app/oyblogdeploy && docker compose up -d --build"
 
 ```bash
 # 1. 容器状态：7 个都应该是 Up，STATUS 里没有 Restarting
-cd /home/oy/app/oyblogdeploy && docker compose ps
+cd /home/oy/app/oyblogdeploy/oyblog-back && docker compose ps
 
 # 2. 内存（贴边跑，重点观察）：free 的 available 列不要长期为 0
 free -m && docker stats --no-stream
@@ -192,7 +192,7 @@ curl -s -o /dev/null -w "%%{http_code}\n" -X POST http://<SERVER_IP>:8080/user-s
 | 现象 | 原因 | 处理 |
 |---|---|---|
 | 容器 STATUS 一直 Restarting | 启动即崩（配置错/中间件连不上） | `docker compose logs --tail=50 <服务>` 看报错 |
-| 日志里 Nacos 连接失败 | .env 的 SERVER_IP 不对或为空 | 编辑 /home/oy/app/oyblogdeploy/.env 后 `docker compose up -d` 重启 |
+| 日志里 Nacos 连接失败 | .env 的 SERVER_IP 不对或为空 | 编辑 /home/oy/app/oyblogdeploy/oyblog-back/.env 后 `docker compose up -d` 重启 |
 | 日志里 MySQL/Redis/ES 拒绝连接 | 中间件端口没发布到 0.0.0.0 或账号密码不对 | 检查宿主机中间件容器端口映射 |
 | 邮件发不出去 | MAIL_TOKEN 没填或键名不对 | .env 里键名必须是 MAIL_TOKEN |
 | free -m 显示内存耗尽、容器被 OOM 杀掉 | 7 个 JVM ≈ 2G 贴边 | 按序降级：① 服务器加 4G swap ② 停掉 agent-service（`docker compose stop agent-service`）③ compose 里把 -Xmx 再调小 ④ 停掉 search-service |
@@ -207,10 +207,10 @@ set JAVA_HOME=D:\DevelopKit\jdk-21.0.8
 mvn clean package -DskipTests
 
 :: ② 上传改动的 jar（例如只改了 user-service）
-scp .\oy-blog-service\user-service\target\user-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/
+scp .\oy-blog-service\user-service\target\user-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/oyblog-back/jar/
 
 :: ③ 服务器重建启动
-ssh oy@oyk40 "cd /home/oy/app/oyblogdeploy && docker compose up -d --build"
+ssh oy@oyk40 "cd /home/oy/app/oyblogdeploy/oyblog-back && docker compose up -d --build"
 ```
 
 熟练后：`bash scripts/deploy-docker.sh` 一键完成上面三步。
