@@ -597,3 +597,5 @@ resources/i18n/
 | MinIO | (默认端口) |
 | Nacos | (Nacos 地址在 bootstrap-dev.yml 中) |
 | Sentinel Dashboard | 192.168.200.130:8858 |
+
+> 以上 IP 现统一由项目根 `.env` 的 `SERVER_IP` 环境变量控制（yml 中为 `${SERVER_IP:192.168.200.130}` 占位符），改法见 [doc/local-dev-environment.md](local-dev-environment.md)。

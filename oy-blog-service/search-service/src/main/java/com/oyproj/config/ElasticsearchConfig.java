@@ -7,7 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +23,11 @@ public class ElasticsearchConfig {
 
     @Value("${spring.elasticsearch.uris}")
     private String elasticsearchUris;
+    // ES 账号密码（用户名留空 = 不启用认证，兼容未开启安全认证的 ES）
+    @Value("${spring.elasticsearch.username:}")
+    private String username;
+    @Value("${spring.elasticsearch.password:}")
+    private String password;
     @Bean
     public ElasticsearchClient elasticsearchClient() {
         URI uri = URI.create(elasticsearchUris);
@@ -38,9 +47,18 @@ public class ElasticsearchConfig {
         // 2. 用该 ObjectMapper 构造 JacksonJsonpMapper
         JacksonJsonpMapper jsonpMapper = new JacksonJsonpMapper(objectMapper);
         // 3. 创建 RestClient 和 Transport
-        RestClient restClient = RestClient.builder(
+        RestClientBuilder restClientBuilder = RestClient.builder(
                 new HttpHost(host, port, scheme)
-        ).build();
+        );
+        // 配置了用户名才挂 Basic 认证（对应 ES 开启 xpack.security 的情况）
+        if (username != null && !username.isEmpty()) {
+            final BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+            credentialsProvider.setCredentials(AuthScope.ANY,
+                    new UsernamePasswordCredentials(username, password));
+            restClientBuilder.setHttpClientConfigCallback(httpClientBuilder ->
+                    httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider));
+        }
+        RestClient restClient = restClientBuilder.build();
         ElasticsearchTransport transport = new RestClientTransport(restClient, jsonpMapper);
         // 4. 返回 ElasticsearchClient
         return new ElasticsearchClient(transport);

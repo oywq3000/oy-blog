@@ -45,7 +45,7 @@ spring:
             response-timeout: 600000
   data:
     redis:
-      host: 192.168.200.130
+      host: ${SERVER_IP:192.168.200.130}
       timeout: 10000
       client-type: lettuce
       lettuce:

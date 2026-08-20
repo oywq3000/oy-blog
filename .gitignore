@@ -44,3 +44,4 @@ logs/
 # env
 .env
 .env.*
+!.env.example

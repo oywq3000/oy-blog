@@ -7,7 +7,7 @@ app:
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://192.168.200.130:3306/oyblog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8&allowMultiQueries=true
+    url: jdbc:mysql://${SERVER_IP:192.168.200.130}:3306/oyblog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8&allowMultiQueries=true
     username: root
     password: root
   mail:
@@ -27,7 +27,7 @@ spring:
             enable: true
   data:
     redis:
-      host: 192.168.200.130
+      host: ${SERVER_IP:192.168.200.130}
       timeout: 10000
       client-type: lettuce
       lettuce:
@@ -41,7 +41,7 @@ spring:
       enabled: true
       eager: true
       transport:
-        dashboard: 192.168.200.130:8858
+        dashboard: ${SERVER_IP:192.168.200.130}:8858
         port: 8719
       filter:
         url-patterns: /**

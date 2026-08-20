@@ -4,7 +4,7 @@ server:
 spring:
   data:
     redis:
-      host: 192.168.200.130
+      host: ${SERVER_IP:192.168.200.130}
       timeout: 10000
       client-type: lettuce
       lettuce:
@@ -18,7 +18,7 @@ spring:
       enabled: true
       eager: true
       transport:
-        dashboard: 192.168.200.130:8858
+        dashboard: ${SERVER_IP:192.168.200.130}:8858
         port: 8719
       filter:
         url-patterns: /**
@@ -37,7 +37,7 @@ feign:
 
 
 storage:
-  minio-endpoint: http://192.168.200.130:9090
+  minio-endpoint: http://${SERVER_IP:192.168.200.130}:9090
   minio-access-key: minioadmin
   minio-secret-key: minioadmin
   minio-bucket: oy-blog

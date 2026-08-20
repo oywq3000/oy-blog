@@ -9,7 +9,7 @@ spring:
       enabled: true
       eager: true
       transport:
-        dashboard: 192.168.200.130:8858
+        dashboard: ${SERVER_IP:192.168.200.130}:8858
         port: 8719
       filter:
         url-patterns: /**
