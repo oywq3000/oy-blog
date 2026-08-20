@@ -91,8 +91,6 @@ if ! "${SSH_BIN}" "${SSH}" "test -f ${REMOTE_DIR}/.env"; then
     echo "   !! 本机没有 .env，将用模板占位值，请部署后编辑服务器 .env"
   fi
   merge_env "${tmp_env}" "${REPO_DIR}/deploy/docker-compose.env.example"
-  # 容器为 host 网络模式：SERVER_IP 必须指回环（宿主机防火墙会拦容器→宿主 IP 的流量）
-  sed -i 's/^SERVER_IP=.*/SERVER_IP=127.0.0.1/' "${tmp_env}"
   "${SCP_BIN}" -q "${tmp_env}" "${SSH}:${REMOTE_DIR}/.env"
   rm -f "${tmp_env}"
   echo "   .env 已生成到服务器 ${REMOTE_DIR}/.env（如含模板占位值需自行修改）"

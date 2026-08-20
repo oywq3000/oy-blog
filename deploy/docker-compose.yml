@@ -3,9 +3,12 @@
 # 用法：cd /home/oy/app/oyblogdeploy/oyblog-back && docker compose up -d --build
 # 说明：
 #   - 所有 jar 平铺放在 ./jar/ 目录（build context）
-#   - network_mode: host：容器与宿主机共享网络，中间件一律用 127.0.0.1 访问（回环不受宿主机防火墙限制）
+#   - network_mode: bridge（docker0）：实测这台 NAS 的防火墙只放行 docker0 网段（172.17.x），
+#     自定义 docker 网络到宿主机转发的流量会被拦截（oy-blog_default 和 oy-test-net 均复现失败）
+#   - 中间件经 SERVER_IP（Tailscale IP，宿主机已发布端口）访问，docker0 网段被防火墙放行
+#   - 服务间互访靠 Nacos 注册的容器 IP（docker0 二层直连），不依赖 docker DNS
+#   - 只有 gateway 对外发布 8080；业务端口 8091-8099 留在容器网络内部，不暴露局域网
 #   - MinIO 返回给前端的下载链接单独用 STORAGE_MINIOFILEDOMAIN 指向 Tailscale IP（浏览器可达）
-#   - 端口直接绑定宿主机：gateway 8080 对外，业务端口 8091-8099 容器网络内互通（同一 host 网络）
 #   - 敏感变量统一放同目录 .env（env_file 注入），见 deploy/docker-compose.env.example
 #   - 内存贴边跑：.env 全局 JAVA_TOOL_OPTIONS 128m，gateway/article/search 在各自 environment 里覆盖
 #   - 若 compose < 2.20 报 name: 不支持，删掉下面这行
@@ -13,7 +16,7 @@ name: oy-blog
 
 x-common: &common
   restart: always
-  network_mode: host    # 共享宿主机网络：容器访问 127.0.0.1 即宿主机端口；注意 host 模式下不能配 ports
+  network_mode: bridge   # docker0：唯一被 NAS 防火墙放行的容器网段
   env_file:
     - .env        # SERVER_IP / TZ / JAVA_TOOL_OPTIONS / MAIL_* / ES_* / STORAGE_* 等全部放 .env
 
@@ -29,6 +32,8 @@ services:
         JAR_FILE: oy-blog-gateway-1.0-SNAPSHOT.jar
     environment:
       JAVA_TOOL_OPTIONS: "-Xms64m -Xmx96m -XX:MaxMetaspaceSize=128m"   # 覆盖 .env 全局值（reactive 最轻）
+    ports:
+      - "8080:8080"          # 唯一对外端口
     volumes:
       - ./logs/oy-blog-gateway:/app/logs
 
