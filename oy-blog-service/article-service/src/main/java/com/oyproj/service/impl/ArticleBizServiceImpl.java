@@ -344,6 +344,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
             Category cat = categoryDao.getByCode(dto.getCategoryCode());
             if (cat != null) {
                 ArticleCategory ac = ArticleCategory.builder()
+                        .id(UUIDUtils.getId())
                         .articleId(articleId)
                         .categoryId(cat.getId())
                         .createdAt(LocalDateTime.now())
@@ -352,13 +353,14 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
             }
         }
 
-        // 2. Tags
+        // 2. Tags（常用标签与自创标签走同一路径：不存在则自动创建）
         articleTagMapper.delete(new LambdaQueryWrapper<ArticleTag>().eq(ArticleTag::getArticleId, articleId));
         if (dto.getTags() != null && !dto.getTags().isEmpty()) {
             for (String tagName : dto.getTags()) {
-                 Tag tag = tagDao.getByCode(tagName);
+                 Tag tag = tagDao.getOrCreateByName(tagName);
                  if (tag != null) {
                      ArticleTag at = ArticleTag.builder()
+                             .id(UUIDUtils.getId())
                              .articleId(articleId)
                              .tagId(tag.getId())
                              .createdAt(LocalDateTime.now())

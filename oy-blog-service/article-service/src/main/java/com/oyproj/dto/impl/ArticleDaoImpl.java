@@ -54,13 +54,15 @@ public class ArticleDaoImpl extends ServiceImpl<ArticleMapper, Article> implemen
     }
 
     /**
-     * 查询发布的文章
+     * 查询已发布且未删除的文章
      *
      * @return 发布文章列表
      */
     @Override
     public List<Article> listPublished() {
-        return baseMapper.selectList(new LambdaQueryWrapper<Article>().eq(Article::getStatus, "published"));
+        return baseMapper.selectList(new LambdaQueryWrapper<Article>()
+                .eq(Article::getStatus, "published")
+                .isNull(Article::getDeletedAt));
     }
 
     /**

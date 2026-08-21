@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 文章VO
@@ -21,7 +22,12 @@ public class ArticleInfoVo {
     private String coverUrl;
     private String language;
     private Integer allowComment;
-    
+
+    /**
+     * 文章标签名列表（无标签时为空列表）
+     */
+    private List<String> tags;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime publishAt;
     

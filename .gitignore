@@ -49,3 +49,4 @@ logs/
 ### Python ###
 __pycache__/
 *.pyc
+deploy/

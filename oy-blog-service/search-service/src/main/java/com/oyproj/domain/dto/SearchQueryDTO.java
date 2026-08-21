@@ -9,7 +9,6 @@ public class SearchQueryDTO {
     private Integer pageNum;
     private Integer pageSize;
     private String author;
-    private String tag;
     private SearchFitter filter;
     private String status;
     /** 排序字段: relevance | createdAt | likeCount | viewCount */

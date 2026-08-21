@@ -8,7 +8,6 @@ import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.domain.entity.ArticleLog;
 import com.oyproj.domain.entity.ArticleStats;
-import com.oyproj.domain.entity.Tag;
 import com.oyproj.domain.vo.ArticleChapterVo;
 import com.oyproj.domain.vo.ArticleContentVo;
 import com.oyproj.domain.vo.ArticleInfoVo;
@@ -42,6 +41,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     @NotNull private final ArticleChapterDao chapterDao;
     @NotNull private final ArticleLogDao viewDao;
     @NotNull private final TagDao tagDao;
+    @NotNull private final ArticleTagDao articleTagDao;
     @NotNull private final ArticleStatsDao articleStatsDao;
     @NotNull private final UserClient userClient;
 
@@ -56,6 +56,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         ArticleInfoVo vo = copyProperties(articleDao.getBySlug(slug), ArticleInfoVo.class);
         enrichWithAuthorInfo(Collections.singletonList(vo));
         enrichWithStats(Collections.singletonList(vo));
+        enrichWithTags(Collections.singletonList(vo));
         return Result.ok(vo);
     }
     
@@ -92,6 +93,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         List<ArticleInfoVo> voList = getPage(articleDao::listPublished, ArticleInfoVo.class);
         enrichWithStats(voList);
         enrichWithAuthorInfo(voList);
+        enrichWithTags(voList);
         return Result.ok(voList);
     }
 
@@ -128,6 +130,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         }
         enrichWithStats(voList);
         enrichWithAuthorInfo(voList);
+        enrichWithTags(voList);
         return Result.ok(voList);
     }
 
@@ -154,6 +157,24 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
                 vo.setCommentCount(stats.getComments());
                 vo.setFavorites(stats.getFavorites());
             }
+        }
+    }
+
+    /**
+     * 为文章VO列表批量注入标签名
+     *
+     * @param voList 文章VO列表
+     */
+    private void enrichWithTags(List<ArticleInfoVo> voList) {
+        if (voList == null || voList.isEmpty()) {
+            return;
+        }
+        List<String> articleIds = voList.stream()
+                .map(ArticleInfoVo::getId)
+                .collect(Collectors.toList());
+        Map<String, List<String>> tagMap = articleTagDao.listTagNamesByArticleIds(articleIds);
+        for (ArticleInfoVo vo : voList) {
+            vo.setTags(tagMap.getOrDefault(vo.getId(), Collections.emptyList()));
         }
     }
 
@@ -190,21 +211,13 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     }
 
     /**
-     * 查询热门标签
+     * 查询常用标签及文章数统计
      *
-     * @return 标签列表
+     * @return 常用标签统计列表（按文章数降序，仅统计已发布且未软删的文章）
      */
     @Override
     public Result<List<TagStatVo>> listPopularTags() {
-        // 暂时查询所有标签，实际应查询热门
-        List<Tag> tags = tagDao.list();
-        List<TagStatVo> vos = tags.stream().map(tag -> TagStatVo.builder()
-                .id(tag.getId())
-                .name(tag.getName())
-                .code(tag.getCode())
-                .articleCount(0L) // 暂无统计
-                .build()).collect(Collectors.toList());
-        return Result.ok(vos);
+        return Result.ok(tagDao.listCommonTagStats());
     }
 
      /**
@@ -218,6 +231,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         ArticleInfoVo vo = copyProperties(articleDao.getById(articleId), ArticleInfoVo.class);
         enrichWithAuthorInfo(Collections.singletonList(vo));
         enrichWithStats(Collections.singletonList(vo));
+        enrichWithTags(Collections.singletonList(vo));
         return Result.ok(vo);
     }
 
@@ -235,6 +249,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
                 ArticleInfoVo.class);
         enrichWithStats(pageVo.getData());
         enrichWithAuthorInfo(pageVo.getData());
+        enrichWithTags(pageVo.getData());
         return Result.ok(pageVo);
     }
 }

@@ -28,16 +28,16 @@ public class Tag {
     private String id;
 
     /**
-     * 名称
+     * 名称（标签唯一标识）
      */
     @TableField("name")
     private String name;
 
     /**
-     * 唯一编码
+     * 是否常用标签：1=常用(管理员预置) 0=自创(保存文章时自动创建)
      */
-    @TableField("code")
-    private String code;
+    @TableField("is_common")
+    private Integer isCommon;
 
     /**
      * 创建时间

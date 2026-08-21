@@ -2,6 +2,9 @@ package com.oyproj.dto;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.oyproj.domain.entity.Tag;
+import com.oyproj.domain.vo.TagStatVo;
+
+import java.util.List;
 
 
 /**
@@ -10,20 +13,17 @@ import com.oyproj.domain.entity.Tag;
 public interface TagDao extends IService<Tag> {
 
     /**
-     * 根据编码查询标签
+     * 按名称查询标签，不存在则自动创建（is_common=0 自创标签）
      *
-     * @param code 标签唯一编码
-     * @return 标签实体
+     * @param name 标签名称
+     * @return 标签实体；name 为空时返回 null
      */
-    Tag getByCode(String code);
+    Tag getOrCreateByName(String name);
 
     /**
-     * 查询热门标签
-     * @param limit 限制数量
-     * @return 标签列表
+     * 常用标签文章数统计（仅统计已发布且未软删的文章）
+     *
+     * @return 常用标签统计列表（按文章数降序）
      */
-    // List<TagStatVo> listPopularTags(int limit); // 暂时返回Tag实体或自定义VO，这里先不做复杂统计，简单返回所有
-    // 实际应查询 article_tag 关联表统计
-    // 暂且保留基础方法
+    List<TagStatVo> listCommonTagStats();
 }
-

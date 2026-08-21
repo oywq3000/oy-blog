@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.oyproj.mapper.TagMapper">
+
+    <!--
+        常用标签文章数统计
+        口径：只统计 status='published' 且未软删(deleted_at IS NULL) 的文章；
+        过滤条件放 LEFT JOIN 的 ON 中 + COUNT(CASE WHEN)，保证 0 文章的标签也保留
+    -->
+    <select id="listCommonTagStats" resultType="com.oyproj.domain.vo.TagStatVo">
+        SELECT t.id   AS id,
+               t.name AS name,
+               COUNT(CASE WHEN a.id IS NOT NULL THEN 1 END) AS article_count
+        FROM tag t
+        LEFT JOIN article_tag at ON at.tag_id = t.id
+        LEFT JOIN article a ON a.id = at.article_id
+             AND a.status = 'published' AND a.deleted_at IS NULL
+        WHERE t.is_common = 1
+        GROUP BY t.id, t.name
+        ORDER BY article_count DESC, t.name ASC
+    </select>
+</mapper>

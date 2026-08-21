@@ -52,6 +52,11 @@ feign:
   sentinel:
     enabled: true
 
+# ============ MyBatis Plus Mapper XML ============
+# 显式声明扫描路径：mapper/ 为默认约定目录；com/oyproj/dao/ 兼容既有统计 XML（UserArticleStatDao.xml 等）
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml,classpath*:/com/oyproj/dao/*.xml
+
 # ============ MQ Retry Configuration ============
 oy-blog:
   mq:
