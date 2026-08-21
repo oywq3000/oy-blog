@@ -8,7 +8,6 @@
 #   - 中间件经 MYSQL_HOST/REDIS_HOST/NACOS_HOST 等按组件变量（Tailscale IP，宿主机已发布端口）访问，docker0 网段被防火墙放行
 #   - 服务间互访靠 Nacos 注册的容器 IP（docker0 二层直连），不依赖 docker DNS
 #   - 只有 gateway 对外发布 8080；业务端口 8091-8099 留在容器网络内部，不暴露局域网
-#   - MinIO 返回给前端的下载链接单独用 STORAGE_MINIOFILEDOMAIN 指向 Tailscale IP（浏览器可达）
 #   - 敏感变量统一放同目录 .env（env_file 注入），见 deploy/docker-compose.env.example
 #   - 内存贴边跑：.env 全局 JAVA_TOOL_OPTIONS 128m，gateway/article/search 在各自 environment 里覆盖
 #   - 若 compose < 2.20 报 name: 不支持，删掉下面这行
@@ -17,6 +16,7 @@ name: oy-blog
 x-common: &common
   restart: always
   network_mode: bridge   # docker0：唯一被 NAS 防火墙放行的容器网段
+  pids_limit: 256        # 防线程爆炸拖死宿主机（重连风暴时每个容器最多 256 线程）
   env_file:
     - .env        # MYSQL_HOST / REDIS_HOST / NACOS_HOST / ES_HOST / MQ_HOST / MINIO_HOST / SENTINEL_HOST / TZ / JAVA_TOOL_OPTIONS / MAIL_* / ES_* / STORAGE_* 等全部放 .env
 
@@ -25,6 +25,8 @@ services:
     <<: *common
     image: oy-blog/gateway:1.0-SNAPSHOT
     container_name: oy-blog-gateway
+    cpus: "0.8"          # 资源限制三件套：CPU 硬上限（NAS 8 核，7 个服务合计 6.2 核，给系统留 1.8 核保命）
+    mem_limit: 320m      # Xmx96 + metaspace + 原生开销余量，超限 OOM kill（restart 自动拉起）
     build:
       context: ./jar
       dockerfile: ../docker/Dockerfile
@@ -41,6 +43,8 @@ services:
     <<: *common
     image: oy-blog/user-service:1.0-SNAPSHOT
     container_name: oy-blog-user-service
+    cpus: "1.0"
+    mem_limit: 384m      # Xmx128
     build:
       context: ./jar
       dockerfile: ../docker/Dockerfile
@@ -53,6 +57,8 @@ services:
     <<: *common
     image: oy-blog/article-service:1.0-SNAPSHOT
     container_name: oy-blog-article-service
+    cpus: "1.2"
+    mem_limit: 448m      # Xmx192（MyBatis + MQ 较重）
     build:
       context: ./jar
       dockerfile: ../docker/Dockerfile
@@ -67,6 +73,8 @@ services:
     <<: *common
     image: oy-blog/file-service:1.0-SNAPSHOT
     container_name: oy-blog-file-service
+    cpus: "0.8"
+    mem_limit: 384m      # Xmx128
     build:
       context: ./jar
       dockerfile: ../docker/Dockerfile
@@ -79,6 +87,8 @@ services:
     <<: *common
     image: oy-blog/message-service:1.0-SNAPSHOT
     container_name: oy-blog-message-service
+    cpus: "0.4"
+    mem_limit: 320m      # Xmx128（最轻，只有邮件）
     build:
       context: ./jar
       dockerfile: ../docker/Dockerfile
@@ -91,6 +101,8 @@ services:
     <<: *common
     image: oy-blog/search-service:1.0-SNAPSHOT
     container_name: oy-blog-search-service
+    cpus: "1.2"
+    mem_limit: 448m      # Xmx192（ES 客户端较重）
     build:
       context: ./jar
       dockerfile: ../docker/Dockerfile
@@ -105,6 +117,8 @@ services:
     <<: *common
     image: oy-blog/agent-service:1.0-SNAPSHOT
     container_name: oy-blog-agent-service
+    cpus: "0.8"
+    mem_limit: 384m      # Xmx128
     build:
       context: ./jar
       dockerfile: ../docker/Dockerfile
