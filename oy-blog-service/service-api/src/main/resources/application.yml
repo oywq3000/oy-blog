@@ -2,14 +2,3 @@
 feign:
   sentinel:
     enabled: true
-
-spring:
-  cloud:
-    sentinel:
-      enabled: true
-      eager: true
-      transport:
-        dashboard: ${SERVER_IP:192.168.200.130}:8858
-        port: 8719
-      filter:
-        url-patterns: /**

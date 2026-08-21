@@ -3,14 +3,14 @@ server:
 
 spring:
   elasticsearch:
-    uris: http://${SERVER_IP:192.168.200.130}:9200
+    uris: http://${ES_HOST:192.168.200.130}:9200
     # ES 账号密码：用户名留空 = 不启用认证（兼容未开启安全认证的 ES）
     username: ${ES_USERNAME:}
     password: ${ES_PASSWORD:}
     # 禁止 Spring Data 自动创建/修改索引，mapping 手动管理（见 doc/es-mysql-sync-mechanism.md）
     auto-create-index: false
   rabbitmq:
-    host: ${SERVER_IP:192.168.200.130}
+    host: ${MQ_HOST:192.168.200.130}
     port: 5672
     username: guest
     password: guest

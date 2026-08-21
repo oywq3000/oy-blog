@@ -2,4 +2,4 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: http://${SERVER_IP:192.168.200.130}:8848
+        server-addr: http://${NACOS_HOST:192.168.200.130}:8848

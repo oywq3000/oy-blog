@@ -13,7 +13,7 @@ oyproj:
 spring:
   data:
     redis:
-      host: ${SERVER_IP:192.168.200.130}
+      host: ${REDIS_HOST:192.168.200.130}
       timeout: 10000
       client-type: lettuce
       lettuce:

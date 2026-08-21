@@ -3,12 +3,12 @@ server:
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${SERVER_IP:192.168.200.130}:3306/oyblog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8&allowMultiQueries=true
+    url: jdbc:mysql://${MYSQL_HOST:192.168.200.130}:3306/oyblog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8&allowMultiQueries=true
     username: root
     password: root
   data:
     redis:
-      host: ${SERVER_IP:192.168.200.130}
+      host: ${REDIS_HOST:192.168.200.130}
       timeout: 10000
       client-type: lettuce
       lettuce:
