@@ -135,6 +135,10 @@ public class SearchBizServiceImpl implements SearchBizService {
             int from = pageNum * pageSize;
             // 是否有关键词搜索条件（只有关键词搜索才需要高亮）
             boolean hasKeywordQuery = hasKeyword && (filter == SearchFitter.ALL || filter == SearchFitter.ARTICLE);
+            // 标签高亮：TAG 精确过滤，或 ALL 模式下命中标签 TermQuery
+            boolean needTagHighlight = hasKeyword && (filter == SearchFitter.ALL || filter == SearchFitter.TAG);
+            // 作者高亮：AUTHOR 精确过滤，或 ALL 模式下命中作者 TermQuery
+            boolean needAuthorHighlight = hasKeyword && (filter == SearchFitter.ALL || filter == SearchFitter.AUTHOR);
 
             // 执行搜索
             SortOptions sortOptions = buildSortOptions(queryDTO);
@@ -146,30 +150,48 @@ public class SearchBizServiceImpl implements SearchBizService {
                 if (sortOptions != null) {
                     s.sort(sortOptions);
                 }
-                // 高亮配置：仅有关键词搜索时启用
-                if (hasKeywordQuery) {
-                    s.highlight(h -> h
+                // 高亮配置：按搜索模式启用对应字段
+                if (hasKeywordQuery || needTagHighlight || needAuthorHighlight) {
+                    s.highlight(h -> {
+                        if (hasKeywordQuery) {
                             // title 高亮
-                            .fields("title", hf -> hf
+                            h.fields("title", hf -> hf
                                     .preTags("<em class=\"highlight\">")
                                     .postTags("</em>")
                                     .numberOfFragments(0)
-                            )
+                            );
                             // content 高亮：返回 200 字上下文片段
-                            .fields("content", hf -> hf
+                            h.fields("content", hf -> hf
                                     .preTags("<em class=\"highlight\">")
                                     .postTags("</em>")
                                     .fragmentSize(200)
                                     .numberOfFragments(1)
-                            )
+                            );
                             // summary 高亮：返回 200 字上下文片段
-                            .fields("summary", hf -> hf
+                            h.fields("summary", hf -> hf
                                     .preTags("<em class=\"highlight\">")
                                     .postTags("</em>")
                                     .fragmentSize(200)
                                     .numberOfFragments(1)
-                            )
-                    );
+                            );
+                        }
+                        if (needTagHighlight) {
+                            // tags 是 keyword 数组：高亮返回命中元素的完整值
+                            h.fields("tags", hf -> hf
+                                    .preTags("<em class=\"highlight\">")
+                                    .postTags("</em>")
+                                    .numberOfFragments(0)
+                            );
+                        }
+                        if (needAuthorHighlight) {
+                            h.fields("authorName", hf -> hf
+                                    .preTags("<em class=\"highlight\">")
+                                    .postTags("</em>")
+                                    .numberOfFragments(0)
+                            );
+                        }
+                        return h;
+                    });
                 }
                 return s;
             }, ArticleDocument.class);
@@ -221,10 +243,33 @@ public class SearchBizServiceImpl implements SearchBizService {
                 } else if (summaryFrags != null && !summaryFrags.isEmpty()) {
                     vo.setHighlightSnippet(summaryFrags.get(0));
                 }
+                // highlightTags: 命中的标签名（去 em 纯文本，前端用它强制展示并高亮）
+                List<String> tagFrags = highlights.get("tags");
+                if (tagFrags != null && !tagFrags.isEmpty()) {
+                    vo.setHighlightTags(tagFrags.stream()
+                            .map(this::stripHighlightMarkers)
+                            .filter(name -> name != null && !name.isEmpty())
+                            .toList());
+                }
+                // highlightAuthorName: 命中作者名的 HTML 片段（前端 v-html 渲染）
+                List<String> authorFrags = highlights.get("authorName");
+                if (authorFrags != null && !authorFrags.isEmpty()) {
+                    vo.setHighlightAuthorName(authorFrags.get(0));
+                }
             }
             results.add(vo);
         }
         return results;
+    }
+
+    /**
+     * 去除高亮片段中的 em 标签，还原纯文本（如 &lt;em&gt;Java&lt;/em&gt; → Java）
+     */
+    private String stripHighlightMarkers(String fragment) {
+        if (fragment == null) {
+            return null;
+        }
+        return fragment.replaceAll("<em[^>]*>", "").replaceAll("</em>", "");
     }
 
     /**

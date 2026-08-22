@@ -64,7 +64,7 @@ SET @col_exists := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tag'
                       AND COLUMN_NAME = 'code' AND IS_NULLABLE = 'NO');
 SET @ddl := IF(@col_exists = 1,
-    'ALTER TABLE tag MODIFY COLUMN code VARCHAR(255) NULL',
+    'ALTER TABLE tag MODIFY COLUMN code VARCHAR(128) NULL',
     'SELECT ''code already nullable or not exists, skip''');
 PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
