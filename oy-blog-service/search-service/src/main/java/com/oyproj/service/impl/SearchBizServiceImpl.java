@@ -56,20 +56,14 @@ public class SearchBizServiceImpl implements SearchBizService {
             if (hasKeyword) {
                 switch (filter) {
                     case TAG:
-                        // 标签精确匹配
-                        boolQueryBuilder.must(
-                                TermQuery.of(t -> t.field("tags").value(keyword))._toQuery()
-                        );
+                        // 标签精确匹配（caseInsensitive 保证大小写不敏感）
+                        boolQueryBuilder.must(termCI("tags", keyword));
                         hasSearchCondition = true;
                         break;
                     case AUTHOR:
-                        // 作者精确匹配
-                        boolQueryBuilder.should(
-                                TermQuery.of(t -> t.field("authorName").value(keyword))._toQuery()
-                        );
-                        boolQueryBuilder.should(
-                                TermQuery.of(t -> t.field("authorId").value(keyword))._toQuery()
-                        );
+                        // 作者精确匹配（caseInsensitive 保证大小写不敏感）
+                        boolQueryBuilder.should(termCI("authorName", keyword));
+                        boolQueryBuilder.should(termCI("authorId", keyword));
                         hasSearchCondition = true;
                         break;
                     case ARTICLE:
@@ -90,12 +84,8 @@ public class SearchBizServiceImpl implements SearchBizService {
                         boolQueryBuilder.should(
                                 MatchQuery.of(m -> m.field("content").query(keyword))._toQuery()
                         );
-                        boolQueryBuilder.should(
-                                TermQuery.of(t -> t.field("tags").value(keyword))._toQuery()
-                        );
-                        boolQueryBuilder.should(
-                                TermQuery.of(t -> t.field("authorName").value(keyword))._toQuery()
-                        );
+                        boolQueryBuilder.should(termCI("tags", keyword));
+                        boolQueryBuilder.should(termCI("authorName", keyword));
                         hasSearchCondition = true;
                         break;
                 }
@@ -210,6 +200,14 @@ public class SearchBizServiceImpl implements SearchBizService {
             return Result.ok(pageVo);
 
         }
+    }
+
+    /**
+     * 构建大小写不敏感的精确匹配查询（tags/authorName/authorId 等 keyword 字段）。
+     * keyword 字段默认大小写敏感，开启 caseInsensitive 保证搜索不区分大小写。
+     */
+    private static Query termCI(String field, String value) {
+        return TermQuery.of(t -> t.field(field).value(value).caseInsensitive(true))._toQuery();
     }
 
     /**

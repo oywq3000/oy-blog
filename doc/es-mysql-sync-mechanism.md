@@ -243,13 +243,18 @@ CREATE TABLE mq_retry_log (
 
 ### 首次部署 / 索引重建
 
+> **注意**：先停 search-service 再删索引，避免运行中的 MQ 消费者在删索引后写入，
+> 触发 ES 服务端 auto_create_index 自动建出**无 mapping 的索引**。
+
 ```bash
+# 0. 停掉 search-service
+
 # 1. 删除旧索引（如果存在）
 curl -X DELETE http://192.168.200.130:9200/articles
 
-# 2. 启动 search-service（自动创建索引 mapping）
+# 2. 启动 search-service（自动按 @Setting/@Field 注解创建索引 mapping）
 
-# 3. 手动触发全量重建
+# 3. 手动触发全量重建（不触发也会在 60s 后由对账调度器自动补齐）
 curl -X POST http://localhost:8099/admin/reindex
 ```
 
