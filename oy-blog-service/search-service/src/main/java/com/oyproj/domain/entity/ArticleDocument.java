@@ -8,6 +8,7 @@ import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.Setting;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -18,22 +19,24 @@ import java.util.List;
  */
 @Data
 @Document(indexName = "articles")
+@Setting(settingPath = "es/analyzer-settings.json")
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ArticleDocument implements Serializable {
-    
+
     @Id
     private String id;
 
     @Field(type = FieldType.Keyword)
     private String slug;
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word", searchAnalyzer = "ik_smart")
+    // ik_*_lc = IK 分词 + lowercase filter，保证英文关键词搜索大小写不敏感（如 redis 可命中 Redis）
+    @Field(type = FieldType.Text, analyzer = "ik_max_word_lc", searchAnalyzer = "ik_smart_lc")
     private String title;
-    
-    @Field(type = FieldType.Text, analyzer = "ik_max_word", searchAnalyzer = "ik_smart")
+
+    @Field(type = FieldType.Text, analyzer = "ik_max_word_lc", searchAnalyzer = "ik_smart_lc")
     private String content;
-    
-    @Field(type = FieldType.Text, analyzer = "ik_max_word", searchAnalyzer = "ik_smart")
+
+    @Field(type = FieldType.Text, analyzer = "ik_max_word_lc", searchAnalyzer = "ik_smart_lc")
     private String summary;
     
     @Field(type = FieldType.Keyword)
