@@ -67,7 +67,4 @@ public class ArticleDocument implements Serializable {
     
     @Field(type = FieldType.Keyword)
     private List<String> tags;
-    
-    @Field(type = FieldType.Keyword)
-    private String category;
 }

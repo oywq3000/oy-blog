@@ -291,7 +291,6 @@ public class SearchBizServiceImpl implements SearchBizService {
         dst.setLikeCount(src.getLikeCount());
         dst.setCommentCount(src.getCommentCount());
         dst.setTags(src.getTags());
-        dst.setCategory(src.getCategory());
     }
 
     /**

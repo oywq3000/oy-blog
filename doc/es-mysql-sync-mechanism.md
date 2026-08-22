@@ -80,7 +80,6 @@ oy-blog 使用 **Elasticsearch** 提供文章全文搜索能力，**MySQL** 作�
 | `updatedAt` | LocalDateTime | 更新时间 |
 | `status` | String | 文章状态 |
 | `tags` | List\<String\> | 标签 |
-| `category` | String | 分类 |
 | `operationTime` | LocalDateTime | 操作时间 |
 
 ### RabbitMQ 拓扑
@@ -229,7 +228,6 @@ CREATE TABLE mq_retry_log (
 | `author` | Keyword | - |
 | `authorId` | Keyword | - |
 | `status` | Keyword | - |
-| `category` | Keyword | - |
 | `tags` | Keyword[] | - |
 | `createdAt` | Date | `date_hour_minute_second_millis` |
 | `updatedAt` | Date | `date_hour_minute_second_millis` |

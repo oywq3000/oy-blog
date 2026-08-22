@@ -50,12 +50,6 @@ public class ArticleSaveDto {
     private String coverUrl;
 
     /**
-     * 分类编码
-     */
-    @Schema(description = "分类编码", example = "tech")
-    private String categoryCode;
-
-    /**
      * 标签列表
      */
     @Schema(description = "标签列表", example = "[\"Java\", \"Spring\"]")

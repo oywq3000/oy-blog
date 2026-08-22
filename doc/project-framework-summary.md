@@ -127,7 +127,7 @@ oy-blog/
     │   ├── domain/entity/           #   Article, ArticleContent, ArticleChapter, ArticleRevision,
     │   │                            #   ArticleStats, ArticleLog, ArticleFavorite, ArticleLike,
     │   │                            #   ArticleSeries, ArticleSeriesItem, ArticleAttachment,
-    │   │                            #   ArticleCategory, ArticleTag, Category, Tag,
+    │   │                            #   ArticleTag, Tag,
     │   │                            #   Comment, CommentReply, CommentReaction, ModerationLog
     │   ├── domain/dto/              #   ArticleSaveDto, ArticleViewDto, CommentSaveDto 等
     │   ├── domain/vo/               #   ArticleVo, ArticleContentVo, ArticleChapterVo, CommentVo 等
@@ -470,7 +470,6 @@ Result<T> {
 | ArticleLike | `article_like` | 点赞记录 |
 | ArticleFavorite | `article_favorite` | 收藏记录 |
 | ArticleSeries | `article_series` | 文章系列 |
-| Category | `category` | 分类 |
 | Tag | `tag` | 标签 |
 | Comment | `comment` | 评论 |
 | CommentReply | `comment_reply` | 评论回复 |

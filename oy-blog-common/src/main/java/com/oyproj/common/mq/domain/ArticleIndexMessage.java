@@ -70,11 +70,6 @@ public class ArticleIndexMessage {
      * 标签列表
      */
     private List<String> tags;
-    
-    /**
-     * 分类
-     */
-    private String category;
 
     /**
      * 文章内容（Markdown原文，消费者侧做清洗）

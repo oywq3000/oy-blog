@@ -188,7 +188,6 @@ public class IndexReconciler {
         doc.setUpdatedAt(message.getUpdatedAt());
         doc.setStatus(message.getStatus());
         doc.setTags(message.getTags());
-        doc.setCategory(message.getCategory());
         doc.setViewCount(message.getViewCount() != null ? message.getViewCount() : 0L);
         doc.setLikeCount(message.getLikeCount() != null ? message.getLikeCount() : 0L);
         doc.setCommentCount(message.getCommentCount() != null ? message.getCommentCount() : 0L);

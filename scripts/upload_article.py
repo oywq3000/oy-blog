@@ -10,7 +10,7 @@ oy-blog 文章自动上传脚本
 
 示例:
     python upload_article.py my-post.md
-    python upload_article.py my-post.md --summary "这是一篇好文章" --tags Java,Spring --category tech
+    python upload_article.py my-post.md --summary "这是一篇好文章" --tags Java,Spring
     python upload_article.py my-post.md --base-url http://your-server:8080
 
 依赖:
@@ -127,7 +127,6 @@ class OyBlogClient:
             "contentMd": content_md,
             "summary": kwargs.get("summary", ""),
             "coverUrl": kwargs.get("cover_url", ""),
-            "categoryCode": kwargs.get("category", ""),
             "tags": kwargs.get("tags", []),
             "allowComment": kwargs.get("allow_comment", 1),
         }
@@ -259,7 +258,7 @@ def main():
         epilog="""
 示例:
   python upload_article.py my-post.md
-  python upload_article.py my-post.md -s "摘要" -t Java,Spring -c tech
+  python upload_article.py my-post.md -s "摘要" -t Java,Spring
   python upload_article.py my-post.md --username admin --password 123456
 
 配置文件 (~/.oy-blog-upload.conf):
@@ -271,7 +270,6 @@ def main():
     parser.add_argument("file", help="Markdown 文件路径")
     parser.add_argument("-s", "--summary", default="", help="文章摘要")
     parser.add_argument("-t", "--tags", default="", help="标签，逗号分隔")
-    parser.add_argument("-c", "--category", default="", help="分类编码")
     parser.add_argument("--cover", default="", help="封面图 URL")
     parser.add_argument("--title", default="", help="文章标题（默认从文件提取）")
     parser.add_argument("--article-id", default="", help="文章 ID（更新已有文章时使用）")
@@ -307,7 +305,6 @@ def main():
     print(f"📝 文章: {title}")
     print(f"📂 文件: {args.file}")
     print(f"🏷  标签: {args.tags or '(无)'}")
-    print(f"📁 分类: {args.category or '(无)'}")
     print(f"{'='*60}")
 
     # 登录
@@ -325,7 +322,6 @@ def main():
         content_md=processed_content,
         summary=summary,
         cover_url=args.cover,
-        category=args.category,
         tags=[t.strip() for t in args.tags.split(",") if t.strip()],
         article_id=args.article_id,
     )

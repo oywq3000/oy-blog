@@ -16,7 +16,6 @@ import com.oyproj.dao.UserArticleStatDao;
 import com.oyproj.domain.dto.ArticleSaveDto;
 import com.oyproj.domain.entity.*;
 import com.oyproj.dto.*;
-import com.oyproj.mapper.ArticleCategoryMapper;
 import com.oyproj.mapper.ArticleTagMapper;
 import com.oyproj.service.ArticleBizService;
 import com.oyproj.service.ArticleMessageProducer;
@@ -47,9 +46,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
     @NotNull private final ArticleContentDao contentDao;
     @NotNull private final ArticleChapterDao chapterDao;
     @NotNull private final ArticleStatsDao statsDao;
-    @NotNull private final CategoryDao categoryDao;
     @NotNull private final TagDao tagDao;
-    @NotNull private final ArticleCategoryMapper articleCategoryMapper;
     @NotNull private final ArticleTagMapper articleTagMapper;
     @NotNull private final ArticleMessageProducer articleMessageProducer;
     @NotNull private final UserClient userClient;
@@ -143,7 +140,6 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         message.setCreatedAt(article.getCreatedAt());
         message.setUpdatedAt(article.getUpdatedAt());
         message.setStatus(article.getStatus());
-        message.setCategory(dto.getCategoryCode());
         message.setTags(dto.getTags());
 
         // 加载文章内容（清洗 Markdown 为纯文本）
@@ -332,28 +328,13 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
     }
 
     /**
-     * 保存文章关联关系（分类、标签）
+     * 保存文章关联关系（标签）
      *
      * @param articleId 文章ID
-     * @param dto 文章保存DTO，包含分类编码和标签列表
+     * @param dto 文章保存DTO，包含标签列表
      */
     private void saveRelations(String articleId, ArticleSaveDto dto) {
-        // 1. Category
-        articleCategoryMapper.delete(new LambdaQueryWrapper<ArticleCategory>().eq(ArticleCategory::getArticleId, articleId));
-        if (StringUtils.hasText(dto.getCategoryCode())) {
-            Category cat = categoryDao.getByCode(dto.getCategoryCode());
-            if (cat != null) {
-                ArticleCategory ac = ArticleCategory.builder()
-                        .id(UUIDUtils.getId())
-                        .articleId(articleId)
-                        .categoryId(cat.getId())
-                        .createdAt(LocalDateTime.now())
-                        .build();
-                articleCategoryMapper.insert(ac);
-            }
-        }
-
-        // 2. Tags（常用标签与自创标签走同一路径：不存在则自动创建）
+        // Tags（常用标签与自创标签走同一路径：不存在则自动创建）
         articleTagMapper.delete(new LambdaQueryWrapper<ArticleTag>().eq(ArticleTag::getArticleId, articleId));
         if (dto.getTags() != null && !dto.getTags().isEmpty()) {
             for (String tagName : dto.getTags()) {

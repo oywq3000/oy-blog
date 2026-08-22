@@ -105,7 +105,6 @@ public class ArticleIndexConsumer {
         document.setUpdatedAt(message.getUpdatedAt());
         document.setStatus(message.getStatus());
         document.setTags(message.getTags());
-        document.setCategory(message.getCategory());
 
         // 内容已在生产者侧清洗为纯文本
         document.setContent(message.getContentMd());
