@@ -84,14 +84,37 @@ public class ArticleReadController {
     }
 
     /**
-     * 查询已发布文章列表
+     * 按发布时间分页查询已发布文章列表
      *
-     * @return 文章列表
+     * @param pageNum  页码（从 1 开始）
+     * @param pageSize 每页条数
+     * @return 分页的文章列表
      */
     @GetMapping("/published")
-    @Operation(summary = "查询已发布文章列表", description = "查询所有已发布的文章")
-    public Result<List<ArticleInfoVo>> listPublished() {
-        return biz.listPublished();
+    @Operation(summary = "按发布时间分页查询已发布文章列表", description = "查询已发布文章，置顶优先，其余按发布时间降序分页返回")
+    public Result<PageVo<List<ArticleInfoVo>>> listPublished(
+            @Parameter(description = "页码（从 1 开始）", example = "1")
+            @RequestParam(defaultValue = "1") int pageNum,
+            @Parameter(description = "每页条数", example = "10")
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return biz.listPublished(pageNum, pageSize);
+    }
+
+    /**
+     * 按热度分页查询已发布文章列表
+     *
+     * @param pageNum  页码（从 1 开始）
+     * @param pageSize 每页条数
+     * @return 分页的文章列表
+     */
+    @GetMapping("/published/hot")
+    @Operation(summary = "按热度分页查询已发布文章列表", description = "按 views*1 + likes*2 + comments*5 + favorites*3 加权评分降序分页返回（权重可在配置调整）")
+    public Result<PageVo<List<ArticleInfoVo>>> listPublishedByHot(
+            @Parameter(description = "页码（从 1 开始）", example = "1")
+            @RequestParam(defaultValue = "1") int pageNum,
+            @Parameter(description = "每页条数", example = "10")
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return biz.listPublishedByHot(pageNum, pageSize);
     }
 
     /**

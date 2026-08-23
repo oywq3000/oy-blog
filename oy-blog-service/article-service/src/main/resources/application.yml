@@ -64,3 +64,11 @@ oy-blog:
     retry-interval-ms: 60000
     # 启动后首次重试延迟（毫秒），默认 30 秒
     retry-initial-delay-ms: 30000
+  article:
+    # ============ 热度加权公式配置 ============
+    # 热度分 = views*views权重 + likes*likes权重 + comments*comments权重 + favorites*favorites权重
+    hot-weight:
+      views: 1
+      likes: 2
+      comments: 5
+      favorites: 3

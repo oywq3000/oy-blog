@@ -73,5 +73,28 @@ public interface ArticleDao extends IService<Article> {
      * @return 文章数量
      */
     Long countByAuthorAndStatus(String authorId, String status);
+
+    /**
+     * 按发布时间分页查询已发布未删除的文章（置顶优先 + publishAt/createdAt/id 降序）
+     *
+     * @param pageNum  页码（1-based）
+     * @param pageSize 每页大小
+     * @return 文章列表
+     */
+    List<Article> listPublishedByTime(int pageNum, int pageSize);
+
+    /**
+     * 按热度分页查询已发布未删除的文章
+     *
+     * @param pageNum   页码（1-based）
+     * @param pageSize  每页大小
+     * @param wViews    浏览量权重
+     * @param wLikes    点赞数权重
+     * @param wComments 评论数权重
+     * @param wFavorites 收藏数权重
+     * @return 文章列表
+     */
+    List<Article> listPublishedByHot(int pageNum, int pageSize,
+                                     long wViews, long wLikes, long wComments, long wFavorites);
 }
 

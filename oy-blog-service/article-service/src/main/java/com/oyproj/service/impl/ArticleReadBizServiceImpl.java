@@ -5,6 +5,7 @@ import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.domain.vo.PageVo;
+import com.oyproj.config.HotWeightProperties;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.domain.entity.ArticleLog;
 import com.oyproj.domain.entity.ArticleStats;
@@ -18,7 +19,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,6 +44,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     @NotNull private final ArticleTagDao articleTagDao;
     @NotNull private final ArticleStatsDao articleStatsDao;
     @NotNull private final UserClient userClient;
+    @NotNull private final HotWeightProperties hotWeightProperties;
 
     /**
      * 根据slug查询文章
@@ -83,18 +84,65 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     }
 
     /**
-     * 查询已发布文章列表（分页）
+     * 按发布时间分页查询已发布文章列表（置顶优先 + publishAt/createdAt/id 降序）
      *
-     * @return 文章列表
+     * @param pageNum  页码（1-based）
+     * @param pageSize 每页大小
+     * @return 分页的文章列表
      */
     @Override
-    @Transactional
-    public Result<List<ArticleInfoVo>> listPublished() {
-        List<ArticleInfoVo> voList = getPage(articleDao::listPublished, ArticleInfoVo.class);
+    public Result<PageVo<List<ArticleInfoVo>>> listPublished(int pageNum, int pageSize) {
+        int[] p = normalizePage(pageNum, pageSize);
+        long total = articleDao.countPublished();
+        List<ArticleInfoVo> voList = total == 0
+                ? Collections.emptyList()
+                : copyList(articleDao.listPublishedByTime(p[0], p[1]), ArticleInfoVo.class);
         enrichWithStats(voList);
         enrichWithAuthorInfo(voList);
         enrichWithTags(voList);
-        return Result.ok(voList);
+        return Result.ok(buildPageVo(p[0], p[1], total, voList));
+    }
+
+    /**
+     * 按热度分页查询已发布文章列表（加权评分降序）
+     *
+     * @param pageNum  页码（1-based）
+     * @param pageSize 每页大小
+     * @return 分页的文章列表
+     */
+    @Override
+    public Result<PageVo<List<ArticleInfoVo>>> listPublishedByHot(int pageNum, int pageSize) {
+        int[] p = normalizePage(pageNum, pageSize);
+        long total = articleDao.countPublished();
+        List<ArticleInfoVo> voList = total == 0
+                ? Collections.emptyList()
+                : copyList(articleDao.listPublishedByHot(p[0], p[1],
+                        hotWeightProperties.getViews(), hotWeightProperties.getLikes(),
+                        hotWeightProperties.getComments(), hotWeightProperties.getFavorites()),
+                        ArticleInfoVo.class);
+        enrichWithStats(voList);
+        enrichWithAuthorInfo(voList);
+        enrichWithTags(voList);
+        return Result.ok(buildPageVo(p[0], p[1], total, voList));
+    }
+
+    /**
+     * 归一化分页参数：pageNum 最小 1，pageSize 限制在 1~100
+     *
+     * @return {pageNum, pageSize}
+     */
+    private int[] normalizePage(int pageNum, int pageSize) {
+        int p = Math.max(pageNum, 1);
+        int s = Math.min(Math.max(pageSize, 1), 100);
+        return new int[]{p, s};
+    }
+
+    /**
+     * 组装分页 VO（totalPages = ceil(total / pageSize)）
+     */
+    private PageVo<List<ArticleInfoVo>> buildPageVo(int pageNum, int pageSize, long total, List<ArticleInfoVo> data) {
+        int totalPages = (int) Math.ceil((double) total / pageSize);
+        return new PageVo<>(pageNum, pageSize, total, totalPages, data);
     }
 
     /**

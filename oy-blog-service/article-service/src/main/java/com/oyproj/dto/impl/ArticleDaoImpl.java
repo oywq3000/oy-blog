@@ -62,7 +62,11 @@ public class ArticleDaoImpl extends ServiceImpl<ArticleMapper, Article> implemen
     public List<Article> listPublished() {
         return baseMapper.selectList(new LambdaQueryWrapper<Article>()
                 .eq(Article::getStatus, "published")
-                .isNull(Article::getDeletedAt));
+                .isNull(Article::getDeletedAt)
+                .orderByDesc(Article::getIsTop)
+                .orderByDesc(Article::getPublishAt)
+                .orderByDesc(Article::getCreatedAt)
+                .orderByDesc(Article::getId));
     }
 
     /**
@@ -109,6 +113,32 @@ public class ArticleDaoImpl extends ServiceImpl<ArticleMapper, Article> implemen
                 .eq(Article::getAuthorId, authorId)
                 .eq(Article::getStatus, status)
                 .isNull(Article::getDeletedAt));
+    }
+
+    /**
+     * 按发布时间分页查询已发布未删除的文章（置顶优先 + publishAt/createdAt/id 降序）
+     */
+    @Override
+    public List<Article> listPublishedByTime(int pageNum, int pageSize) {
+        Page<Article> pageResult = baseMapper.selectPage(new Page<>(pageNum, pageSize),
+                new LambdaQueryWrapper<Article>()
+                        .eq(Article::getStatus, "published")
+                        .isNull(Article::getDeletedAt)
+                        .orderByDesc(Article::getIsTop)
+                        .orderByDesc(Article::getPublishAt)
+                        .orderByDesc(Article::getCreatedAt)
+                        .orderByDesc(Article::getId));
+        return pageResult.getRecords();
+    }
+
+    /**
+     * 按热度分页查询已发布未删除的文章（加权评分降序 + id 降序兜底）
+     */
+    @Override
+    public List<Article> listPublishedByHot(int pageNum, int pageSize,
+                                            long wViews, long wLikes, long wComments, long wFavorites) {
+        int offset = (pageNum - 1) * pageSize;
+        return baseMapper.selectHotPage(offset, pageSize, wViews, wLikes, wComments, wFavorites);
     }
 }
 

@@ -40,11 +40,22 @@ public interface ArticleReadBizService {
     Result<List<ArticleChapterVo>> listChapters(String articleId);
 
     /**
-     * 查询已发布文章列表
+     * 按发布时间分页查询已发布文章列表（置顶优先 + publishAt 降序）
      *
-     * @return 文章列表
+     * @param pageNum  页码（1-based）
+     * @param pageSize 每页大小
+     * @return 分页的文章列表
      */
-    Result<List<ArticleInfoVo>> listPublished();
+    Result<PageVo<List<ArticleInfoVo>>> listPublished(int pageNum, int pageSize);
+
+    /**
+     * 按热度分页查询已发布文章列表（加权评分降序）
+     *
+     * @param pageNum  页码（1-based）
+     * @param pageSize 每页大小
+     * @return 分页的文章列表
+     */
+    Result<PageVo<List<ArticleInfoVo>>> listPublishedByHot(int pageNum, int pageSize);
 
     /**
      * 查询用户浏览历史
