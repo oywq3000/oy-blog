@@ -2,11 +2,9 @@ package com.oyproj.controller;
 import com.oyproj.common.base.OpLog;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.vo.PageVo;
-import com.oyproj.domain.vo.ArticleChapterVo;
-import com.oyproj.domain.vo.ArticleContentVo;
-import com.oyproj.domain.vo.ArticleInfoVo;
-import com.oyproj.domain.vo.TagStatVo;
+import com.oyproj.domain.vo.*;
 import com.oyproj.service.ArticleReadBizService;
+import com.oyproj.service.ArticleStatsBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,7 +30,7 @@ import java.util.List;
 public class ArticleReadController {
 
     @NotNull private final ArticleReadBizService biz;
-
+    @NotNull private final ArticleStatsBizService statsBiz;
     /**
      * 根据slug查询文章
      *
@@ -116,7 +114,16 @@ public class ArticleReadController {
             @RequestParam(defaultValue = "10") int pageSize) {
         return biz.listPublishedByHot(pageNum, pageSize);
     }
-
+    /**
+     * 获取全库文章数据统计
+     *
+     * @return 已发布文章总数、阅读量总和、点赞数总和、标签总数
+     */
+    @GetMapping("/stats/global")
+    @Operation(summary = "获取全库文章数据统计", description = "统计所有已发布文章总数、全库阅读量总和、点赞数总和、标签总数")
+    public Result<ArticleStatsVo> getGlobalStats() {
+        return statsBiz.getGlobalStats();
+    }
     /**
      * 查询用户浏览历史
      *

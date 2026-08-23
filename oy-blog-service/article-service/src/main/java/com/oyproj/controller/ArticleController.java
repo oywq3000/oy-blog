@@ -1,12 +1,9 @@
 package com.oyproj.controller;
-
 import com.oyproj.api.file.domain.vo.FileVo;
 import com.oyproj.common.base.OpLog;
 import com.oyproj.common.base.Result;
 import com.oyproj.domain.dto.ArticleSaveDto;
-import com.oyproj.domain.vo.ArticleStatsVo;
 import com.oyproj.domain.vo.HeatmapDayVo;
-import com.oyproj.domain.vo.UserArticleStatsVo;
 import com.oyproj.service.ArticleBizService;
 import com.oyproj.service.ArticleCommonBizService;
 import com.oyproj.service.ArticleStatsBizService;
@@ -129,17 +126,6 @@ public class ArticleController {
     @Operation(summary = "获取当前用户活跃度热力图", description = "最近12个月发文章/评论/回复/点赞/收藏的每日活跃数据，游客返回空列表")
     public Result<List<HeatmapDayVo>> getMyHeatmap() {
         return statsBiz.getMyHeatmap();
-    }
-
-    /**
-     * 获取全库文章数据统计
-     *
-     * @return 已发布文章总数、阅读量总和、点赞数总和、标签总数
-     */
-    @GetMapping("/stats/global")
-    @Operation(summary = "获取全库文章数据统计", description = "统计所有已发布文章总数、全库阅读量总和、点赞数总和、标签总数")
-    public Result<ArticleStatsVo> getGlobalStats() {
-        return statsBiz.getGlobalStats();
     }
 
     /**
