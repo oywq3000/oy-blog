@@ -51,5 +51,19 @@ public interface ArticleStatsDao extends IService<ArticleStats> {
      * @param delta 增量（正数新增，负数删除）
      */
     void incComments(String articleId, long delta);
+
+    /**
+     * 全库阅读量总和
+     *
+     * @return 阅读量总和；无数据返回 0
+     */
+    Long sumViews();
+
+    /**
+     * 全库点赞数总和
+     *
+     * @return 点赞数总和；无数据返回 0
+     */
+    Long sumLikes();
 }
 

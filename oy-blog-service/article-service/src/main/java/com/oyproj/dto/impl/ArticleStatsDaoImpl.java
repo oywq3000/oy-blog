@@ -1,6 +1,7 @@
 package com.oyproj.dto.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.oyproj.domain.entity.ArticleStats;
@@ -84,6 +85,35 @@ public class ArticleStatsDaoImpl extends ServiceImpl<ArticleStatsMapper, Article
         baseMapper.update(null, new LambdaUpdateWrapper<ArticleStats>()
                 .eq(ArticleStats::getArticleId, articleId)
                 .setSql("comments = GREATEST(comments + " + delta + ", 0)"));
+    }
+
+    /**
+     * 全库阅读量总和
+     */
+    @Override
+    public Long sumViews() {
+        return sumColumn("views");
+    }
+
+    /**
+     * 全库点赞数总和
+     */
+    @Override
+    public Long sumLikes() {
+        return sumColumn("likes");
+    }
+
+    /**
+     * 对指定数值列求和，无数据或 SUM 结果为 null 时返回 0
+     *
+     * @param column 数值列名
+     * @return 总和
+     */
+    private Long sumColumn(String column) {
+        Object value = baseMapper.selectObjs(new QueryWrapper<ArticleStats>()
+                .select("COALESCE(SUM(" + column + "), 0)"))
+                .stream().findFirst().orElse(null);
+        return value == null ? 0L : ((Number) value).longValue();
     }
 }
 
