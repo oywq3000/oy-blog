@@ -24,4 +24,18 @@ public class EmailCodeSendDto {
      */
     @Schema(description = "用途：null=注册，reset=重置密码", example = "reset")
     private String purpose;
+
+    /**
+     * 图形验证码 ID（发送前通过 /email/verification/captcha 获取）
+     */
+    @NotBlank(message = "{email.captcha.required}")
+    @Schema(description = "图形验证码 ID，发送验证码前获取")
+    private String captchaId;
+
+    /**
+     * 图形验证码答案
+     */
+    @NotBlank(message = "{email.captcha.required}")
+    @Schema(description = "图形验证码答案")
+    private String captchaCode;
 }
