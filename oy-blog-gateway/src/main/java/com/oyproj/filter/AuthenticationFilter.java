@@ -130,8 +130,9 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         String guestId = GuestUtil.getGuestIdFromCookie(request);
         if(guestId==null){
             guestId = GuestUtil.generateUniqueGuestId();
-            GuestUtil.setGuestCookie(response,guestId);
         }
+        // 每次请求都重新下发 cookie，实现"30天不活跃才过期"的滑动续期
+        GuestUtil.setGuestCookie(response,guestId);
         ServerHttpRequest modifiedRequest = request.mutate()
                 .header(HeaderConstant.USER_ID.getValue(), guestId)
                 .header(HeaderConstant.USER_TYPE.getValue(), BlogRole.GUEST.name())
