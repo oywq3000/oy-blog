@@ -4,7 +4,11 @@ import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.constant.CachePrefix;
 import com.oyproj.dao.UserActivityHeatmapDao;
+import com.oyproj.domain.vo.ArticleStatsVo;
 import com.oyproj.domain.vo.HeatmapDayVo;
+import com.oyproj.dto.ArticleDao;
+import com.oyproj.dto.ArticleStatsDao;
+import com.oyproj.dto.TagDao;
 import com.oyproj.service.ArticleStatsBizService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +27,15 @@ public class ArticleStatsBizServiceImpl extends ArticleBaseBizService implements
     @NotNull
     private final UserActivityHeatmapDao activityHeatmapDao;
 
+    @NotNull
+    private final ArticleDao articleDao;
+
+    @NotNull
+    private final ArticleStatsDao articleStatsDao;
+
+    @NotNull
+    private final TagDao tagDao;
+
     @Override
     public Result<List<HeatmapDayVo>> getMyHeatmap() {
         String userId = getUserId();
@@ -31,5 +44,19 @@ public class ArticleStatsBizServiceImpl extends ArticleBaseBizService implements
             return Result.ok(Collections.emptyList());
         }
         return Result.ok(activityHeatmapDao.listActivityDays(userId, LocalDate.now().minusMonths(12)));
+    }
+
+    @Override
+    public Result<ArticleStatsVo> getGlobalStats() {
+        ArticleStatsVo vo = new ArticleStatsVo();
+        vo.setArticleCount(nvl(articleDao.countPublished()));
+        vo.setViewCount(nvl(articleStatsDao.sumViews()));
+        vo.setLikeCount(nvl(articleStatsDao.sumLikes()));
+        vo.setTagCount(nvl(tagDao.count()));
+        return Result.ok(vo);
+    }
+
+    private Long nvl(Long value) {
+        return value == null ? 0L : value;
     }
 }
