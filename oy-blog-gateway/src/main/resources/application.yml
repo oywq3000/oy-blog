@@ -82,8 +82,7 @@ auth:
     - /search-service/essearch/**
     # AI 助手：游客可聊（前端 SSE 用 fetch 手拼 token，游客为空），由 AuthenticationFilter 注入 x-user-id（真实 userId 或 guestId）
     # 安全底线：agent-service 内部所有写接口必须按 x-user-id 做 owner 校验
-    - /agent/**
-    - /conversations/**
+    - /agent-service/**
     - /health
     - /swagger-ui/**
     - /v3/api-docs/**

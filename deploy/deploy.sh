@@ -66,7 +66,9 @@ fi
 
 echo "==> [1/5] 本地 Maven 构建（JDK21，跳过测试）"
 if [ "$SKIP_BUILD" != "1" ]; then
-  (cd "$REPO_ROOT" && mvn -q clean package -DskipTests)
+  # 注意: 用 maven.test.skip=true 而非 -DskipTests —— 后者只跳过"运行测试"，
+  # 测试代码仍会编译，testCompile 编译失败会直接卡住整个构建
+  (cd "$REPO_ROOT" && mvn -q clean package -Dmaven.test.skip=true)
 fi
 
 echo "==> [2/5] 校验 6 个可执行 jar（应包含 BOOT-INF/）"
