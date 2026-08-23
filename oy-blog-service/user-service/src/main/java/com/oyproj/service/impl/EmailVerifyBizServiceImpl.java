@@ -12,8 +12,10 @@ import com.oyproj.common.service.CommonCache;
 import com.oyproj.dao.UserDao;
 import com.oyproj.domain.dto.EmailCodeSendDto;
 import com.oyproj.domain.entity.User;
+import com.oyproj.domain.vo.CaptchaVo;
 import com.oyproj.service.EmailSendService;
 import com.oyproj.service.EmailVerifyBizService;
+import com.oyproj.utils.CaptchaUtils;
 import com.oyproj.utils.VerifyCodeUtils;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +26,7 @@ import java.time.LocalDateTime;
  *
  * <p>验证码：6 位数字，Redis 存 {EMAIL_VERIFY_CODE}_&lt;email&gt;，5 分钟有效；
  * 60 秒内同一邮箱最多发 1 次、每日上限 10 次（incr 计数器）。
+ * 图形验证码：4 位字符，Redis 存 {CAPTCHA}_&lt;captchaId&gt;，2 分钟有效、一次性使用，发码前必须校验通过。
  * 验证链接：随机 token 存 {EMAIL_VERIFY_TOKEN}_&lt;token&gt;=userId，24 小时有效，单次使用。</p>
  */
 @Service
@@ -37,6 +40,8 @@ public class EmailVerifyBizServiceImpl extends UserBizBase implements EmailVerif
     private static final long SEND_INTERVAL_SECONDS = 60L;
     /** 同一邮箱每日发送上限 */
     private static final long DAILY_SEND_LIMIT = 10L;
+    /** 图形验证码有效期（秒） */
+    private static final long CAPTCHA_TTL_SECONDS = 120L;
 
     private final EmailSendService emailSendService;
 
@@ -50,7 +55,15 @@ public class EmailVerifyBizServiceImpl extends UserBizBase implements EmailVerif
         String email = dto.getEmail();
         boolean isReset = "reset".equals(dto.getPurpose());
 
-        // 1. 按用途校验邮箱注册状态：注册要求未注册，重置要求已注册
+        // 1. 人机验证：图形验证码校验（一次性使用，无论对错校验后即删除，防止脚本重放）
+        String captchaKey = CachePrefix.CAPTCHA.getPrefix() + dto.getCaptchaId();
+        String captchaAnswer = cache.getString(captchaKey);
+        cache.remove(captchaKey);
+        if (captchaAnswer == null || !captchaAnswer.equalsIgnoreCase(dto.getCaptchaCode())) {
+            throw new ValidationException(I18n("email.captcha.invalid"));
+        }
+
+        // 2. 按用途校验邮箱注册状态：注册要求未注册，重置要求已注册
         User existing = userDao.getByEmail(email);
         if (isReset) {
             if (existing == null) {
@@ -62,7 +75,7 @@ public class EmailVerifyBizServiceImpl extends UserBizBase implements EmailVerif
             }
         }
 
-        // 2. 防刷：60 秒内最多 1 次 + 每日上限
+        // 3. 防刷：60 秒内最多 1 次 + 每日上限
         String sendKey = CachePrefix.EMAIL_VERIFY_CODE.getPrefix() + "SEND_" + email;
         String dailyKey = CachePrefix.EMAIL_VERIFY_CODE.getPrefix() + "DAILY_" + email;
         if (cache.incr(sendKey, SEND_INTERVAL_SECONDS) > 0) {
@@ -72,13 +85,13 @@ public class EmailVerifyBizServiceImpl extends UserBizBase implements EmailVerif
             throw new ValidationException(I18n("email.code.send.limit"));
         }
 
-        // 3. 生成验证码并缓存 5 分钟（注册 / 重置密码分别使用独立前缀，互不串用）
+        // 4. 生成验证码并缓存 5 分钟（注册 / 重置密码分别使用独立前缀，互不串用）
         String code = VerifyCodeUtils.genCode();
         String codePrefix = isReset ? CachePrefix.EMAIL_RESET_CODE.getPrefix()
                 : CachePrefix.EMAIL_VERIFY_CODE.getPrefix();
         cache.put(codePrefix + email, code, CODE_TTL_SECONDS);
 
-        // 4. 发送邮件（重置密码使用独立主题）
+        // 5. 发送邮件（重置密码使用独立主题）
         if (isReset) {
             emailSendService.sendResetCode(email, code);
         } else {
@@ -135,5 +148,13 @@ public class EmailVerifyBizServiceImpl extends UserBizBase implements EmailVerif
         }
         User user = userDao.getById(getCurrentUserId());
         return Result.ok(user != null && Integer.valueOf(1).equals(user.getEmailVerified()));
+    }
+
+    @Override
+    public Result<CaptchaVo> captcha() {
+        CaptchaUtils.Captcha captcha = CaptchaUtils.gen();
+        String captchaId = VerifyCodeUtils.genToken();
+        cache.put(CachePrefix.CAPTCHA.getPrefix() + captchaId, captcha.code(), CAPTCHA_TTL_SECONDS);
+        return Result.ok(new CaptchaVo(captchaId, captcha.base64Image()));
     }
 }

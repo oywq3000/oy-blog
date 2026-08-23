@@ -2,6 +2,7 @@ package com.oyproj.controller;
 
 import com.oyproj.common.base.Result;
 import com.oyproj.domain.dto.EmailCodeSendDto;
+import com.oyproj.domain.vo.CaptchaVo;
 import com.oyproj.service.EmailVerifyBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,6 +19,15 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/email/verification")
 public class EmailVerifyController {
     private final EmailVerifyBizService emailVerifyBiz;
+
+    /**
+     * 获取图形验证码（发送邮箱验证码前的人机验证，2 分钟有效、一次性使用）
+     */
+    @GetMapping("/captcha")
+    @Operation(summary = "获取图形验证码", description = "发送邮箱验证码前的人机验证（2 分钟有效、一次性使用）")
+    public Result<CaptchaVo> captcha() {
+        return emailVerifyBiz.captcha();
+    }
 
     /**
      * 向未注册邮箱发送 6 位数字验证码（5 分钟有效）
