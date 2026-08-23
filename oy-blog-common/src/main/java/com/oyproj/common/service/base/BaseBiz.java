@@ -112,30 +112,6 @@ public class BaseBiz {
     }
 
     /**
-     * 获取分页数据
-     *
-     * @param supplier 数据提供者（Lambda表达式，执行实际的查询逻辑）
-     * @param targetClass 目标VO类
-     * @param <T> 源数据类型
-     * @param <R> 目标数据类型
-     * @return 分页结果
-     */
-   /* public <T, R> List<R> getPage(Supplier<List<T>> supplier, Class<R> targetClass) {
-        PageUtils.startPage();
-        List<T> list = supplier.get();
-        PageInfo<T> pageInfo = new PageInfo<>(list);
-        PageUtils.clearPage();
-        List<R> resultList = copyList(list, targetClass);
-        PageInfo<R> resultPageInfo = new PageInfo<>(resultList);
-        resultPageInfo.setTotal(pageInfo.getTotal());
-        resultPageInfo.setPageNum(pageInfo.getPageNum());
-        resultPageInfo.setPageSize(pageInfo.getPageSize());
-        resultPageInfo.setPages(pageInfo.getPages());
-        return resultList;
-    }*/
-
-
-    /**
      * 系统繁忙
      *
      * @return 系统繁忙提示信息

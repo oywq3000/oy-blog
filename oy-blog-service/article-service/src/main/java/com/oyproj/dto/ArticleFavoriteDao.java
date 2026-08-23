@@ -1,5 +1,6 @@
 package com.oyproj.dto;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.oyproj.domain.entity.ArticleFavorite;
 
@@ -51,6 +52,6 @@ public interface ArticleFavoriteDao extends IService<ArticleFavorite> {
      * @param userId 用户ID
      * @return 收藏记录列表
      */
-    List<ArticleFavorite> listFavorites(String userId);
+    List<ArticleFavorite> listFavorites(String userId, Page<ArticleFavorite> page);
 }
 

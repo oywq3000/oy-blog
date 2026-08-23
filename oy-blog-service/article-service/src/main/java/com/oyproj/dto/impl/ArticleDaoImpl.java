@@ -74,12 +74,12 @@ public class ArticleDaoImpl extends ServiceImpl<ArticleMapper, Article> implemen
      */
     @Override
     public List<Article> listPublished(int page, int size) {
-        Page<Article> pageResult = baseMapper.selectPage(new Page<>(page, size),
+        return baseMapper.selectPage(new Page<>(page, size),
                 new LambdaQueryWrapper<Article>()
                         .eq(Article::getStatus, "published")
                         .isNull(Article::getDeletedAt)
-                        .orderByDesc(Article::getCreatedAt));
-        return pageResult.getRecords();
+                        .orderByDesc(Article::getCreatedAt))
+                .getRecords();
     }
 
     /**
@@ -96,12 +96,13 @@ public class ArticleDaoImpl extends ServiceImpl<ArticleMapper, Article> implemen
      * 按作者和状态分页查询文章
      */
     @Override
-    public List<Article> listByAuthorAndStatus(String authorId, String status) {
-        return baseMapper.selectList(new LambdaQueryWrapper<Article>()
+    public List<Article> listByAuthorAndStatus(String authorId, String status, Page<Article> page) {
+        return baseMapper.selectPage(page, new LambdaQueryWrapper<Article>()
                 .eq(Article::getAuthorId, authorId)
                 .eq(Article::getStatus, status)
                 .isNull(Article::getDeletedAt)
-                .orderByDesc(Article::getUpdatedAt));
+                .orderByDesc(Article::getUpdatedAt))
+                .getRecords();
     }
 
     /**
@@ -120,15 +121,15 @@ public class ArticleDaoImpl extends ServiceImpl<ArticleMapper, Article> implemen
      */
     @Override
     public List<Article> listPublishedByTime(int pageNum, int pageSize) {
-        Page<Article> pageResult = baseMapper.selectPage(new Page<>(pageNum, pageSize),
+        return baseMapper.selectPage(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<Article>()
                         .eq(Article::getStatus, "published")
                         .isNull(Article::getDeletedAt)
                         .orderByDesc(Article::getIsTop)
                         .orderByDesc(Article::getPublishAt)
                         .orderByDesc(Article::getCreatedAt)
-                        .orderByDesc(Article::getId));
-        return pageResult.getRecords();
+                        .orderByDesc(Article::getId))
+                .getRecords();
     }
 
     /**

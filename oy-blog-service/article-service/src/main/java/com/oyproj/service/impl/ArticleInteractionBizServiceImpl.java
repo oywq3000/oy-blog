@@ -1,6 +1,7 @@
 package com.oyproj.service.impl;
 
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
@@ -12,6 +13,8 @@ import com.oyproj.domain.entity.ArticleFavorite;
 import com.oyproj.domain.entity.ArticleLog;
 import com.oyproj.domain.entity.ArticleStats;
 import com.oyproj.domain.vo.ArticleInfoVo;
+import com.oyproj.domain.vo.PageDomain;
+import com.oyproj.domain.vo.TableSupport;
 import com.oyproj.dto.ArticleDao;
 import com.oyproj.dto.ArticleFavoriteDao;
 import com.oyproj.dto.ArticleLikeDao;
@@ -310,7 +313,9 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
             return Result.error("游客不支持收藏");
         }
         String userId = getUserId();
-        List<ArticleFavorite> favorites = getPage(() -> favoriteDao.listFavorites(userId), ArticleFavorite.class);
+        PageDomain pd = TableSupport.getPageDomain();
+        Page<ArticleFavorite> page = new Page<>(pd.getPageNum(), pd.getPageSize());
+        List<ArticleFavorite> favorites = favoriteDao.listFavorites(userId, page);
         if (favorites.isEmpty()) {
             return Result.ok(Collections.emptyList());
         }

@@ -1,5 +1,6 @@
 package com.oyproj.dto;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.oyproj.domain.entity.Comment;
 
@@ -33,7 +34,7 @@ public interface CommentDao extends IService<Comment> {
      * @param articleId 文章ID
      * @return 评论列表
      */
-    List<Comment> listByArticleOrderByNewest(String articleId);
+    List<Comment> listByArticleOrderByNewest(String articleId, Page<Comment> page);
 
     /**
      * 根据文章ID + 热度排序分页查询评论

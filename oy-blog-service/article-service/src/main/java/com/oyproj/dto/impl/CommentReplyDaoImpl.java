@@ -2,6 +2,7 @@ package com.oyproj.dto.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import com.oyproj.domain.entity.CommentReply;
@@ -29,10 +30,11 @@ public class CommentReplyDaoImpl extends ServiceImpl<CommentReplyMapper, Comment
      * @return 回复列表
      */
     @Override
-    public List<CommentReply> listByCommentId(String commentId) {
-        return baseMapper.selectList(new LambdaQueryWrapper<CommentReply>()
+    public List<CommentReply> listByCommentId(String commentId, Page<CommentReply> page) {
+        return baseMapper.selectPage(page, new LambdaQueryWrapper<CommentReply>()
                 .eq(CommentReply::getCommentId, commentId)
-                .orderByAsc(CommentReply::getReplyAt));
+                .orderByAsc(CommentReply::getReplyAt))
+                .getRecords();
     }
 
     /**

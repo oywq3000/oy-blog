@@ -2,8 +2,7 @@ package com.oyproj.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.github.pagehelper.PageHelper;
-import com.github.pagehelper.PageInfo;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.common.exception.NotFoundException;
 import com.oyproj.domain.entity.AgentConversation;
@@ -31,14 +30,11 @@ public class AgentConversationServiceImpl implements AgentConversationService {
 
     @Override
     public PageVo<List<ConversationVo>> listConversations(String userId, int page, int size) {
-        // PageHelper ThreadLocal 分页（与 article-service 一致，项目全局排除了 jsqlparser，MP 分页插件不可用）
-        PageHelper.startPage(page, size);
-        List<AgentConversation> records = conversationMapper.selectList(
+        Page<AgentConversation> pageResult = conversationMapper.selectPage(new Page<>(page, size),
                 new LambdaQueryWrapper<AgentConversation>()
                         .eq(AgentConversation::getUserId, userId)
                         .orderByDesc(AgentConversation::getUpdatedAt));
-        PageInfo<AgentConversation> pageInfo = new PageInfo<>(records);
-        PageHelper.clearPage();
+        List<AgentConversation> records = pageResult.getRecords();
 
         List<ConversationVo> vos = records.stream()
                 .map(c -> ConversationVo.builder()
@@ -62,8 +58,8 @@ public class AgentConversationServiceImpl implements AgentConversationService {
             vos.forEach(vo -> vo.setMessageCount(counts.getOrDefault(vo.getId(), 0L)));
         }
 
-        return new PageVo<>(pageInfo.getPageNum(), pageInfo.getPageSize(),
-                pageInfo.getTotal(), pageInfo.getPages(), vos);
+        return new PageVo<>((int) pageResult.getCurrent(), (int) pageResult.getSize(),
+                pageResult.getTotal(), (int) pageResult.getPages(), vos);
     }
 
     @Override

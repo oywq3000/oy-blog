@@ -1,5 +1,6 @@
 package com.oyproj.dto;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.oyproj.domain.entity.ArticleLog;
 
@@ -28,8 +29,9 @@ public interface ArticleLogDao extends IService<ArticleLog> {
      * 查询用户阅读历史明细（仅 articleId + viewAt，按浏览时间倒序）
      *
      * @param userId 用户ID
+     * @param page   MP 分页对象（传入 pageNum/pageSize，查询后填充 total/pages）
      * @return 阅读明细列表
      */
-    List<ArticleLog> listHistoryLogs(String userId);
+    List<ArticleLog> listHistoryLogs(String userId, Page<ArticleLog> page);
 }
 

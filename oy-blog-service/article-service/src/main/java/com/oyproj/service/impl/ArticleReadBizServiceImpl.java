@@ -1,5 +1,6 @@
 package com.oyproj.service.impl;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
@@ -12,6 +13,8 @@ import com.oyproj.domain.entity.ArticleStats;
 import com.oyproj.domain.vo.ArticleChapterVo;
 import com.oyproj.domain.vo.ArticleContentVo;
 import com.oyproj.domain.vo.ArticleInfoVo;
+import com.oyproj.domain.vo.PageDomain;
+import com.oyproj.domain.vo.TableSupport;
 import com.oyproj.domain.vo.TagStatVo;
 import com.oyproj.dto.*;
 import com.oyproj.service.ArticleReadBizService;
@@ -152,7 +155,8 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
      */
     @Override
     public Result<List<ArticleInfoVo>> listHistory() {
-        List<ArticleLog> logs = getPage(() -> viewDao.listHistoryLogs(getUserId()), ArticleLog.class);
+        PageDomain pd = TableSupport.getPageDomain();
+        List<ArticleLog> logs = viewDao.listHistoryLogs(getUserId(), new Page<>(pd.getPageNum(), pd.getPageSize()));
         if (logs.isEmpty()) {
             return Result.ok(Collections.emptyList());
         }
@@ -292,13 +296,15 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     @Override
     public Result<PageVo<List<ArticleInfoVo>>> listMine(String status) {
         String userId = getUserId();
-        PageVo<List<ArticleInfoVo>> pageVo = getPageVo(
-                () -> articleDao.listByAuthorAndStatus(userId, status),
-                ArticleInfoVo.class);
-        enrichWithStats(pageVo.getData());
-        enrichWithAuthorInfo(pageVo.getData());
-        enrichWithTags(pageVo.getData());
-        return Result.ok(pageVo);
+        PageDomain pd = TableSupport.getPageDomain();
+        Page<Article> page = new Page<>(pd.getPageNum(), pd.getPageSize());
+        List<Article> articles = articleDao.listByAuthorAndStatus(userId, status, page);
+        List<ArticleInfoVo> voList = copyList(articles, ArticleInfoVo.class);
+        enrichWithStats(voList);
+        enrichWithAuthorInfo(voList);
+        enrichWithTags(voList);
+        return Result.ok(new PageVo<>((int) page.getCurrent(), (int) page.getSize(),
+                page.getTotal(), (int) page.getPages(), voList));
     }
 }
 

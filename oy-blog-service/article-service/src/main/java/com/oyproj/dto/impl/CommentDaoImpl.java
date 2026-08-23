@@ -2,6 +2,7 @@ package com.oyproj.dto.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import com.oyproj.domain.entity.Comment;
@@ -55,11 +56,12 @@ public class CommentDaoImpl extends ServiceImpl<CommentMapper, Comment> implemen
      * @return 评论列表
      */
     @Override
-    public List<Comment> listByArticleOrderByNewest(String articleId) {
-        return baseMapper.selectList(new LambdaQueryWrapper<Comment>()
+    public List<Comment> listByArticleOrderByNewest(String articleId, Page<Comment> page) {
+        return baseMapper.selectPage(page, new LambdaQueryWrapper<Comment>()
                 .eq(Comment::getArticleId, articleId)
                 .orderByDesc(Comment::getIsPinned)
-                .orderByDesc(Comment::getCommentAt));
+                .orderByDesc(Comment::getCommentAt))
+                .getRecords();
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.oyproj.dto.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.oyproj.common.utils.UUIDUtils;
 import com.oyproj.domain.entity.ArticleFavorite;
@@ -84,11 +85,12 @@ public class ArticleFavoriteDaoImpl extends ServiceImpl<ArticleFavoriteMapper, A
      * @return 收藏记录列表
      */
     @Override
-    public List<ArticleFavorite> listFavorites(String userId) {
-        return baseMapper.selectList(new LambdaQueryWrapper<ArticleFavorite>()
+    public List<ArticleFavorite> listFavorites(String userId, Page<ArticleFavorite> page) {
+        return baseMapper.selectPage(page, new LambdaQueryWrapper<ArticleFavorite>()
                 .eq(ArticleFavorite::getUserId, userId)
                 .orderByDesc(ArticleFavorite::getFavoritedAt)
-                .orderByDesc(ArticleFavorite::getCreatedAt));
+                .orderByDesc(ArticleFavorite::getCreatedAt))
+                .getRecords();
     }
 }
 

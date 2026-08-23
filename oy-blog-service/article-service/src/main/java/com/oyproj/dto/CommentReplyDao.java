@@ -1,5 +1,6 @@
 package com.oyproj.dto;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.oyproj.domain.entity.CommentReply;
 
@@ -17,7 +18,7 @@ public interface CommentReplyDao extends IService<CommentReply> {
      * @param commentId 评论ID
      * @return 回复列表
      */
-    List<CommentReply> listByCommentId(String commentId);
+    List<CommentReply> listByCommentId(String commentId, Page<CommentReply> page);
 
     /**
      * 根据评论ID统计回复数量

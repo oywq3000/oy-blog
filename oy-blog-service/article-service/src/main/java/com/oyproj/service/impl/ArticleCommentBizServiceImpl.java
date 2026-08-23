@@ -1,5 +1,6 @@
 package com.oyproj.service.impl;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
@@ -13,6 +14,8 @@ import com.oyproj.domain.entity.CommentReply;
 import com.oyproj.domain.vo.CommentReplyVo;
 import com.oyproj.domain.vo.CommentVo;
 import com.oyproj.domain.vo.CommentWrapperVo;
+import com.oyproj.domain.vo.PageDomain;
+import com.oyproj.domain.vo.TableSupport;
 import com.oyproj.dto.ArticleStatsDao;
 import com.oyproj.dto.CommentDao;
 import com.oyproj.dto.CommentReactionDao;
@@ -79,18 +82,19 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
     }
 
     /**
-     * 按最新排序查询评论（置顶优先 + 时间倒序 + PageHelper 分页）
+     * 按最新排序查询评论（置顶优先 + 时间倒序 + MP 分页）
      */
     private Result<PageVo<CommentWrapperVo>> listCommentsByNewest(String articleId) {
         // ===== 第1次查询：分页查评论（置顶优先 + 时间倒序） =====
-        PageVo<List<Comment>> entityPage = getPageVo(() -> commentDao.listByArticleOrderByNewest(articleId), Comment.class);
-        List<Comment> commentList = entityPage.getData();
+        PageDomain pd = TableSupport.getPageDomain();
+        Page<Comment> page = new Page<>(pd.getPageNum(), pd.getPageSize());
+        List<Comment> commentList = commentDao.listByArticleOrderByNewest(articleId, page);
 
         // 提取分页元数据
-        Integer currentPage = entityPage.getCurrentPage();
-        Integer pageSize = entityPage.getPageSize();
-        Long total = entityPage.getTotal();
-        Integer totalPages = entityPage.getTotalPages();
+        Integer currentPage = (int) page.getCurrent();
+        Integer pageSize = (int) page.getSize();
+        Long total = page.getTotal();
+        Integer totalPages = (int) page.getPages();
 
         if (commentList.isEmpty()) {
             PageVo<CommentWrapperVo> emptyPage = new PageVo<>(currentPage, pageSize, total, totalPages, new CommentWrapperVo(0, new ArrayList<>()));
@@ -210,13 +214,14 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
     @Override
     public Result<PageVo<List<CommentReplyVo>>> listReplies(String commentId) {
         // ===== 分页查回复 =====
-        PageVo<List<CommentReply>> entityPage = getPageVo(() -> replyDao.listByCommentId(commentId), CommentReply.class);
-        List<CommentReply> replies = entityPage.getData();
+        PageDomain pd = TableSupport.getPageDomain();
+        Page<CommentReply> page = new Page<>(pd.getPageNum(), pd.getPageSize());
+        List<CommentReply> replies = replyDao.listByCommentId(commentId, page);
 
-        Integer currentPage = entityPage.getCurrentPage();
-        Integer pageSize = entityPage.getPageSize();
-        Long total = entityPage.getTotal();
-        Integer totalPages = entityPage.getTotalPages();
+        Integer currentPage = (int) page.getCurrent();
+        Integer pageSize = (int) page.getSize();
+        Long total = page.getTotal();
+        Integer totalPages = (int) page.getPages();
 
         if (replies.isEmpty()) {
             PageVo<List<CommentReplyVo>> emptyPage = new PageVo<>(currentPage, pageSize, total, totalPages, new ArrayList<>());

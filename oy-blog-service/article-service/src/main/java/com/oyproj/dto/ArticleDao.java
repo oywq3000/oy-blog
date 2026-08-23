@@ -1,5 +1,6 @@
 package com.oyproj.dto;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.oyproj.domain.entity.Article;
 
@@ -60,10 +61,11 @@ public interface ArticleDao extends IService<Article> {
      * 按作者和状态分页查询文章
      *
      * @param authorId 作者ID
-     * @param status 文章状态 (published/draft)
+     * @param status   文章状态 (published/draft)
+     * @param page     MP 分页对象（传入 pageNum/pageSize，查询后填充 total/pages）
      * @return 文章列表
      */
-    List<Article> listByAuthorAndStatus(String authorId, String status);
+    List<Article> listByAuthorAndStatus(String authorId, String status, Page<Article> page);
 
     /**
      * 按作者和状态统计文章数量
