@@ -168,17 +168,6 @@ oy-blog/
     │   ├── Repository/ArticleSearchRepository # Spring Data ES Repository
     │   ├── service/SearchBizService # 搜索业务
     │   └── config/ElasticsearchConfig # ES 配置
-    │
-    └── message-service/            # 【消息服务】
-        ├── controller/WebSocketServer    # WebSocket 端点 (/ws/message/{userId})
-        ├── service/MessageService        # 消息服务接口
-        ├── service/EmailService / impl   # 邮件服务
-        ├── strategy/MessageStrategy      # 消息策略接口
-        │   └── impl/
-        │       ├── EmailMessageStrategy       # 邮件消息
-        │       ├── SiteMessageStrategy        # 站内消息
-        │       └── WechatOfficialMessageStrategy # 微信公众号消息
-        └── constant/MessageTypeEnum      # 消息类型枚举
 ```
 
 ---
@@ -368,18 +357,6 @@ UserBehaviorStrategyFactory          — 自动注入 List<UserBehaviorStrategy>
 实现类:
   ├─ CommonUserBehaviorStrategy     — READER 用户
   └─ GuestUserBehaviorStrategy      — GUEST 用户
-```
-
-**消息发送策略** (`message-service/strategy/`):
-```
-MessageStrategy (接口)
-  ├─ support(MessageTypeEnum): boolean
-  └─ send(MessageSendDto): void
-
-实现类:
-  ├─ EmailMessageStrategy           — 邮件消息
-  ├─ SiteMessageStrategy            — 站内消息
-  └─ WechatOfficialMessageStrategy  — 微信消息
 ```
 
 **文件存储策略** (`file-service/service/impl/strategy/`):
@@ -585,7 +562,6 @@ resources/i18n/
 | article-service | (Nacos 注册) | 文章核心业务 |
 | file-service | (Nacos 注册) | 文件存储 (MinIO) |
 | search-service | (Nacos 注册) | Elasticsearch 搜索 |
-| message-service | (Nacos 注册) | 消息推送 + WebSocket |
 
 | 中间件 | 地址 |
 |------|------|

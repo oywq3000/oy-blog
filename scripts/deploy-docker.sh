@@ -27,13 +27,12 @@ SSH_BIN="/c/Windows/System32/OpenSSH/ssh.exe"
 SCP_BIN="/c/Windows/System32/OpenSSH/scp.exe"
 SSH="${SERVER_USER}@${SERVER_HOST}"
 
-# 七个服务：(compose 服务名|相对模块目录|jar 文件名)
+# 六个服务：(compose 服务名|相对模块目录|jar 文件名)
 SERVICES=(
   "oy-blog-gateway|oy-blog-gateway|oy-blog-gateway-1.0-SNAPSHOT.jar"
   "user-service|oy-blog-service/user-service|user-service-1.0-SNAPSHOT.jar"
   "article-service|oy-blog-service/article-service|article-service-1.0-SNAPSHOT.jar"
   "file-service|oy-blog-service/file-service|file-service-1.0-SNAPSHOT.jar"
-  "message-service|oy-blog-service/message-service|message-service-1.0-SNAPSHOT.jar"
   "search-service|oy-blog-service/search-service|search-service-1.0-SNAPSHOT.jar"
   "agent-service|oy-blog-service/agent-service|agent-service-1.0-SNAPSHOT.jar"
 )
@@ -57,7 +56,7 @@ cd "${REPO_DIR}"
 mvn -q clean package -DskipTests
 
 # ---- 2. 校验 fat jar（防 pom 漏改，薄 jar 会在这里被拦下）----
-echo "==> [2/5] 校验 7 个可执行 jar（应包含 BOOT-INF/）"
+echo "==> [2/5] 校验 6 个可执行 jar（应包含 BOOT-INF/）"
 for entry in "${SERVICES[@]}"; do
   IFS='|' read -r name mod jar <<< "${entry}"
   jar_path="${mod}/target/${jar}"
@@ -107,6 +106,6 @@ echo ""
 echo "部署完成，验证清单："
 echo "  1. 上面 docker compose ps 全部 Up"
 echo "  2. 内存：ssh ${SSH} 'free -m && docker stats --no-stream'（总 RSS 应 <= 2G）"
-echo "  3. Nacos 控制台 http://${SERVER_HOST}:8848/nacos 服务列表应有 7 个服务、每服务 1 实例"
+echo "  3. Nacos 控制台 http://${SERVER_HOST}:8848/nacos 服务列表应有 6 个服务、每服务 1 实例"
 echo "  4. 网关冒烟：curl -s -o /dev/null -w '%{http_code}' -X POST http://${SERVER_HOST}:8080/user-service/auth/login -H 'Content-Type: application/json' -d '{}'"
 echo "     （期望返回 4xx 而不是 000/503）"

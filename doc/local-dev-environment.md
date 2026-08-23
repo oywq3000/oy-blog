@@ -49,8 +49,6 @@ ES_PASSWORD=
 
 然后回到代码里正常 Run 每个服务——IDEA 会按 3.2 的模板自动生成新配置，自动带上根 `.env`。
 
-> 消息服务 `message-service` 没有现成运行配置，直接 Run 就会走模板，不用管。
-
 ### 3.4 user-service 的邮件密钥（重要，别漏）
 
 `user-service` 原来的运行配置通过 EnvFile 插件加载 `oy-blog-service/user-service/.env`（里面是 QQ 邮箱授权码 `MAIL_USERNAME` / `MAIL_TOKEN`）。**3.3 删掉旧配置后这段引用会一起消失，邮件会发不出去**。重建后二选一：

@@ -86,20 +86,6 @@ services:
     volumes:
       - ./logs/file-service:/app/logs
 
-  message-service:
-    <<: *common
-    image: oy-blog/message-service:1.0-SNAPSHOT
-    container_name: oy-blog-message-service
-    cpus: "0.4"
-    mem_limit: 320m      # Xmx128（最轻，只有邮件）
-    build:
-      context: ./jar
-      dockerfile: ../docker/Dockerfile
-      args:
-        JAR_FILE: message-service-1.0-SNAPSHOT.jar
-    volumes:
-      - ./logs/message-service:/app/logs
-
   search-service:
     <<: *common
     image: oy-blog/search-service:1.0-SNAPSHOT

@@ -1,6 +1,6 @@
 # Docker 部署手册（手动版，逐步教学）
 
-把 oy-blog 的 7 个微服务打包成 Docker 容器，部署到 Linux 服务器（SSH 别名 `oyk40`，用户 `oy`）。
+把 oy-blog 的 6 个微服务打包成 Docker 容器，部署到 Linux 服务器（SSH 别名 `oyk40`，用户 `oy`）。
 本手册每一步都有命令，照着执行即可。熟练后可以用 `scripts/deploy-docker.sh` 一键完成 1→3 步。
 
 > **终端说明**：以下命令在 **Windows cmd 或 PowerShell** 里执行（你的实际环境）。
@@ -13,11 +13,11 @@
 
 ```
 本机 Windows（cmd/PowerShell）           Linux 服务器 (oyk40)
-① mvn clean package 打 7 个 jar  ──② scp 上传──►  /home/oy/app/oyblogdeploy/oyblog-back/
+① mvn clean package 打 6 个 jar  ──② scp 上传──►  /home/oy/app/oyblogdeploy/oyblog-back/
                                                   ├ docker-compose.yml
                                                   ├ .env（密钥，仅第一次配）
                                                   ├ docker/Dockerfile
-                                                  ├ jar/（7 个 jar 平铺）
+                                                  ├ jar/（6 个 jar 平铺）
                                                   └ logs/<服务>/
 ③ docker compose up -d --build（在服务器上构建镜像并启动）
 ```
@@ -73,7 +73,7 @@ mvn clean package -DskipTests
 - `-DskipTests`：跳过运行测试
 - 结束看到 `BUILD SUCCESS` 即成功
 
-**确认 7 个 jar 都是"可执行 fat jar"**（大小应都是几十 MB；如果哪个只有几 KB 说明 pom 缺插件）：
+**确认 6 个 jar 都是"可执行 fat jar"**（大小应都是几十 MB；如果哪个只有几 KB 说明 pom 缺插件）：
 
 | 服务 | jar 路径 | 端口 |
 |---|---|---|
@@ -81,7 +81,6 @@ mvn clean package -DskipTests
 | user-service | oy-blog-service\user-service\target\user-service-1.0-SNAPSHOT.jar | 8093 |
 | article-service | oy-blog-service\article-service\target\article-service-1.0-SNAPSHOT.jar | 8091 |
 | file-service | oy-blog-service\file-service\target\file-service-1.0-SNAPSHOT.jar | 8092 |
-| message-service | oy-blog-service\message-service\target\message-service-1.0-SNAPSHOT.jar | 8094 |
 | search-service | oy-blog-service\search-service\target\search-service-1.0-SNAPSHOT.jar | 8099 |
 | agent-service | oy-blog-service\agent-service\target\agent-service-1.0-SNAPSHOT.jar | 8095 |
 
@@ -93,13 +92,12 @@ mvn clean package -DskipTests
 ssh oy@oyk40 "mkdir -p /home/oy/app/oyblogdeploy/oyblog-back/jar /home/oy/app/oyblogdeploy/oyblog-back/docker /home/oy/app/oyblogdeploy/oyblog-back/logs"
 ```
 
-逐个上传 7 个 jar（user-service 已传过；scp 语法：`scp 本地文件 用户@服务器:目标路径`）：
+逐个上传 6 个 jar（user-service 已传过；scp 语法：`scp 本地文件 用户@服务器:目标路径`）：
 
 ```
 scp .\oy-blog-gateway\target\oy-blog-gateway-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/oyblog-back/jar/
 scp .\oy-blog-service\article-service\target\article-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/oyblog-back/jar/
 scp .\oy-blog-service\file-service\target\file-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/oyblog-back/jar/
-scp .\oy-blog-service\message-service\target\message-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/oyblog-back/jar/
 scp .\oy-blog-service\search-service\target\search-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/oyblog-back/jar/
 scp .\oy-blog-service\agent-service\target\agent-service-1.0-SNAPSHOT.jar oy@oyk40:/home/oy/app/oyblogdeploy/oyblog-back/oyblog-back/jar/
 ```
@@ -154,14 +152,14 @@ ssh oy@oyk40 "cd /home/oy/app/oyblogdeploy/oyblog-back && docker compose up -d -
 - `-d`：后台运行（detached）
 - `--build`：先按 compose 里每个服务的 build 段构建镜像（第一次会拉取 eclipse-temurin:21-jre 基础镜像，之后有缓存）
 
-看到 7 个 `Created` / `Started` 即启动完成。以后只重启不重建（jar 没变的情况下）用 `docker compose up -d`（不带 --build）。
+看到 6 个 `Created` / `Started` 即启动完成。以后只重启不重建（jar 没变的情况下）用 `docker compose up -d`（不带 --build）。
 
 ## 第 5 步：检查是否成功
 
 在服务器上执行（先 `ssh oy@oyk40` 登录）：
 
 ```bash
-# 1. 容器状态：7 个都应该是 Up，STATUS 里没有 Restarting
+# 1. 容器状态：6 个都应该是 Up，STATUS 里没有 Restarting
 cd /home/oy/app/oyblogdeploy/oyblog-back && docker compose ps
 
 # 2. 内存（贴边跑，重点观察）：free 的 available 列不要长期为 0
@@ -177,7 +175,7 @@ docker compose logs --tail=50 user-service
 
 本机验证：
 
-1. Nacos 控制台：http://<SERVER_IP>:8848/nacos → 服务管理 → 服务列表，应有 7 个服务、每服务 1 个实例（如果某个服务显示 2 个实例，说明本机 IDEA 里还开着同款服务，网关会分流到本机，需要停掉 IDEA 里的）
+1. Nacos 控制台：http://<SERVER_IP>:8848/nacos → 服务管理 → 服务列表，应有 6 个服务、每服务 1 个实例（如果某个服务显示 2 个实例，说明本机 IDEA 里还开着同款服务，网关会分流到本机，需要停掉 IDEA 里的）
 2. 网关冒烟：
 
 ```
@@ -194,7 +192,7 @@ curl -s -o /dev/null -w "%%{http_code}\n" -X POST http://<SERVER_IP>:8080/user-s
 | 日志里 Nacos 连接失败 | .env 的 SERVER_IP 不对或为空 | 编辑 /home/oy/app/oyblogdeploy/oyblog-back/.env 后 `docker compose up -d` 重启 |
 | 日志里 MySQL/Redis/ES 拒绝连接 | 中间件端口没发布到 0.0.0.0 或账号密码不对 | 检查宿主机中间件容器端口映射 |
 | 邮件发不出去 | MAIL_TOKEN 没填或键名不对 | .env 里键名必须是 MAIL_TOKEN |
-| free -m 显示内存耗尽、容器被 OOM 杀掉 | 7 个 JVM ≈ 2G 贴边 | 按序降级：① 服务器加 4G swap ② 停掉 agent-service（`docker compose stop agent-service`）③ compose 里把 -Xmx 再调小 ④ 停掉 search-service |
+| free -m 显示内存耗尽、容器被 OOM 杀掉 | 6 个 JVM ≈ 2G 贴边 | 按序降级：① 服务器加 4G swap ② 停掉 agent-service（`docker compose stop agent-service`）③ compose 里把 -Xmx 再调小 ④ 停掉 search-service |
 | 更新代码后没生效 | jar 没重新传/没重建镜像 | 重做第 1、2、4 步 |
 | 镜像构建报 Dockerfile 在 context 外 | 服务器 docker 版本太旧（< 23，无 BuildKit） | 把 Dockerfile 拷进 oyblog-back 目录并把 compose 里 dockerfile 段改成 `Dockerfile` |
 

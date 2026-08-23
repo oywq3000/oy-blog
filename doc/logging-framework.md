@@ -148,8 +148,6 @@ logs/
 │   └── ...
 ├── file-service/
 │   └── ...
-├── message-service/
-│   └── ...
 └── search-service/
     └── ...
 ```
@@ -382,14 +380,12 @@ Get-Content logs\article-service\article-service.log -Wait -Tail 50
 | `oy-blog-service/user-service/.../logback-spring.xml` | user-service 日志配置 |
 | `oy-blog-service/file-service/.../logback-spring.xml` | file-service 日志配置 |
 | `oy-blog-service/search-service/.../logback-spring.xml` | search-service 日志配置 |
-| `oy-blog-service/message-service/.../logback-spring.xml` | message-service 日志配置 |
-| `oy-blog-service/message-service/.../application.yml` | message-service 基础配置 |
 
-### 修改文件（7个）
+### 修改文件（6个）
 
 | 文件 | 改动内容 |
 |------|----------|
-| 5 个服务的 `application.yml` | 追加 `logging.*` 配置节 |
+| 4 个服务的 `application.yml` | 追加 `logging.*` 配置节 |
 | `oy-blog-gateway/.../application.yml` | 追加 `logging.*` 配置节 |
 | `service-api/.../config/FeignConfig.java` | 追加 recordId 跨服务传播 |
 
