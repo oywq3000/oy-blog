@@ -5,6 +5,8 @@ import com.oyproj.api.file.domain.dto.FileUploadDto;
 import com.oyproj.api.file.domain.vo.FileVo;
 import com.oyproj.base.UserBizBase;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.base.ResultCode;
+import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.common.service.CommonCache;
 import com.oyproj.common.utils.FileUtils;
 import com.oyproj.common.utils.UUIDUtils;
@@ -33,7 +35,7 @@ public class UserCommonBizServiceImpl extends UserBizBase implements UserCommonB
         String userId = getCurrentUserId();
         User user = userDao.getById(userId);
         if (user == null) {
-            return Result.error("用户不存在");
+            return Result.error(ResultCode.FAIL.getErrCode(), I18nUtils.t("user.notfound"));
         }
         try {
             // 上传头像

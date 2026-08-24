@@ -6,6 +6,7 @@ import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.exception.UnAuthorizedException;
 import com.oyproj.common.security.domain.SecurityUser;
 import com.oyproj.common.service.CommonCache;
+import com.oyproj.common.utils.I18nUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -67,7 +68,8 @@ public class AuthFilter implements Filter {
                 userDTO.setBlogRole(blogRole);
             }
             default -> {
-                throw new UnAuthorizedException("未知用户类型");
+                // filter 阶段 LocaleContextHolder 尚未填充，必须显式用请求 locale
+                throw new UnAuthorizedException(I18nUtils.tLocale("auth.unknown_user_type", request.getLocale()));
             }
         }
         //todo 完成权限绑定功能

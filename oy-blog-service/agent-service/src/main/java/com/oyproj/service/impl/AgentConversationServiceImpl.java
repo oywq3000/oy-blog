@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.common.exception.NotFoundException;
+import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.domain.entity.AgentConversation;
 import com.oyproj.domain.entity.AgentMessage;
 import com.oyproj.domain.vo.ConversationVo;
@@ -94,7 +95,7 @@ public class AgentConversationServiceImpl implements AgentConversationService {
                 .eq(AgentMessage::getUserId, userId)
                 .set(AgentMessage::getFeedback, feedback));
         if (rows == 0) {
-            throw new NotFoundException("消息不存在");
+            throw new NotFoundException(I18nUtils.t("conversation.message.not_found"));
         }
     }
 
@@ -104,7 +105,7 @@ public class AgentConversationServiceImpl implements AgentConversationService {
     private AgentConversation requireOwned(String userId, String conversationId) {
         AgentConversation conv = conversationMapper.selectById(conversationId);
         if (conv == null || !conv.getUserId().equals(userId)) {
-            throw new NotFoundException("会话不存在");
+            throw new NotFoundException(I18nUtils.t("conversation.not_found"));
         }
         return conv;
     }

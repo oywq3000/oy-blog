@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.base.ResultCode;
+import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.common.constant.CachePrefix;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.service.CommonCache;
@@ -97,7 +99,7 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
     @Override
     public Result<Object> favorite(String articleId) {
         if (isGuest()) {
-            return Result.error("游客不支持收藏");
+            return Result.error(ResultCode.FAIL.getErrCode(), I18nUtils.t("interaction.guest_not_support"));
         }
         String userId = getUserId();
         if (!favoriteDao.hasFavorited(articleId, userId)) {
@@ -116,7 +118,7 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
     @Override
     public Result<Object> unfavorite(String articleId) {
         if (isGuest()) {
-            return Result.error("游客不支持收藏");
+            return Result.error(ResultCode.FAIL.getErrCode(), I18nUtils.t("interaction.guest_not_support"));
         }
         String userId = getUserId();
         if (favoriteDao.hasFavorited(articleId, userId)) {
@@ -190,7 +192,7 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
         // 1. 检查文章是否存在
         Article article = articleDao.getById(articleId);
         if (article == null) {
-            return Result.error("文章不存在");
+            return Result.error(ResultCode.FAIL.getErrCode(), I18nUtils.t("article.not_found"));
         }
 
         String userId = getUserId();
@@ -310,7 +312,7 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
     @Override
     public Result<List<ArticleInfoVo>> listFavorites() {
         if (isGuest()) {
-            return Result.error("游客不支持收藏");
+            return Result.error(ResultCode.FAIL.getErrCode(), I18nUtils.t("interaction.guest_not_support"));
         }
         String userId = getUserId();
         PageDomain pd = TableSupport.getPageDomain();

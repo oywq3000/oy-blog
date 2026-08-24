@@ -27,10 +27,10 @@ public class SqlUtils {
      */
     public static String escapeOrderBySql(String value) {
         if (StringUtils.isNotEmpty(value) && !isValidOrderBySql(value)) {
-            throw new BaseException("参数不符合规范，不能进行查询");
+            throw new BaseException(I18nUtils.t("sql.param.invalid"));
         }
         if (StringUtils.length(value) > ORDER_BY_MAX_LENGTH) {
-            throw new BaseException("参数已超过最大限制，不能进行查询");
+            throw new BaseException(I18nUtils.t("sql.param.too_long"));
         }
         return value;
     }
@@ -52,7 +52,7 @@ public class SqlUtils {
         String[] sqlKeywords = StringUtils.split(SQL_REGEX, "\\|");
         for (String sqlKeyword : sqlKeywords) {
             if (StringUtils.indexOfIgnoreCase(value, sqlKeyword) > -1) {
-                throw new BaseException("参数存在SQL注入风险");
+                throw new BaseException(I18nUtils.t("sql.injection_risk"));
             }
         }
     }

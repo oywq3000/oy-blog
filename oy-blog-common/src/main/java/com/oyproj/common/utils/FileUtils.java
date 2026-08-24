@@ -120,7 +120,7 @@ public class FileUtils {
      */
     public static void checkSize(long size, int maxSize) {
         if (size > (long) maxSize * 1024 * 1024) {
-            throw new ValidationException("文件大小超出限制: " + maxSize + "MB");
+            throw new ValidationException(I18nUtils.t("file.size.exceeded", maxSize));
         }
     }
 }

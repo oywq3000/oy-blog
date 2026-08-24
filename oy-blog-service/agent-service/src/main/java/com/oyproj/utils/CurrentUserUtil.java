@@ -2,6 +2,7 @@ package com.oyproj.utils;
 
 import com.oyproj.common.exception.UnAuthorizedException;
 import com.oyproj.common.security.domain.SecurityUser;
+import com.oyproj.common.utils.I18nUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -24,6 +25,6 @@ public class CurrentUserUtil {
         if (auth != null && auth.getPrincipal() instanceof SecurityUser securityUser) {
             return securityUser.getUser().getId();
         }
-        throw new UnAuthorizedException("未登录");
+        throw new UnAuthorizedException(I18nUtils.t("user.not_login"));
     }
 }

@@ -4,6 +4,7 @@ import com.oyproj.base.UserBizBase;
 import com.oyproj.common.base.BaseException;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.base.ResultCode;
+import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.common.constant.BlogRole;
 import com.oyproj.common.constant.CachePrefix;
 import com.oyproj.common.domain.dto.UserDTO;
@@ -122,13 +123,13 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
         try {
             claims = JwtUtil.parseToken(refreshToken);
         } catch (Exception e) {
-            return Result.error("刷新令牌无效或已过期");
+            return Result.error(ResultCode.FAIL.getErrCode(), I18nUtils.t("token.refresh.invalid_expired"));
         }
 
         // 2. 校验 token 类型必须为 refresh
         String tokenType = JwtUtil.getTokenType(claims);
         if (!JwtUtil.TOKEN_TYPE_REFRESH.equals(tokenType)) {
-            return Result.error("令牌类型错误，需要刷新令牌");
+            return Result.error(ResultCode.FAIL.getErrCode(), I18nUtils.t("token.refresh.type_error"));
         }
 
         String userId = claims.getSubject();
@@ -136,13 +137,13 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
         // 3. 对比 Redis 中存储的 refresh token（防重放，实现旋转策略）
         String storedToken = commonCache.getString(CachePrefix.REFRESH_TOKEN.getPrefix() + userId);
         if (storedToken == null) {
-            return Result.error("刷新令牌已失效，请重新登录");
+            return Result.error(ResultCode.FAIL.getErrCode(), I18nUtils.t("token.refresh.disabled"));
         }
         if (!storedToken.equals(refreshToken)) {
             // 令牌不匹配，可能被重放攻击，清除已失效的 token
             commonCache.remove(CachePrefix.REFRESH_TOKEN.getPrefix() + userId);
             commonCache.remove(CachePrefix.USER_ID.getPrefix() + userId);
-            return Result.error("刷新令牌无效，请重新登录");
+            return Result.error(ResultCode.FAIL.getErrCode(), I18nUtils.t("token.refresh.invalid_login"));
         }
 
         // 4. 生成新 token（旋转：旧 refresh token 立即失效）
@@ -157,7 +158,7 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
             User user = userDao.getById(userId);
             if (user == null) {
                 // 用户已不存在，无法恢复会话 —— 拒绝刷新，让前端走"重新登录"
-                return Result.error("用户不存在或已注销，请重新登录");
+                return Result.error(ResultCode.FAIL.getErrCode(), I18nUtils.t("user.notfound_or_cancelled"));
             }
             UserDTO userDTO = new UserDTO();
             BeanCopyUtils.copyProperties(user, userDTO);

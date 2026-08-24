@@ -6,6 +6,8 @@ import com.oyproj.api.article.domain.UserArticleStatDto;
 import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.exception.NotFoundException;
+import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.mq.constants.MQOperation;
 import com.oyproj.common.mq.domain.ArticleIndexMessage;
@@ -245,7 +247,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         if (StringUtils.hasText(dto.getId())) {
             article = articleDao.getById(dto.getId());
             if (article == null) {
-                throw new RuntimeException("文章不存在");
+                throw new NotFoundException(I18nUtils.t("article.not_found"));
             }
         } else {
             article = new Article();

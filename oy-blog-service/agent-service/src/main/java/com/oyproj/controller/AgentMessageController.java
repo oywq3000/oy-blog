@@ -2,6 +2,7 @@ package com.oyproj.controller;
 
 import com.oyproj.common.base.Result;
 import com.oyproj.common.exception.ValidationException;
+import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.domain.dto.FeedbackRequest;
 import com.oyproj.service.AgentConversationService;
 import com.oyproj.utils.CurrentUserUtil;
@@ -24,7 +25,7 @@ public class AgentMessageController {
     @PostMapping("/{messageId}/feedback")
     public Result<Void> feedback(@PathVariable String messageId, @RequestBody FeedbackRequest req) {
         if (!"like".equals(req.getFeedback()) && !"dislike".equals(req.getFeedback())) {
-            throw new ValidationException("反馈类型不合法");
+            throw new ValidationException(I18nUtils.t("message.feedback_type.invalid"));
         }
         conversationService.feedback(CurrentUserUtil.getUserId(), messageId, req.getFeedback());
         return Result.ok();

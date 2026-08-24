@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.base.ResultCode;
+import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.dto.CommentReactionDto;
@@ -360,7 +362,7 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
                     commentDao.updateById(comment);
                 }
             } else {
-                return Result.error("评论不存在");
+                return Result.error(ResultCode.FAIL.getErrCode(), I18nUtils.t("comment.not_found"));
             }
         }
 

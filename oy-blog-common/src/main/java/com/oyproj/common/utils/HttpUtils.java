@@ -2,6 +2,7 @@ package com.oyproj.common.utils;
 
 
 import com.oyproj.common.base.BaseException;
+import com.oyproj.common.base.ResultCode;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -403,7 +404,7 @@ public class HttpUtils {
                         .append(URLEncoder.encode(entry.getValue(), DEFAULT_CHARSET));
             }
         } catch (UnsupportedEncodingException e) {
-            throw new BaseException("Unsupported encoding: " + DEFAULT_CHARSET, e);
+            throw new BaseException(ResultCode.INTERNAL_SERVER_ERROR, e);
         }
 
         return formData.toString();
