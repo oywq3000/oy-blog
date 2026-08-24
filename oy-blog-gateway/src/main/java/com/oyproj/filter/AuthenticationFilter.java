@@ -6,6 +6,7 @@ import com.oyproj.common.constant.CachePrefix;
 import com.oyproj.common.constant.HeaderConstant;
 import com.oyproj.common.exception.UnAuthorizedException;
 import com.oyproj.common.service.CommonCache;
+import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.common.utils.JwtUtil;
 import com.oyproj.domain.AuthenticationResult;
 import com.oyproj.properties.AuthProperties;
@@ -27,6 +28,8 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.util.Locale;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -40,6 +43,8 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
         log.info("转发:{}",path);
+        // 网关（WebFlux）不填充 LocaleContextHolder，报错消息必须按请求 Accept-Language 显式解析
+        Locale locale = I18nUtils.resolveLocale(request.getHeaders().getAcceptLanguageAsLocales());
         String token = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         //白名单路径：可选认证（类似 permitAll）—— 无论 token 是否有效都可访问
         if(isWhitelisted(path)){
@@ -62,11 +67,11 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         }else if(!StringUtil.isNullOrEmpty(token)){
             //存在token，且认证失败 → 直接拒绝
             log.warn("Token认证失败，拒绝访问: {}", path);
-            return Mono.error(new UnAuthorizedException("Token无效或已过期，请重新登录"));
+            return Mono.error(new UnAuthorizedException(I18nUtils.tLocale("auth.token.invalid", locale)));
         }
         //非白名单路径需要认证
         log.warn("未认证访问受保护路径: {}", path);
-        return Mono.error(new UnAuthorizedException("需要认证"));
+        return Mono.error(new UnAuthorizedException(I18nUtils.tLocale("auth.required", locale)));
     }
 
 
