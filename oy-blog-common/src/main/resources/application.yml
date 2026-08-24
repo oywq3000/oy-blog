@@ -26,5 +26,5 @@ spring:
   messages:
     basename: i18n/messages,i18n/ValidationMessages
     encoding: UTF-8
-    fallback-to-system-locale: true
+    fallback-to-system-locale: false
     use-code-as-default-message: false
