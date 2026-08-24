@@ -3,6 +3,8 @@ package com.oyproj.common.exception;
 import com.oyproj.common.base.BaseException;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.base.ResultCode;
+import com.oyproj.common.utils.I18nUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 /**
  * 全局异常处理器
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -61,12 +64,14 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 处理其他异常
+     * 处理其他异常（兜底）
+     * 返回统一的 i18n 消息，不把内部异常细节（e.getMessage()）泄露给前端，堆栈打日志
      */
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result handleException(Exception e) {
-        return Result.error(ResultCode.INTERNAL_SERVER_ERROR.getErrCode(), e.getMessage());
+        log.error("Unhandled exception", e);
+        return Result.error(ResultCode.INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -75,11 +80,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-        // 获取第一个验证错误信息
+        // 获取第一个验证错误信息（defaultMessage 已是 ValidationMessages 的 i18n 消息）
         String errorMessage = e.getBindingResult().getFieldErrors().stream()
                 .map(error -> error.getDefaultMessage())
                 .findFirst()
-                .orElse("参数验证失败");
+                .orElse(I18nUtils.from(ResultCode.BAD_REQUEST));
         return Result.error(ResultCode.BAD_REQUEST.getErrCode(), errorMessage);
     }
 
