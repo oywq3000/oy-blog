@@ -12,7 +12,9 @@ import com.oyproj.common.exception.NotFoundException;
 import com.oyproj.common.exception.ValidationException;
 import com.oyproj.common.service.CommonCache;
 import com.oyproj.common.utils.BeanCopyUtils;
+import com.oyproj.common.utils.IpUtils;
 import com.oyproj.common.utils.JwtUtil;
+import com.oyproj.common.utils.ServletUtils;
 import com.oyproj.dao.UserDao;
 import com.oyproj.domain.dto.*;
 import com.oyproj.domain.entity.User;
@@ -55,8 +57,10 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
         if (user.getStatus() == 0) {
             throw new ForbiddenException(I18n("user.disabled"));
         }
-        if (user.getLastLoginIp() != null && !user.getLastLoginIp().equals(req.getIpAddress())) {
-            user.setLastLoginIp(req.getIpAddress());
+        // 客户端 IP 由服务端从请求头获取，不信任前端上报
+        String clientIp = IpUtils.getClientIp(ServletUtils.getRequest());
+        if (user.getLastLoginIp() != null && !user.getLastLoginIp().equals(clientIp)) {
+            user.setLastLoginIp(clientIp);
         }
         user.setLastLoginAt(LocalDateTime.now());
         userDao.updateById(user);
@@ -78,6 +82,8 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
 
     @Override
     public Result<Object> register(RegisterDto req) {
+        // 客户端 IP 由服务端从请求头获取，不信任前端上报
+        String clientIp = IpUtils.getClientIp(ServletUtils.getRequest());
         //todo 做注册判断
         User userByName = userDao.getUserByName(req.getUsername());
         if(userByName!=null){
@@ -100,7 +106,7 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
                 .username(req.getUsername())
                 .password(passwordEncoder.encode(req.getPassword()))
                 .email(req.getEmail())
-                .lastLoginIp(req.getIpAddress())
+                .lastLoginIp(clientIp)
                 .status(1)
                 .emailVerified(1)
                 .emailVerifiedAt(LocalDateTime.now())

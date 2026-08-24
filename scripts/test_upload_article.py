@@ -6,12 +6,10 @@ upload_article.py 纯逻辑函数的单元测试
   - generate_summary: 摘要自动生成（去格式前 N 字）
   - find_local_images: 本地图片引用解析
 """
-
 import os
 import sys
 import tempfile
 from pathlib import Path
-
 import pytest
 
 # 确保能 import upload_article（在 scripts/ 目录下）

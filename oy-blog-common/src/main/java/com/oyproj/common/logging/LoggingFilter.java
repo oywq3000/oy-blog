@@ -5,6 +5,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.oyproj.common.utils.IpUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -102,7 +103,7 @@ public class LoggingFilter implements Filter {
             boolean skipBody = LoggingUtils.shouldSkipBody(contentType);
 
             Map<String, String> headers = sanitizeHeaders(httpRequest);
-            String clientIp = getClientIp(httpRequest);
+            String clientIp = IpUtils.getClientIp(httpRequest);
 
             log.info("[REQUEST] {} {} | query={} | headers={} | body={} | client={}",
                     method,
@@ -205,21 +206,4 @@ public class LoggingFilter implements Filter {
         return LoggingUtils.generateRecordId();
     }
 
-    /**
-     * 获取客户端真实 IP
-     */
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        // X-Forwarded-For 可能包含多个 IP，取第一个
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip;
-    }
 }
