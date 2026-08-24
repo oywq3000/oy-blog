@@ -56,7 +56,7 @@ public class MinioFileService extends BaseUpload {
             if (!found) {
                 minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
             }
-
+            
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(bucketName)
@@ -64,7 +64,6 @@ public class MinioFileService extends BaseUpload {
                             .stream(inputStream, -1, 10485760) // -1 for unknown size, part size 10MB
                             .contentType(contentType)
                             .build());
-
             return getUrl(path);
         } catch (Exception e) {
             log.error("MinIO upload error: {}", e.getMessage(), e);

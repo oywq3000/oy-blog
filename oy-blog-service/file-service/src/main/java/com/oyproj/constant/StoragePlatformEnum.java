@@ -11,9 +11,7 @@ import lombok.Getter;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public enum StoragePlatformEnum {
 
-    MINIO(1, "MinIO", "MinIO", "MinIO存储平台"),
-    QINIU(2, "七牛云", "Qiniu", "七牛云存储平台");
-
+    MINIO(1, "MinIO", "MinIO", "MinIO存储平台");
     /**
      * 编码
      */

@@ -33,20 +33,6 @@ public class StorageDomain {
     private String minioBucket;
 
     /**
-     * 七牛云RegionId
-     */
-    private String qiniuOssRegionId;
-
-    /**
-     * 七牛云
-     */
-    private String qiniuOssEndpoint;
-    private String qiniuOssAccessKeyId;
-    private String qiniuOssAccessKeySecret;
-    private String qiniuOssUrl;
-    private String qiniuOssBucket;
-
-    /**
      * 项目名称
      */
     private String qiniuOssImmProjectName;

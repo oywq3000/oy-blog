@@ -38,6 +38,7 @@ feign:
 
 storage:
   minio-endpoint: http://${MINIO_HOST:192.168.200.130}:9000
+  minio-file-domain: ${ASSET_SERVER}
   minio-access-key: minioadmin
   minio-secret-key: minioadmin
   minio-bucket: oy-blog
