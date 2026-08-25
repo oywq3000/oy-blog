@@ -43,6 +43,12 @@ spring:
             connect-timeout: 5000
             # SSE 长流（深度思考可能 30 秒以上无首包），SCG 默认 response-timeout 30s 会掐断，按路由调大
             response-timeout: 600000
+        - id: admin-service
+          uri: lb://admin-service
+          predicates:
+            - Path=/admin-service/**
+          filters:
+            - StripPrefix=1
   data:
     redis:
       host: ${REDIS_HOST:192.168.200.130}
@@ -86,6 +92,7 @@ auth:
     - /health
     - /swagger-ui/**
     - /v3/api-docs/**
+    - /admin-service/public/**
 
 
 
