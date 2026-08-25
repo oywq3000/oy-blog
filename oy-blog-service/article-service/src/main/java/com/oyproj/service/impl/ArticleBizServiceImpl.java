@@ -6,6 +6,7 @@ import com.oyproj.api.article.domain.UserArticleStatDto;
 import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.base.ResultCode;
 import com.oyproj.common.exception.NotFoundException;
 import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.common.domain.dto.UserDTO;
@@ -66,7 +67,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         Article article = saveArticleBase(dto, "draft");
         String articleId =article.getId();
         saveRevision(articleId, dto.getContentMd());
-        return Result.ok(articleId);
+        return Result.ok(articleId, I18n(ResultCode.SUCCESS));
     }
 
     /**

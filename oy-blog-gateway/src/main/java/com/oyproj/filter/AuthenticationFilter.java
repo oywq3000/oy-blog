@@ -4,6 +4,8 @@ package com.oyproj.filter;
 import com.oyproj.common.constant.BlogRole;
 import com.oyproj.common.constant.CachePrefix;
 import com.oyproj.common.constant.HeaderConstant;
+import com.oyproj.common.domain.dto.UserDTO;
+import com.oyproj.common.exception.ForbiddenException;
 import com.oyproj.common.exception.UnAuthorizedException;
 import com.oyproj.common.service.CommonCache;
 import com.oyproj.common.utils.I18nUtils;
@@ -63,6 +65,14 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         if(authResult.isAuthenticated()){
             //用户认证成功
             log.debug("认证用户访问: {}, 用户ID: {}", path, authResult.getUserId());
+            // 管理端路径：仅 ADMIN 可访问（/public/** 除外，如公告展示/通知读取）
+            if (isAdminPath(path)) {
+                UserDTO cached = (UserDTO) commonCache.get(CachePrefix.USER_ID.getPrefix() + authResult.getUserId());
+                if (cached == null || cached.getBlogRole() != BlogRole.ADMIN) {
+                    log.warn("非管理员访问管理端路径被拒绝: {}, 用户ID: {}", path, authResult.getUserId());
+                    return Mono.error(new ForbiddenException(I18nUtils.tLocale("error.forbidden", locale)));
+                }
+            }
             return handleAuthenticatedUser(exchange, chain, authResult);
         }else if(!StringUtil.isNullOrEmpty(token)){
             //存在token，且认证失败 → 直接拒绝
@@ -112,16 +122,24 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         }
     }
 
+    /** 是否管理端受保护路径（/admin-service/** 且不在 public 白名单语义内） */
+    private boolean isAdminPath(String path) {
+        return path.startsWith("/admin-service/") && !path.startsWith("/admin-service/public/");
+    }
+
     /**
-     * 处理认证用户请求
+     * 处理认证用户请求：从缓存读取完整 UserDTO，注入真实角色（READER/ADMIN）
      */
     private Mono<Void> handleAuthenticatedUser(ServerWebExchange exchange,
                                                GatewayFilterChain chain,
                                                AuthenticationResult authResult) {
         ServerHttpRequest request = exchange.getRequest();
+        String userId = authResult.getUserId();
+        UserDTO cached = (UserDTO) commonCache.get(CachePrefix.USER_ID.getPrefix() + userId);
+        BlogRole role = (cached != null && cached.getBlogRole() != null) ? cached.getBlogRole() : BlogRole.READER;
         ServerHttpRequest modifiedRequest = request.mutate()
-                .header(HeaderConstant.USER_ID.getValue(), authResult.getUserId())
-                .header(HeaderConstant.USER_TYPE.getValue(), BlogRole.READER.name())
+                .header(HeaderConstant.USER_ID.getValue(), userId)
+                .header(HeaderConstant.USER_TYPE.getValue(), role.name())
                 .build();
         return chain.filter(exchange.mutate().request(modifiedRequest).build());
     }

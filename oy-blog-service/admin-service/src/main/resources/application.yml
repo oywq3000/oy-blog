@@ -1,0 +1,40 @@
+server:
+  port: 8095
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:192.168.200.130}:3306/oyblog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8&allowMultiQueries=true
+    username: root
+    password: root
+  data:
+    redis:
+      host: ${REDIS_HOST:192.168.200.130}
+      timeout: 10000
+      client-type: lettuce
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1
+          max-idle: 8
+          min-idle: 0
+  cloud:
+    sentinel:
+      enabled: true
+      eager: true
+      transport:
+        dashboard: ${SENTINEL_HOST:192.168.200.130}:8858
+        port: 8719
+      filter:
+        url-patterns: /**
+
+logging:
+  level:
+    com.oyproj: DEBUG
+    org.springframework: WARN
+  file:
+    path: ./logs
+
+feign:
+  sentinel:
+    enabled: true
