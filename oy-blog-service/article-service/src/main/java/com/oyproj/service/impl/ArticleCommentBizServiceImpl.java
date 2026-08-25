@@ -326,6 +326,7 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         Comment comment = copyProperties(dto, Comment.class);
         comment.setId(getId());
         comment.setUserId(getUserId());
+        comment.setStatus(0);
         comment.setCommentAt(LocalDateTime.now());
 
         // 计算楼层：当前文章最大楼层 + 1
@@ -348,6 +349,7 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         CommentReply commentReply = copyProperties(dto, CommentReply.class);
         commentReply.setId(getId());
         commentReply.setUserId(getUserId());
+        commentReply.setStatus(0);
         commentReply.setReplyAt(LocalDateTime.now());
 
         // 确保 articleId 存在。如果前端没传，需要先查 Comment 补全
