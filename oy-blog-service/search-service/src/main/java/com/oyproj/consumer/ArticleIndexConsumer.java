@@ -3,6 +3,7 @@ package com.oyproj.consumer;
 import com.oyproj.Repository.ArticleSearchRepository;
 import com.oyproj.common.mq.constants.ArticleMQConstant;
 import com.oyproj.common.mq.domain.ArticleIndexMessage;
+import com.oyproj.converter.ArticleDocumentConverter;
 import com.oyproj.domain.entity.ArticleDocument;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
@@ -76,7 +77,7 @@ public class ArticleIndexConsumer {
      * 索引文章到ES
      */
     private void indexArticle(ArticleIndexMessage message) {
-        ArticleDocument document = convertToDocument(message);
+        ArticleDocument document = ArticleDocumentConverter.toDocument(message);
         articleSearchRepository.save(document);
         log.info("文章索引成功，文章ID: {}", document.getId());
     }
@@ -87,33 +88,5 @@ public class ArticleIndexConsumer {
     private void deleteArticleIndex(String articleId) {
         articleSearchRepository.deleteById(articleId);
         log.info("文章索引删除成功，文章ID: {}", articleId);
-    }
-
-    /**
-     * 将消息转换为ES文档
-     */
-    private ArticleDocument convertToDocument(ArticleIndexMessage message) {
-        ArticleDocument document = new ArticleDocument();
-        document.setId(message.getArticleId());
-        document.setSlug(message.getSlug());
-        document.setTitle(message.getTitle());
-        document.setSummary(message.getSummary());
-        document.setAuthorName(message.getAuthorName());
-        document.setAuthorAvatar(message.getAuthorAvatar());
-        document.setAuthorId(message.getAuthorId());
-        document.setCreatedAt(message.getCreatedAt());
-        document.setUpdatedAt(message.getUpdatedAt());
-        document.setStatus(message.getStatus());
-        document.setTags(message.getTags());
-
-        // 内容已在生产者侧清洗为纯文本
-        document.setContent(message.getContentMd());
-
-        // 统计数据（带 null 保护，兼容旧版本消息）
-        document.setViewCount(message.getViewCount() != null ? message.getViewCount() : 0L);
-        document.setLikeCount(message.getLikeCount() != null ? message.getLikeCount() : 0L);
-        document.setCommentCount(message.getCommentCount() != null ? message.getCommentCount() : 0L);
-
-        return document;
     }
 }

@@ -51,7 +51,12 @@ public class ArticleDocument implements Serializable {
     @Field(type = FieldType.Date,format = DateFormat.date_hour_minute_second_millis)
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "GMT+8")
     private LocalDateTime createdAt;
-    
+
+    // 发布时间（草稿为 null，发布后写入；搜索的时间范围过滤和排序都以它为准）
+    @Field(type = FieldType.Date,format = DateFormat.date_hour_minute_second_millis)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "GMT+8")
+    private LocalDateTime publishAt;
+
     @Field(type = FieldType.Date,format = DateFormat.date_hour_minute_second_millis)
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "GMT+8")
     private LocalDateTime updatedAt;

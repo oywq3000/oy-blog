@@ -140,6 +140,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
             message.setAuthorName(article.getAuthorId()); // 兜底：用 authorId
         }
         message.setCreatedAt(article.getCreatedAt());
+        message.setPublishAt(article.getPublishAt());
         message.setUpdatedAt(article.getUpdatedAt());
         message.setStatus(article.getStatus());
         message.setTags(dto.getTags());

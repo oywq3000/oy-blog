@@ -9,6 +9,7 @@ import com.oyproj.api.article.client.ArticleIndexClient;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.common.mq.domain.ArticleIndexMessage;
+import com.oyproj.converter.ArticleDocumentConverter;
 import com.oyproj.domain.entity.ArticleDocument;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -175,23 +176,7 @@ public class IndexReconciler {
     }
 
     private ArticleDocument convertToDocument(ArticleIndexMessage message) {
-        ArticleDocument doc = new ArticleDocument();
-        doc.setId(message.getArticleId());
-        doc.setSlug(message.getSlug());
-        doc.setTitle(message.getTitle());
-        doc.setContent(message.getContentMd());
-        doc.setSummary(message.getSummary());
-        doc.setAuthorName(message.getAuthorName());
-        doc.setAuthorAvatar(message.getAuthorAvatar());
-        doc.setAuthorId(message.getAuthorId());
-        doc.setCreatedAt(message.getCreatedAt());
-        doc.setUpdatedAt(message.getUpdatedAt());
-        doc.setStatus(message.getStatus());
-        doc.setTags(message.getTags());
-        doc.setViewCount(message.getViewCount() != null ? message.getViewCount() : 0L);
-        doc.setLikeCount(message.getLikeCount() != null ? message.getLikeCount() : 0L);
-        doc.setCommentCount(message.getCommentCount() != null ? message.getCommentCount() : 0L);
-        return doc;
+        return ArticleDocumentConverter.toDocument(message);
     }
 
     public SyncStats getLastSyncStats() {

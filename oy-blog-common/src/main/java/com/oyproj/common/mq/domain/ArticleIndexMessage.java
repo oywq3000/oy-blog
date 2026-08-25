@@ -55,7 +55,12 @@ public class ArticleIndexMessage {
      * 创建时间
      */
     private LocalDateTime createdAt;
-    
+
+    /**
+     * 发布时间
+     */
+    private LocalDateTime publishAt;
+
     /**
      * 更新时间
      */

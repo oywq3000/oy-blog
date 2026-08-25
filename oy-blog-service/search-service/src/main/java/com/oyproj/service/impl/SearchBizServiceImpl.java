@@ -98,13 +98,13 @@ public class SearchBizServiceImpl implements SearchBizService {
                 );
                 hasSearchCondition = true;
             }
-            // 发布时间范围过滤（createdAt 即发布时间；草稿不索引，索引内仅已发布文章）
+            // 发布时间范围过滤（按 publishAt；草稿不索引，索引内仅已发布文章，publishAt 为发布时刻）
             String fromStr = toEsDateString(queryDTO.getDateFrom(), false);
             String toStr = toEsDateString(queryDTO.getDateTo(), true);
             if (fromStr != null || toStr != null) {
                 boolQueryBuilder.must(
                     RangeQuery.of(r -> r.date(dr -> {
-                        dr.field("createdAt");
+                        dr.field("publishAt");
                         if (fromStr != null) dr.gte(fromStr);
                         if (toStr != null) dr.lte(toStr);
                         return dr;
@@ -283,6 +283,7 @@ public class SearchBizServiceImpl implements SearchBizService {
         dst.setAuthorAvatar(src.getAuthorAvatar());
         dst.setAuthorId(src.getAuthorId());
         dst.setCreatedAt(src.getCreatedAt());
+        dst.setPublishAt(src.getPublishAt());
         dst.setUpdatedAt(src.getUpdatedAt());
         dst.setStatus(src.getStatus());
         dst.setViewCount(src.getViewCount());
@@ -301,6 +302,7 @@ public class SearchBizServiceImpl implements SearchBizService {
         }
         String field = switch (sortBy) {
             case "createdAt" -> "createdAt";
+            case "publishAt" -> "publishAt";
             case "likeCount" -> "likeCount";
             case "viewCount" -> "viewCount";
             default -> null;

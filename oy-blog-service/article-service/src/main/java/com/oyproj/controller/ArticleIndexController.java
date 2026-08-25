@@ -118,6 +118,7 @@ public class ArticleIndexController {
             msg.setAuthorAvatar(authorAvatarMap.get(article.getAuthorId()));
             msg.setTags(tagMap.getOrDefault(article.getId(), new ArrayList<>()));
             msg.setCreatedAt(article.getCreatedAt());
+            msg.setPublishAt(article.getPublishAt());
             msg.setUpdatedAt(article.getUpdateAt());
             msg.setStatus(article.getStatus());
 
