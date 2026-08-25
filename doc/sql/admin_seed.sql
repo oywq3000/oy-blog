@@ -3,12 +3,12 @@
 
 -- 1. 确保 ADMIN 角色存在
 INSERT INTO `role` (id, code, name, description, created_at, updated_at)
-SELECT 'seed-role-admin', 'ADMIN', '管理员', '博客管理员', NOW(), NOW()
+SELECT REPLACE(UUID(), '-', ''), 'ADMIN', '管理员', '博客管理员', NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM `role` WHERE code = 'ADMIN');
 
 -- 2. 给博主授予 ADMIN 角色（替换 'oywq3000' 为实际用户名）
 INSERT INTO `user_role` (id, user_id, role_id, created_at)
-SELECT UUID(), u.id, r.id, NOW()
+SELECT REPLACE(UUID(), '-', ''), u.id, r.id, NOW()
 FROM `user` u
 JOIN `role` r ON r.code = 'ADMIN'
 WHERE u.username = 'oywq3000'
