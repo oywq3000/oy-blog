@@ -32,7 +32,8 @@ public class CommentDaoImpl extends ServiceImpl<CommentMapper, Comment> implemen
     @Override
     public long countByArticle(String articleId) {
         return commentMapper.selectCount(new LambdaQueryWrapper<Comment>()
-                .eq(Comment::getArticleId, articleId));
+                .eq(Comment::getArticleId, articleId)
+                .eq(Comment::getStatus, 1));
     }
 
     /**
@@ -59,6 +60,7 @@ public class CommentDaoImpl extends ServiceImpl<CommentMapper, Comment> implemen
     public List<Comment> listByArticleOrderByNewest(String articleId, Page<Comment> page) {
         return baseMapper.selectPage(page, new LambdaQueryWrapper<Comment>()
                 .eq(Comment::getArticleId, articleId)
+                .eq(Comment::getStatus, 1)
                 .orderByDesc(Comment::getIsPinned)
                 .orderByDesc(Comment::getCommentAt))
                 .getRecords();

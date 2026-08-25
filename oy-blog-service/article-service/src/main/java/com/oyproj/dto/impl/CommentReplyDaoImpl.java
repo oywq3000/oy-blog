@@ -33,6 +33,7 @@ public class CommentReplyDaoImpl extends ServiceImpl<CommentReplyMapper, Comment
     public List<CommentReply> listByCommentId(String commentId, Page<CommentReply> page) {
         return baseMapper.selectPage(page, new LambdaQueryWrapper<CommentReply>()
                 .eq(CommentReply::getCommentId, commentId)
+                .eq(CommentReply::getStatus, 1)
                 .orderByAsc(CommentReply::getReplyAt))
                 .getRecords();
     }
