@@ -16,5 +16,6 @@
         <module>service-api</module>
         <module>search-service</module>
         <module>agent-service</module>
+        <module>admin-service</module>
     </modules>
 </project>
