@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.oyproj.dao.DashboardDao">
+
+    <select id="countPublishedArticles" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM article WHERE status = 'published' AND deleted_at IS NULL
+    </select>
+
+    <select id="sumViews" resultType="java.lang.Long">
+        SELECT IFNULL(SUM(views), 0) FROM article_stats
+    </select>
+
+    <select id="sumLikes" resultType="java.lang.Long">
+        SELECT IFNULL(SUM(likes), 0) FROM article_stats
+    </select>
+
+    <select id="sumComments" resultType="java.lang.Long">
+        SELECT IFNULL(SUM(comments), 0) FROM article_stats
+    </select>
+
+    <select id="countUsers" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM `user` WHERE id_deleted = 0
+    </select>
+
+    <select id="listDailyViews" resultType="com.oyproj.domain.vo.DailyTrendVo">
+        SELECT DATE_FORMAT(view_at, '%Y-%m-%d') AS date, COUNT(*) AS count
+        FROM article_log
+        WHERE view_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        GROUP BY DATE_FORMAT(view_at, '%Y-%m-%d')
+        ORDER BY date
+    </select>
+
+    <select id="listTopArticles" resultType="com.oyproj.domain.vo.TopArticleVo">
+        SELECT a.id, a.title, s.views, s.likes, s.comments
+        FROM article a
+        JOIN article_stats s ON s.article_id = a.id
+        WHERE a.status = 'published' AND a.deleted_at IS NULL
+        ORDER BY s.views DESC
+        LIMIT 10
+    </select>
+</mapper>
