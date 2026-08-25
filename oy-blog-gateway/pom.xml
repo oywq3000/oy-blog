@@ -63,6 +63,17 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Boot 3.4 的 starter-test 已不包含 reactor-test，而测试用 StepVerifier 必须引入（版本由 spring-boot-dependencies BOM 管理） -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- AppTest 使用 junit.framework（与 article/file/message/search 模块保持一致） -->
         <dependency>
             <groupId>junit</groupId>
