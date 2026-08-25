@@ -30,7 +30,7 @@ public interface CommentMapper extends BaseMapper<Comment> {
         "  SUM(CASE WHEN reaction_type = 'like' THEN 1 ELSE 0 END) AS like_count " +
         "  FROM comment_reaction WHERE article_id = #{articleId} AND comment_id IS NOT NULL " +
         "  GROUP BY comment_id) rc ON c.id = rc.comment_id " +
-        "WHERE c.article_id = #{articleId} " +
+        "WHERE c.article_id = #{articleId} AND c.status = 1 AND c.is_deleted = 0 " +
         "ORDER BY c.is_pinned DESC, " +
         "  (COALESCE(rc.like_count, 0) + COALESCE(rp.reply_count, 0) * 2) DESC " +
         "LIMIT #{offset}, #{size}")

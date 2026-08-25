@@ -3,6 +3,7 @@ package com.oyproj.domain.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -44,6 +45,19 @@ public class Comment {
      */
     @TableField("content")
     private String content;
+
+    /**
+     * 审核状态 0=待审 1=通过 2=拒绝
+     */
+    @TableField("status")
+    private Integer status;
+
+    /**
+     * 逻辑删除 0=否 1=是
+     */
+    @TableLogic
+    @TableField("is_deleted")
+    private Integer isDeleted;
 
     /**
      * 楼层序号
