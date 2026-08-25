@@ -18,6 +18,7 @@ import com.oyproj.common.utils.JwtUtil;
 import com.oyproj.common.utils.ServletUtils;
 import com.oyproj.dao.UserDao;
 import com.oyproj.domain.dto.*;
+import com.oyproj.domain.entity.Role;
 import com.oyproj.domain.entity.User;
 import com.oyproj.service.UserAuthBizService;
 import com.oyproj.utils.SecurityUtil;
@@ -28,6 +29,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 
 /**
@@ -68,7 +70,7 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
         //创建服务间通用的
         UserDTO userDTO = new UserDTO();
         BeanCopyUtils.copyProperties(user,userDTO);
-        userDTO.setBlogRole(BlogRole.READER);
+        userDTO.setBlogRole(resolveBlogRole(user.getId()));
         //SpringSecurity 登录
         SecurityUtil.login(userDTO,null);
         //存储对象到Redis中
@@ -162,7 +164,7 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
             }
             UserDTO userDTO = new UserDTO();
             BeanCopyUtils.copyProperties(user, userDTO);
-            userDTO.setBlogRole(BlogRole.READER);
+            userDTO.setBlogRole(resolveBlogRole(userId));
             session = userDTO;
         }
         commonCache.put(CachePrefix.USER_ID.getPrefix() + userId,
@@ -244,6 +246,13 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
     @Override
     public Result<String> test() {
         return Result.ok(getCurrentUserId());
+    }
+
+    /** 按用户角色表解析真实角色：拥有 ADMIN 角色 → ADMIN，否则 READER */
+    private BlogRole resolveBlogRole(String userId) {
+        List<Role> roles = userDao.listRolesByUserId(userId);
+        boolean admin = roles.stream().anyMatch(r -> "ADMIN".equals(r.getCode()));
+        return admin ? BlogRole.ADMIN : BlogRole.READER;
     }
 
 
