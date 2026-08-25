@@ -11,8 +11,8 @@ SERVER_HOST="100.110.148.14"          # 首次部署建议先用服务器 IP
 SERVER_USER="oy"                # 非 root 需对 REMOTE_DIR 有写权限
 REMOTE_DIR="/home/oy/app/oyblogdeploy/oyblog-back"
 JAVA_HOME="/d/DevelopKit/jdk-21.0.8"  # 本机 JDK21（默认 JDK20 报"不支持发行版本 21"）；已是 21 则留空
-SSH_BIN="${SSH_BIN:-ssh}"       # 中文用户 home 导致 ssh 读密钥失败时，改 /c/Windows/System32/OpenSSH/ssh.exe
-SCP_BIN="${SCP_BIN:-scp}"
+SSH_BIN="C:\Windows\System32\OpenSSH\ssh.exe"       # 中文用户 home 导致 ssh 读密钥失败时，改 /c/Windows/System32/OpenSSH/ssh.exe
+SCP_BIN="C:\Windows\System32\OpenSSH\scp.exe"
 # ===========================================
 
 SSH_TARGET="${SERVER_USER}@${SERVER_HOST}"
@@ -96,28 +96,6 @@ EOF
 tar -czf - "${TAR_ARGS[@]}" | "${SSH_BIN}" "$SSH_TARGET" "$REMOTE_SCRIPT"
 
 echo "==> [4/5] 同步配置文件"
-# .env：仅首次部署生成（含本机 .env 真实密钥 + 模板补全缺失键）；已存在则不动，避免覆盖服务器改过的值
-if ! "${SSH_BIN}" "$SSH_TARGET" "test -f ${REMOTE_DIR}/.env"; then
-  tmp_env="${REPO_ROOT}/.env.merged.tmp"   # 用仓库内相对路径：Windows 原生 scp 解析不了 /tmp
-  if [ -f "${REPO_ROOT}/.env" ]; then
-    cp "${REPO_ROOT}/.env" "${tmp_env}"
-    echo "   .env 基础来自本机 .env（含真实密钥）"
-  else
-    : > "${tmp_env}"
-    echo "   !! 本机没有 .env，将用模板占位值，请部署后编辑服务器 .env"
-  fi
-  while IFS= read -r line; do          # merge_env: 模板缺失的键补进 .env（跳过注释；已存在不动）
-    case "${line}" in ''|\#*) continue ;; esac
-    key="${line%%=*}"
-    if ! grep -q "^${key}=" "${tmp_env}" 2>/dev/null; then
-      echo "${line}" >> "${tmp_env}"
-      echo "   [.env 补全] ${key}"
-    fi
-  done < "${REPO_ROOT}/deploy/docker-compose.env.example"
-  "${SCP_BIN}" -q "${tmp_env}" "${SSH_TARGET}:${REMOTE_DIR}/.env"
-  rm -f "${tmp_env}"
-  echo "   .env 已生成到服务器 ${REMOTE_DIR}/.env（如含模板占位值需自行修改）"
-fi
 
 # --sync-config 时：compose/Dockerfile/env 模板两端 MD5 比对，有变化才上传
 if [ "$SYNC_CONFIG" = "1" ]; then
@@ -125,6 +103,7 @@ if [ "$SYNC_CONFIG" = "1" ]; then
     "deploy/docker-compose.yml|docker-compose.yml"
     "deploy/docker/Dockerfile|docker/Dockerfile"
     "deploy/docker-compose.env.example|deploy.env.example"
+    ".env"
   )
   for entry in "${CONFIG_FILES[@]}"; do
     IFS='|' read -r local_rel remote_rel <<< "${entry}"
