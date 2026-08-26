@@ -251,7 +251,7 @@ public class UserAuthBizServiceImpl extends UserBizBase implements UserAuthBizSe
     /** 按用户角色表解析真实角色：拥有 ADMIN 角色 → ADMIN，否则 READER */
     private BlogRole resolveBlogRole(String userId) {
         List<Role> roles = userDao.listRolesByUserId(userId);
-        boolean admin = roles.stream().anyMatch(r -> "ADMIN".equals(r.getCode()));
+        boolean admin = roles.stream().anyMatch(r -> "admin".equalsIgnoreCase(r.getCode()));
         return admin ? BlogRole.ADMIN : BlogRole.READER;
     }
 

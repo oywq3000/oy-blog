@@ -99,7 +99,7 @@ public class UserAdminBizServiceImpl extends UserBizBase implements UserAdminBiz
     @Override
     public Result<Boolean> assignRole(UserRoleAssignDto dto) {
         Role adminRole = roleMapper.selectOne(
-                new LambdaQueryWrapper<Role>().eq(Role::getCode, "ADMIN"));
+                new LambdaQueryWrapper<Role>().eq(Role::getCode, "admin"));
         if (adminRole == null) {
             return Result.error(false);
         }
