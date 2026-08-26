@@ -63,9 +63,13 @@ public class AuthFilter implements Filter {
                 userDTO.setUsername("游客");
             }
             case ADMIN -> {
-                userDTO = new UserDTO();
-                userDTO.setId(userId);
-                userDTO.setBlogRole(blogRole);
+                // 与 READER 一致：从缓存取完整 UserDTO（username/avatar 等），缓存失效则用 header 兜底
+                userDTO = (UserDTO) commonCache.get(CachePrefix.USER_ID.getPrefix() + userId);
+                if (userDTO == null) {
+                    userDTO = new UserDTO();
+                    userDTO.setId(userId);
+                    userDTO.setBlogRole(blogRole);
+                }
             }
             default -> {
                 // filter 阶段 LocaleContextHolder 尚未填充，必须显式用请求 locale
