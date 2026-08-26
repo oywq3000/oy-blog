@@ -15,7 +15,7 @@ import java.util.Map;
 /**
  * 文章服务管理接口 Feign 客户端（admin-service 使用）
  */
-@FeignClient(value = "article-service", configuration = AdminFeignConfig.class,
+@FeignClient(value = "article-service", contextId = "admin-article-client", configuration = AdminFeignConfig.class,
         fallbackFactory = AdminArticleClientFallbackFactory.class)
 public interface AdminArticleClient {
 

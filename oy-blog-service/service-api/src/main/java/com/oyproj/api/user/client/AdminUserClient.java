@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * 用户服务管理接口 Feign 客户端（admin-service 使用）
  */
-@FeignClient(value = "user-service", configuration = AdminFeignConfig.class,
+@FeignClient(value = "user-service", contextId = "admin-user-client", configuration = AdminFeignConfig.class,
         fallbackFactory = AdminUserClientFallbackFactory.class)
 public interface AdminUserClient {
 
