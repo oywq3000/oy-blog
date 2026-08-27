@@ -1,6 +1,7 @@
 package com.oyproj.domain.vo;
 
 
+import com.oyproj.common.constant.BlogRole;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -54,7 +55,11 @@ public class UserVo {
     @Schema(description = "头像URL", example = "https://example.com/avatar.jpg")
     private String avatarUrl;
 
-
+    /**
+     * 用户role
+     */
+    @Schema(description = "博客角色", example = "admin")
+    private BlogRole blogRole;
 
     /**
      * 邮箱是否验证

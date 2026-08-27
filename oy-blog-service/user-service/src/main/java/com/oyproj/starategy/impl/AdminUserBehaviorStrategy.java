@@ -1,4 +1,5 @@
 package com.oyproj.starategy.impl;
+
 import com.oyproj.base.UserBizBase;
 import com.oyproj.common.component.IpParseApi;
 import com.oyproj.common.constant.BlogRole;
@@ -13,14 +14,13 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 @Component
-public class CommonUserBehaviorStrategy extends UserBizBase implements UserBehaviorStrategy {
-
+public class AdminUserBehaviorStrategy extends UserBizBase implements UserBehaviorStrategy {
     private final IpParseApi ipParseApi;
     private final UserDao userDao;
 
-    public CommonUserBehaviorStrategy(UserDao userDao,
-                                      CommonCache cache,
-                                      IpParseApi ipParseApi) {
+    public AdminUserBehaviorStrategy(UserDao userDao,
+                                     CommonCache cache,
+                                     IpParseApi ipParseApi) {
         super(userDao, cache);
         this.ipParseApi = ipParseApi;
         this.userDao = userDao;
@@ -28,7 +28,7 @@ public class CommonUserBehaviorStrategy extends UserBizBase implements UserBehav
 
     @Override
     public BlogRole supports() {
-        return BlogRole.READER;
+        return BlogRole.ADMIN;
     }
 
     @Override
@@ -37,6 +37,7 @@ public class CommonUserBehaviorStrategy extends UserBizBase implements UserBehav
         if (user == null) {
             throw new NotFoundException(I18n("user.notfound"));
         }
+
         UserVo userVo = UserVo.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -57,5 +58,4 @@ public class CommonUserBehaviorStrategy extends UserBizBase implements UserBehav
         }
         return userVo;
     }
-
 }
