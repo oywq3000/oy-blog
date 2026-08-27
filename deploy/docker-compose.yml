@@ -6,8 +6,9 @@
 #   - 业务容器加入中间件所在的外部网络 oyblog_oyblog-net（中间件编排在 /home/oy/app/oyblog/），
 #     与 MySQL/Redis/Nacos/ES/RabbitMQ/MinIO 同网段二层直连，按容器名访问，流量不经过宿主机防火墙
 #     （历史教训：自定义网络访问"宿主机端口"会被 NAS 防火墙拦截；同网络内互访则完全绕开防火墙）
-#   - sentinel dashboard 已容器化在同网络（sentinel-dashboard:8858）；只有 python agent 还在宿主机上
-#     （AGENT_PYTHON_URL 走 Tailscale IP），172.19 网段访问宿主机可能被防火墙拦截（历史复现过），连不上不影响业务
+#   - sentinel dashboard 已容器化在同网络（sentinel-dashboard:8858）
+#   - python agent 独立部署在 /home/oy/app/oyblogdeploy/blogagent/（compose 项目 blog-agent，容器名
+#     oy-blog-python-agent），挂同一外部网络，agent-service 经容器名直连（见 agent-service.environment）
 #   - 服务间互访靠 Nacos 注册的容器 IP（同网段二层直连），不依赖 docker DNS
 #   - 只有 gateway 对外发布 8080；业务端口 8091-8099 留在容器网络内部，不暴露局域网
 #   - 敏感变量统一放同目录 .env（env_file 注入），见 deploy/docker-compose.env.example
@@ -108,6 +109,10 @@ services:
     container_name: oy-blog-agent-service
     cpus: "0.8"
     mem_limit: 384m      # Xmx128
+    environment:
+      # Python Agent 独立部署在 /home/oy/app/oyblogdeploy/blogagent/（compose 项目 blog-agent），
+      # 同网络容器名直连；environment 优先于 env_file，本地开发不受影响（本地仍走 localhost 默认值）
+      AGENT_PYTHON_URL: http://oy-blog-python-agent:8001
     build:
       context: ./jar
       dockerfile: ../docker/Dockerfile
