@@ -326,7 +326,7 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         Comment comment = copyProperties(dto, Comment.class);
         comment.setId(getId());
         comment.setUserId(getUserId());
-        comment.setStatus(0);
+        comment.setStatus(1);
         comment.setCommentAt(LocalDateTime.now());
 
         // 计算楼层：当前文章最大楼层 + 1
@@ -336,7 +336,9 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         commentDao.save(comment);
         // 更新文章评论统计
         statsDao.incComments(comment.getArticleId(), 1);
-        return Result.ok();
+        // 返回新建评论（含用户名/头像等展示信息），前端据此乐观插入列表，避免整表重载
+        CommentVo vo = assembleCommentVos(Collections.singletonList(comment)).get(0);
+        return Result.ok(vo);
     }
 
     /**
@@ -349,7 +351,7 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         CommentReply commentReply = copyProperties(dto, CommentReply.class);
         commentReply.setId(getId());
         commentReply.setUserId(getUserId());
-        commentReply.setStatus(0);
+        commentReply.setStatus(1);
         commentReply.setReplyAt(LocalDateTime.now());
 
         // 确保 articleId 存在。如果前端没传，需要先查 Comment 补全
@@ -369,7 +371,14 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         }
 
         replyDao.save(commentReply);
-        return Result.ok();
+        // 返回新建回复（含用户名/头像等展示信息），前端据此就地追加，避免重拉该页
+        List<String> userIds = new ArrayList<>();
+        userIds.add(commentReply.getUserId());
+        if (commentReply.getReplyToUserId() != null) {
+            userIds.add(commentReply.getReplyToUserId());
+        }
+        CommentReplyVo vo = buildReplyVo(commentReply, Collections.emptyMap(), Collections.emptyMap(), fetchUserInfoMap(userIds));
+        return Result.ok(vo);
     }
 
     /**
