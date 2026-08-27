@@ -9,7 +9,7 @@ import com.oyproj.starategy.UserBehaviorStrategy;
 import org.springframework.stereotype.Component;
 
 @Component
-public class GuestUserBehaviorStrategy extends UserBizBase implements UserBehaviorStrategy {
+public class  GuestUserBehaviorStrategy extends UserBizBase implements UserBehaviorStrategy {
     public GuestUserBehaviorStrategy(UserDao userDao, CommonCache cache) {
         super(userDao, cache);
     }
