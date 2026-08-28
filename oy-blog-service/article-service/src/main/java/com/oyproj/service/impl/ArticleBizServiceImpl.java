@@ -9,11 +9,8 @@ import com.oyproj.common.base.Result;
 import com.oyproj.common.base.ResultCode;
 import com.oyproj.common.exception.NotFoundException;
 import com.oyproj.common.utils.I18nUtils;
-import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.mq.constants.MQOperation;
-import com.oyproj.common.mq.domain.ArticleIndexMessage;
 import com.oyproj.common.util.MarkdownRenderer;
-import com.oyproj.common.util.MarkdownSanitizer;
 import com.oyproj.common.utils.UUIDUtils;
 import com.oyproj.dao.UserArticleStatDao;
 import com.oyproj.domain.dto.ArticleSaveDto;
@@ -21,6 +18,7 @@ import com.oyproj.domain.entity.*;
 import com.oyproj.dto.*;
 import com.oyproj.mapper.ArticleTagMapper;
 import com.oyproj.service.ArticleBizService;
+import com.oyproj.service.ArticleIndexMessageService;
 import com.oyproj.service.ArticleMessageProducer;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +50,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
     @NotNull private final TagDao tagDao;
     @NotNull private final ArticleTagMapper articleTagMapper;
     @NotNull private final ArticleMessageProducer articleMessageProducer;
+    @NotNull private final ArticleIndexMessageService indexMessageService;
     @NotNull private final UserClient userClient;
     @NotNull private final UserArticleStatDao userArticleStatDao;
 
@@ -93,7 +92,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         saveRelations(articleId, dto);
         Map<String, String> result = new HashMap<>();
         MQOperation operation = isNew ? MQOperation.CREATE : MQOperation.UPDATE;
-        sendMessageAfterCommit(article, dto, operation);
+        indexMessageService.sendIndexAfterCommit(article, dto.getTags(), operation);
         result.put("articleId", articleId);
         return Result.ok(result);
     }
@@ -102,73 +101,6 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
 
     private String getAuthorName(String authorId) {
         return null;
-    }
-
-
-    // 在事务提交后同步消息到ES
-    private void sendMessageAfterCommit(Article article, ArticleSaveDto dto, MQOperation operation) {
-
-        ArticleIndexMessage articleIndexMessage = buildArticleIndexMessage(article, dto, operation);
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        articleMessageProducer.sendArticleIndexMessage(articleIndexMessage);
-                    }
-                }
-        );
-    }
-
-    /**
-     * 构建文章索引消息
-     */
-    private ArticleIndexMessage buildArticleIndexMessage(Article article, ArticleSaveDto dto, MQOperation operation) {
-        ArticleIndexMessage message = new ArticleIndexMessage();
-        message.setOperation(operation);
-        message.setArticleId(article.getId());
-        message.setSlug(article.getSlug());
-        message.setTitle(article.getTitle());
-        message.setSummary(article.getSummary());
-        message.setAuthorId(article.getAuthorId());
-        try {
-            Result<UserDTO> userDTO = userClient.getUserDTO(article.getAuthorId());
-            if (userDTO != null && userDTO.getData() != null) {
-                message.setAuthorName(userDTO.getData().getUsername());
-                message.setAuthorAvatar(userDTO.getData().getAvatarUrl());
-            }
-        } catch (Exception e) {
-            log.warn("获取作者信息失败, authorId: {}", article.getAuthorId(), e);
-            message.setAuthorName(article.getAuthorId()); // 兜底：用 authorId
-        }
-        message.setCreatedAt(article.getCreatedAt());
-        message.setPublishAt(article.getPublishAt());
-        message.setUpdatedAt(article.getUpdatedAt());
-        message.setStatus(article.getStatus());
-        message.setTags(dto.getTags());
-
-        // 加载文章内容（清洗 Markdown 为纯文本）
-        try {
-            ArticleContent content = contentDao.getById(article.getId());
-            if (content != null) {
-                message.setContentMd(MarkdownSanitizer.sanitize(content.getContentMd()));
-            }
-        } catch (Exception e) {
-            log.warn("加载文章内容失败, articleId: {}", article.getId(), e);
-        }
-
-        // 加载统计数据
-        try {
-            ArticleStats stats = statsDao.getById(article.getId());
-            if (stats != null) {
-                message.setViewCount(stats.getViews());
-                message.setLikeCount(stats.getLikes());
-                message.setCommentCount(stats.getComments());
-            }
-        } catch (Exception e) {
-            log.warn("加载文章统计失败, articleId: {}", article.getId(), e);
-        }
-
-        return message;
     }
 
 
