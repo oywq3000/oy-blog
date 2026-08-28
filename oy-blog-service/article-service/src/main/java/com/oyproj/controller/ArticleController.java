@@ -2,12 +2,16 @@ package com.oyproj.controller;
 import com.oyproj.api.file.domain.vo.FileVo;
 import com.oyproj.common.base.OpLog;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.dto.ArticleSaveDto;
+import com.oyproj.domain.vo.ArticleInfoVo;
 import com.oyproj.domain.vo.HeatmapDayVo;
 import com.oyproj.service.ArticleBizService;
 import com.oyproj.service.ArticleCommonBizService;
+import com.oyproj.service.ArticleReadBizService;
 import com.oyproj.service.ArticleStatsBizService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +33,7 @@ public class ArticleController {
     @NotNull private final ArticleBizService biz;
     @NotNull private final ArticleCommonBizService commonBiz;
     @NotNull private final ArticleStatsBizService statsBiz;
+    @NotNull private final ArticleReadBizService readBiz;
 
     /**
      * 保存草稿
@@ -141,8 +146,18 @@ public class ArticleController {
     }
 
     /**
-     * 根据用户id统计文章
+     * 查询当前用户的文章列表（按状态分页）
+     *
+     * @param status 文章状态：published（已发布）或 draft（草稿），默认 published
+     * @return 分页的文章列表（含 total / currentPage / totalPages）
      */
+    @GetMapping("/creator/me")
+    @Operation(summary = "查询当前用户的文章列表", description = "按状态分页查询当前登录用户的文章，支持 published 和 draft")
+    public Result<PageVo<List<ArticleInfoVo>>> listMine(
+            @Parameter(description = "文章状态：published 或 draft", example = "published")
+            @RequestParam(defaultValue = "published") String status) {
+        return readBiz.listMine(status);
+    }
 
 
 }
