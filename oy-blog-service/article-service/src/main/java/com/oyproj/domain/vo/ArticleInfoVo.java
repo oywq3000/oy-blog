@@ -24,6 +24,16 @@ public class ArticleInfoVo {
     private Integer allowComment;
 
     /**
+     * 审核结论（approved/rejected/manual/exempt，仅创作中心列表需要）
+     */
+    private String reviewStatus;
+
+    /**
+     * 审核理由（驳回/转人工时给作者看）
+     */
+    private String reviewReason;
+
+    /**
      * 文章标签名列表（无标签时为空列表）
      */
     private List<String> tags;
