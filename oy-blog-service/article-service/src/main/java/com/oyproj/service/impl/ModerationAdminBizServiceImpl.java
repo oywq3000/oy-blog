@@ -45,8 +45,9 @@ public class ModerationAdminBizServiceImpl extends ArticleBaseBizService impleme
 
     @Override
     public Result<PageVo<List<ArticleModerationItemVo>>> adminPage(ArticleModerationPageDto dto) {
-        int page = dto.getPage() == null ? 1 : dto.getPage();
-        int size = dto.getSize() == null ? 10 : dto.getSize();
+        // 钳制非法分页参数：page=0 会让 from 为负导致 subList 越界，size=0 会除零
+        int page = Math.max(1, dto.getPage() == null ? 1 : dto.getPage());
+        int size = Math.max(1, dto.getSize() == null ? 10 : dto.getSize());
         List<ArticleModerationItemVo> items = new ArrayList<>();
 
         // 类型一：待审新文章（status=pending_review）
@@ -105,8 +106,8 @@ public class ModerationAdminBizServiceImpl extends ArticleBaseBizService impleme
         Article article = articleDao.getById(dto.getArticleId());
         ArticlePendingContent pending = pendingContentMapper.selectById(dto.getArticleId());
 
-        // 类型一：待审新文章
-        if (article != null && "pending_review".equals(article.getStatus())) {
+        // 类型一：待审新文章（排除软删：队列打开后作者可能已删除，不得审核复活）
+        if (article != null && article.getDeletedAt() == null && "pending_review".equals(article.getStatus())) {
             if (Boolean.TRUE.equals(dto.getApprove())) {
                 article.setStatus("published");
                 article.setPublishAt(LocalDateTime.now());
@@ -130,8 +131,8 @@ public class ModerationAdminBizServiceImpl extends ArticleBaseBizService impleme
 
         // 类型二：已发布文章的待审编辑
         if (pending != null) {
-            // 防御：待审记录存在但文章已不存在（如被硬删），无法执行替换，按"审核项不存在"返回
-            if (article == null) {
+            // 防御：待审记录存在但文章已不存在或已软删（如被硬删/作者删除），无法执行替换，按"审核项不存在"返回
+            if (article == null || article.getDeletedAt() != null) {
                 return Result.error("审核项不存在");
             }
             if (Boolean.TRUE.equals(dto.getApprove())) {
