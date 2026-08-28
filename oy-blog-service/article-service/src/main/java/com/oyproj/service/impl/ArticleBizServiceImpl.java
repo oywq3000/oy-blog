@@ -16,10 +16,13 @@ import com.oyproj.dao.UserArticleStatDao;
 import com.oyproj.domain.dto.ArticleSaveDto;
 import com.oyproj.domain.entity.*;
 import com.oyproj.dto.*;
+import com.oyproj.mapper.ArticlePendingContentMapper;
 import com.oyproj.mapper.ArticleTagMapper;
 import com.oyproj.service.ArticleBizService;
 import com.oyproj.service.ArticleIndexMessageService;
 import com.oyproj.service.ArticleMessageProducer;
+import com.oyproj.service.ModerationService;
+import com.oyproj.service.ModerationVerdict;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,6 +56,8 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
     @NotNull private final ArticleIndexMessageService indexMessageService;
     @NotNull private final UserClient userClient;
     @NotNull private final UserArticleStatDao userArticleStatDao;
+    @NotNull private final ModerationService moderationService;
+    @NotNull private final ArticlePendingContentMapper pendingContentMapper;
 
     /**
      * 保存草稿
@@ -84,17 +89,131 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
             dto.setContentHtml(MarkdownRenderer.toHtml(dto.getContentMd()));
         }
         boolean isNew = !StringUtils.hasText(dto.getId());
-        Article article = saveArticleBase(dto, "published");
+        Article existing = isNew ? null : articleDao.getById(dto.getId());
+        if (!isNew && existing == null) {
+            throw new NotFoundException(I18nUtils.t("article.not_found"));
+        }
+        boolean editingPublished = existing != null && "published".equals(existing.getStatus());
+        // 驳回重发：驳回路径从不发索引消息（未入索引），审核通过后须按新文档 CREATE 建索引
+        boolean isRejectedResubmit = existing != null && "rejected".equals(existing.getStatus());
+
+        // 审核门：开关关闭或豁免用户 → 直接放行
+        if (!moderationService.isEnabled() || moderationService.isExempt()) {
+            Article article = saveArticleBase(dto, "published");
+            String articleId = article.getId();
+            saveRevision(articleId, dto.getContentMd());
+            saveContent(articleId, dto.getContentMd(), dto.getContentHtml());
+            parseAndSaveChapters(articleId, dto.getContentMd());
+            saveRelations(articleId, dto);
+            article.setReviewStatus("exempt");
+            article.setIsReviewed(1);
+            articleDao.updateById(article);
+            MQOperation operation = (isNew || isRejectedResubmit) ? MQOperation.CREATE : MQOperation.UPDATE;
+            indexMessageService.sendIndexAfterCommit(article, dto.getTags(), operation);
+            return publishResult(articleId, "exempt", "审核豁免");
+        }
+
+        // AI 审核（先审后写：已发布文章的编辑在此阶段尚未覆盖内容）
+        ModerationVerdict verdict = moderationService.moderate(
+                isNew ? "" : dto.getId(), dto.getTitle(), dto.getSummary(), dto.getContentMd());
+
+        if (verdict.isApproved()) {
+            Article article = saveArticleBase(dto, "published");
+            String articleId = article.getId();
+            saveRevision(articleId, dto.getContentMd());
+            saveContent(articleId, dto.getContentMd(), dto.getContentHtml());
+            parseAndSaveChapters(articleId, dto.getContentMd());
+            saveRelations(articleId, dto);
+            article.setReviewStatus("approved");
+            article.setReviewReason(verdict.reason());
+            article.setIsReviewed(1);
+            articleDao.updateById(article);
+            MQOperation operation = (isNew || isRejectedResubmit) ? MQOperation.CREATE : MQOperation.UPDATE;
+            indexMessageService.sendIndexAfterCommit(article, dto.getTags(), operation);
+            moderationService.writeLog(articleId, "ai_approve", verdict.reason(), "ai");
+            return publishResult(articleId, "approved", verdict.reason());
+        }
+
+        if (verdict.isRejected()) {
+            if (editingPublished) {
+                // 先审后生效：本次编辑全部丢弃，旧版继续对外展示
+                existing.setReviewStatus("rejected");
+                existing.setReviewReason(verdict.reason());
+                articleDao.updateById(existing);
+                moderationService.writeLog(existing.getId(), "ai_reject", verdict.reason(), "ai");
+                return publishResult(existing.getId(), "rejected", verdict.reason());
+            }
+            // 新文章/重发：内容照常保存为已驳回状态，作者可改后重新发布
+            Article article = saveArticleBase(dto, "rejected");
+            String articleId = article.getId();
+            saveRevision(articleId, dto.getContentMd());
+            saveContent(articleId, dto.getContentMd(), dto.getContentHtml());
+            parseAndSaveChapters(articleId, dto.getContentMd());
+            saveRelations(articleId, dto);
+            article.setReviewStatus("rejected");
+            article.setReviewReason(verdict.reason());
+            articleDao.updateById(article);
+            moderationService.writeLog(articleId, "ai_reject", verdict.reason(), "ai");
+            return publishResult(articleId, "rejected", verdict.reason());
+        }
+
+        // manual：转人工
+        if (editingPublished) {
+            // 新版本进待生效区，旧版继续 published；封面/允许评论/标签属未审字段，本次正常生效
+            existing.setCoverUrl(dto.getCoverUrl());
+            existing.setAllowComment(dto.getAllowComment() != null ? dto.getAllowComment() : 1);
+            existing.setUpdateAt(LocalDateTime.now());
+            existing.setReviewStatus("manual");
+            existing.setReviewReason(verdict.reason());
+            articleDao.updateById(existing);
+            saveRelations(existing.getId(), dto);
+            savePendingContent(existing.getId(), dto, verdict.reason());
+            moderationService.writeLog(existing.getId(), "ai_manual", verdict.reason(), "ai");
+            return publishResult(existing.getId(), "manual", verdict.reason());
+        }
+        Article article = saveArticleBase(dto, "pending_review");
         String articleId = article.getId();
         saveRevision(articleId, dto.getContentMd());
         saveContent(articleId, dto.getContentMd(), dto.getContentHtml());
         parseAndSaveChapters(articleId, dto.getContentMd());
         saveRelations(articleId, dto);
+        article.setReviewStatus("manual");
+        article.setReviewReason(verdict.reason());
+        articleDao.updateById(article);
+        moderationService.writeLog(articleId, "ai_manual", verdict.reason(), "ai");
+        return publishResult(articleId, "manual", verdict.reason());
+    }
+
+    /** 组装 publish 返回：恒含 articleId/verdict/reason，前端据此提示"已驳回+原因/审核中" */
+    private Result<Map<String, String>> publishResult(String articleId, String verdict, String reason) {
         Map<String, String> result = new HashMap<>();
-        MQOperation operation = isNew ? MQOperation.CREATE : MQOperation.UPDATE;
-        indexMessageService.sendIndexAfterCommit(article, dto.getTags(), operation);
         result.put("articleId", articleId);
+        result.put("verdict", verdict);
+        result.put("reason", reason == null ? "" : reason);
         return Result.ok(result);
+    }
+
+    /** 待生效编辑写入（一篇最多一份：已存在则覆盖） */
+    private void savePendingContent(String articleId, ArticleSaveDto dto, String reason) {
+        LocalDateTime now = LocalDateTime.now();
+        ArticlePendingContent pending = pendingContentMapper.selectById(articleId);
+        if (pending == null) {
+            pending = ArticlePendingContent.builder()
+                    .articleId(articleId)
+                    .createdAt(now)
+                    .build();
+        }
+        pending.setPendingTitle(dto.getTitle());
+        pending.setPendingSummary(dto.getSummary());
+        pending.setPendingContentMd(dto.getContentMd());
+        pending.setPendingContentHtml(dto.getContentHtml());
+        pending.setReviewReason(reason);
+        pending.setUpdatedAt(now);
+        if (pendingContentMapper.selectById(articleId) == null) {
+            pendingContentMapper.insert(pending);
+        } else {
+            pendingContentMapper.updateById(pending);
+        }
     }
 
 
