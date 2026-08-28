@@ -101,6 +101,10 @@ public class ModerationAdminBizServiceImpl extends ArticleBaseBizService impleme
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result<Boolean> audit(ArticleModerationAuditDto dto) {
+        // 防御：approve 缺失（null）时不得被 Boolean.TRUE.equals 当"驳回"静默处理（静默驳回是最坏行为）
+        if (dto.getApprove() == null) {
+            return Result.error("审核结果不能为空");
+        }
         String operatorId = getUserId();
         String reason = dto.getReason();
         Article article = articleDao.getById(dto.getArticleId());

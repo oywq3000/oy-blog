@@ -9,6 +9,7 @@ import com.oyproj.common.security.annotation.RequirePermission;
 import com.oyproj.service.ModerationAdminBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,7 +36,7 @@ public class ModerationAdminController {
     @PostMapping("/audit")
     @RequirePermission("admin:moderation:write")
     @Operation(summary = "人工审核文章（通过/驳回）")
-    public Result<Boolean> audit(@RequestBody ArticleModerationAuditDto dto) {
+    public Result<Boolean> audit(@RequestBody @Valid ArticleModerationAuditDto dto) {
         return biz.audit(dto);
     }
 }
