@@ -5,6 +5,8 @@ import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.dto.UserDTO;
+import com.oyproj.common.exception.NotFoundException;
+import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.config.HotWeightProperties;
 import com.oyproj.domain.entity.Article;
@@ -57,13 +59,17 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
      */
     @Override
     public Result<ArticleInfoVo> getBySlug(String slug) {
-        ArticleInfoVo vo = copyProperties(articleDao.getBySlug(slug), ArticleInfoVo.class);
+        Article article = articleDao.getBySlug(slug);
+        if (!canView(article)) {
+            throw new NotFoundException(I18nUtils.t("article.not_found"));
+        }
+        ArticleInfoVo vo = copyProperties(article, ArticleInfoVo.class);
         enrichWithAuthorInfo(Collections.singletonList(vo));
         enrichWithStats(Collections.singletonList(vo));
         enrichWithTags(Collections.singletonList(vo));
         return Result.ok(vo);
     }
-    
+
     /**
      * 查询文章内容
      *
@@ -72,6 +78,9 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
      */
     @Override
     public Result<ArticleContentVo> getContent(String articleId) {
+        if (!canView(articleDao.getById(articleId))) {
+            throw new NotFoundException(I18nUtils.t("article.not_found"));
+        }
         return Result.ok(copyProperties(contentDao.getById(articleId), ArticleContentVo.class));
     }
 
@@ -83,6 +92,9 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
      */
     @Override
     public Result<List<ArticleChapterVo>> listChapters(String articleId) {
+        if (!canView(articleDao.getById(articleId))) {
+            throw new NotFoundException(I18nUtils.t("article.not_found"));
+        }
         return Result.ok(copyList(chapterDao.listByArticle(articleId), ArticleChapterVo.class));
     }
 
@@ -280,11 +292,30 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
       */
     @Override
     public Result<ArticleInfoVo> getById(String articleId) {
-        ArticleInfoVo vo = copyProperties(articleDao.getById(articleId), ArticleInfoVo.class);
+        Article article = articleDao.getById(articleId);
+        if (!canView(article)) {
+            throw new NotFoundException(I18nUtils.t("article.not_found"));
+        }
+        ArticleInfoVo vo = copyProperties(article, ArticleInfoVo.class);
         enrichWithAuthorInfo(Collections.singletonList(vo));
         enrichWithStats(Collections.singletonList(vo));
         enrichWithTags(Collections.singletonList(vo));
         return Result.ok(vo);
+    }
+
+    /**
+     * 公开可见性：已发布人人可见；非已发布仅作者本人可见（供创作中心读取草稿/待审/驳回）。
+     * 不可见一律 NotFound，不泄露文章存在性。
+     */
+    private boolean canView(Article article) {
+        if (article == null || article.getDeletedAt() != null) {
+            return false;
+        }
+        if ("published".equals(article.getStatus())) {
+            return true;
+        }
+        String userId = getUserId();
+        return userId != null && userId.equals(article.getAuthorId());
     }
 
     /**
