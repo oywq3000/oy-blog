@@ -72,3 +72,9 @@ oy-blog:
       likes: 2
       comments: 5
       favorites: 3
+    # ============ 文章 AI 审核配置 ============
+    moderation:
+      enabled: true                 # 审核总开关
+      exempt-roles: [ADMIN]         # 豁免角色（BlogRole.name()）
+      base-url: ${AGENT_PYTHON_URL:http://localhost:8001}  # BlogAgent 审核端点
+      timeout-ms: 30000
