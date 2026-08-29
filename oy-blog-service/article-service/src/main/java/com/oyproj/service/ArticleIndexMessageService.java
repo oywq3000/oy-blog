@@ -11,12 +11,14 @@ import com.oyproj.domain.entity.ArticleContent;
 import com.oyproj.domain.entity.ArticleStats;
 import com.oyproj.dto.ArticleContentDao;
 import com.oyproj.dto.ArticleStatsDao;
+import com.oyproj.dto.ArticleTagDao;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -32,6 +34,13 @@ public class ArticleIndexMessageService {
     private final ArticleStatsDao statsDao;
     private final ArticleMessageProducer articleMessageProducer;
     private final UserClient userClient;
+    private final ArticleTagDao articleTagDao;
+
+    /** 文章标签名列表（索引消息用，发布与审核通过共用） */
+    public List<String> loadTagNames(String articleId) {
+        return articleTagDao.listTagNamesByArticleIds(Collections.singletonList(articleId))
+                .getOrDefault(articleId, Collections.emptyList());
+    }
 
     /** 在事务提交后发送索引消息（afterCommit：消费方读到的数据已提交） */
     public void sendIndexAfterCommit(Article article, List<String> tags, MQOperation operation) {

@@ -13,7 +13,6 @@ import com.oyproj.domain.entity.ArticleContent;
 import com.oyproj.domain.entity.ArticlePendingContent;
 import com.oyproj.dto.ArticleContentDao;
 import com.oyproj.dto.ArticleDao;
-import com.oyproj.dto.ArticleTagDao;
 import com.oyproj.mapper.ArticlePendingContentMapper;
 import com.oyproj.service.ArticleChapterService;
 import com.oyproj.service.ArticleIndexMessageService;
@@ -37,7 +36,6 @@ public class ModerationAdminBizServiceImpl extends ArticleBaseBizService impleme
 
     private final ArticleDao articleDao;
     private final ArticleContentDao contentDao;
-    private final ArticleTagDao articleTagDao;
     private final ArticlePendingContentMapper pendingContentMapper;
     private final ModerationService moderationService; // 复用 writeLog
     private final ArticleIndexMessageService indexMessageService;
@@ -120,7 +118,7 @@ public class ModerationAdminBizServiceImpl extends ArticleBaseBizService impleme
                 article.setIsReviewed(1);
                 article.setUpdateAt(LocalDateTime.now());
                 articleDao.updateById(article);
-                indexMessageService.sendIndexAfterCommit(article, listTagNames(article.getId()), MQOperation.CREATE);
+                indexMessageService.sendIndexAfterCommit(article, indexMessageService.loadTagNames(article.getId()), MQOperation.CREATE);
                 moderationService.writeLog(article.getId(), "manual_approve", reason, operatorId);
             } else {
                 article.setStatus("rejected");
@@ -160,7 +158,7 @@ public class ModerationAdminBizServiceImpl extends ArticleBaseBizService impleme
 
                 chapterService.rebuild(article.getId(), pending.getPendingContentMd()); // 章节目录随新内容重建
                 pendingContentMapper.deleteById(pending.getArticleId());
-                indexMessageService.sendIndexAfterCommit(article, listTagNames(article.getId()), MQOperation.UPDATE);
+                indexMessageService.sendIndexAfterCommit(article, indexMessageService.loadTagNames(article.getId()), MQOperation.UPDATE);
                 moderationService.writeLog(article.getId(), "manual_approve", reason, operatorId);
             } else {
                 // 驳回本次编辑：文章保持旧版不动
@@ -177,9 +175,4 @@ public class ModerationAdminBizServiceImpl extends ArticleBaseBizService impleme
         return Result.error("审核项不存在");
     }
 
-    /** 文章标签名列表（索引消息用） */
-    private List<String> listTagNames(String articleId) {
-        return articleTagDao.listTagNamesByArticleIds(Collections.singletonList(articleId))
-                .getOrDefault(articleId, Collections.emptyList());
-    }
 }
