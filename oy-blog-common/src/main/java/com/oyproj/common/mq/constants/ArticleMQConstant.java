@@ -11,4 +11,12 @@ public class ArticleMQConstant {
     public static final String ARTICLE_INDEX_DLX = "article.index.dlx";
     public static final String ARTICLE_INDEX_DLQ = "article.index.dlq";
     public static final String ARTICLE_INDEX_DLQ_ROUTING_KEY = "article.index.dlq";
+
+    // 文章 AI 审核队列（异步审核）
+    public static final String ARTICLE_MODERATION_EXCHANGE = "article.moderation.exchange";
+    public static final String ARTICLE_MODERATION_QUEUE = "article.moderation.queue";
+    public static final String ARTICLE_MODERATION_ROUTING_KEY = "article.moderation";
+    // 延迟重试回路：retry exchange → retry 队列（无消费者，消息带逐条 TTL）→ 到期死信回主 exchange
+    public static final String ARTICLE_MODERATION_RETRY_EXCHANGE = "article.moderation.retry.exchange";
+    public static final String ARTICLE_MODERATION_RETRY_QUEUE = "article.moderation.retry.queue";
 }
