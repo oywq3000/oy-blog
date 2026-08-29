@@ -1,5 +1,6 @@
 package com.oyproj.consumer;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.oyproj.common.mq.constants.ArticleMQConstant;
 import com.oyproj.common.mq.constants.MQOperation;
 import com.oyproj.common.mq.domain.ArticleModerationMessage;
@@ -94,9 +95,14 @@ public class ArticleModerationConsumer {
             }
 
             // 竞态闸：moderate 耗时 3~15 秒，窗口内作者可能删稿（软删）、兜底扫描或人工可能已处理。
-            // apply 前重读，任一条件不满足 → 清待生效区收尾后直接返回：
-            // 不 updateById（不复活已删文章）、不发 ES 索引消息（否则已删文章重新出现在搜索里）。
-            Article latest = articleDao.getById(articleId);
+            // 重读必须用 FOR UPDATE 当前读：本方法在 onMessage 的事务内（@Transactional 已生效），
+            // MySQL 默认 REPEATABLE READ 下普通重读（getById）走首读快照，窗口内已提交的软删
+            // 不可见 → 闸放行 → updateById 复活软删行 + ES 索引消息照发。FOR UPDATE 读到最新
+            // 已提交版本并锁行到事务提交，并发删除/变更立即可见且被挡在事务外。
+            // 任一条件不满足 → 清待生效区收尾后直接返回：不 updateById、不发 ES 索引消息。
+            Article latest = articleDao.getOne(new LambdaQueryWrapper<Article>()
+                    .eq(Article::getId, articleId)
+                    .last("FOR UPDATE"));
             if (latest == null || latest.getDeletedAt() != null) {
                 pendingContentMapper.deleteById(articleId);
                 return;
@@ -213,7 +219,11 @@ public class ArticleModerationConsumer {
             retrySender.sendRetry(articleId, attempt + 1);
             return;
         }
-        Article article = articleDao.getById(articleId);
+        // 重读同样用 FOR UPDATE 当前读：同事务内 RR 快照会掩盖窗口内软删/状态变更，
+        // 必须读到最新已提交版本再决定是否转人工。
+        Article article = articleDao.getOne(new LambdaQueryWrapper<Article>()
+                .eq(Article::getId, articleId)
+                .last("FOR UPDATE"));
         if (article == null || article.getDeletedAt() != null) {
             pendingContentMapper.deleteById(articleId);
             return;
