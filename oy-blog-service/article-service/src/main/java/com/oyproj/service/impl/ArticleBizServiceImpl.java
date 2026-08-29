@@ -95,21 +95,12 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         boolean editingPublished = existing != null && "published".equals(existing.getStatus());
         // 驳回重发：驳回路径从不发索引消息（未入索引），审核通过后须按新文档 CREATE 建索引
         boolean isRejectedResubmit = existing != null && "rejected".equals(existing.getStatus());
+        // 发布态建索引动作：新文章/驳回重发按 CREATE，已发布编辑按 UPDATE
+        MQOperation publishOp = (isNew || isRejectedResubmit) ? MQOperation.CREATE : MQOperation.UPDATE;
 
         // 审核门：开关关闭或豁免用户 → 直接放行
         if (!moderationService.isEnabled() || moderationService.isExempt()) {
-            Article article = saveArticleBase(dto, "published");
-            String articleId = article.getId();
-            saveRevision(articleId, dto.getContentMd());
-            saveContent(articleId, dto.getContentMd(), dto.getContentHtml());
-            chapterService.rebuild(articleId, dto.getContentMd());
-            saveRelations(articleId, dto);
-            article.setReviewStatus("exempt");
-            article.setIsReviewed(1);
-            articleDao.updateById(article);
-            MQOperation operation = (isNew || isRejectedResubmit) ? MQOperation.CREATE : MQOperation.UPDATE;
-            indexMessageService.sendIndexAfterCommit(article, dto.getTags(), operation);
-            return publishResult(articleId, "exempt", "审核豁免");
+            return persistWithReview(dto, "published", "exempt", "审核豁免", publishOp, null);
         }
 
         // AI 审核（先审后写：已发布文章的编辑在此阶段尚未覆盖内容）
@@ -117,20 +108,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
                 isNew ? "" : dto.getId(), dto.getTitle(), dto.getSummary(), dto.getContentMd());
 
         if (verdict.isApproved()) {
-            Article article = saveArticleBase(dto, "published");
-            String articleId = article.getId();
-            saveRevision(articleId, dto.getContentMd());
-            saveContent(articleId, dto.getContentMd(), dto.getContentHtml());
-            chapterService.rebuild(articleId, dto.getContentMd());
-            saveRelations(articleId, dto);
-            article.setReviewStatus("approved");
-            article.setReviewReason(verdict.reason());
-            article.setIsReviewed(1);
-            articleDao.updateById(article);
-            MQOperation operation = (isNew || isRejectedResubmit) ? MQOperation.CREATE : MQOperation.UPDATE;
-            indexMessageService.sendIndexAfterCommit(article, dto.getTags(), operation);
-            moderationService.writeLog(articleId, "ai_approve", verdict.reason(), "ai");
-            return publishResult(articleId, "approved", verdict.reason());
+            return persistWithReview(dto, "published", "approved", verdict.reason(), publishOp, "ai_approve");
         }
 
         if (verdict.isRejected()) {
@@ -143,17 +121,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
                 return publishResult(existing.getId(), "rejected", verdict.reason());
             }
             // 新文章/重发：内容照常保存为已驳回状态，作者可改后重新发布
-            Article article = saveArticleBase(dto, "rejected");
-            String articleId = article.getId();
-            saveRevision(articleId, dto.getContentMd());
-            saveContent(articleId, dto.getContentMd(), dto.getContentHtml());
-            chapterService.rebuild(articleId, dto.getContentMd());
-            saveRelations(articleId, dto);
-            article.setReviewStatus("rejected");
-            article.setReviewReason(verdict.reason());
-            articleDao.updateById(article);
-            moderationService.writeLog(articleId, "ai_reject", verdict.reason(), "ai");
-            return publishResult(articleId, "rejected", verdict.reason());
+            return persistWithReview(dto, "rejected", "rejected", verdict.reason(), null, "ai_reject");
         }
 
         // manual：转人工
@@ -170,17 +138,42 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
             moderationService.writeLog(existing.getId(), "ai_manual", verdict.reason(), "ai");
             return publishResult(existing.getId(), "manual", verdict.reason());
         }
-        Article article = saveArticleBase(dto, "pending_review");
+        // 新文章/重发：先落库为待人工审核，管理员审核通过后再发布建索引
+        return persistWithReview(dto, "pending_review", "manual", verdict.reason(), null, "ai_manual");
+    }
+
+    /**
+     * 落库文章并写审核结果（publish 四路分支共用：豁免/通过/驳回/转人工）。
+     * 统一完成：基础信息 → 修订 → 内容 → 章节 → 标签 → 审核字段 → 审核日志。
+     *
+     * @param status       落库状态：published / rejected / pending_review
+     * @param reviewStatus 审核状态：exempt / approved / rejected / manual
+     * @param reason       审核原因（豁免为固定文案，其余取 AI verdict）
+     * @param operation    发布态传 CREATE/UPDATE（同时标记已审并建索引）；非发布态传 null（仅落库不建索引）
+     * @param logType      审核日志类型（ai_approve/ai_reject/ai_manual）；null 不写日志（豁免路径）
+     */
+    private Result<Map<String, String>> persistWithReview(ArticleSaveDto dto, String status, String reviewStatus,
+                                                          String reason, MQOperation operation, String logType) {
+        Article article = saveArticleBase(dto, status);
         String articleId = article.getId();
         saveRevision(articleId, dto.getContentMd());
         saveContent(articleId, dto.getContentMd(), dto.getContentHtml());
         chapterService.rebuild(articleId, dto.getContentMd());
         saveRelations(articleId, dto);
-        article.setReviewStatus("manual");
-        article.setReviewReason(verdict.reason());
+        article.setReviewStatus(reviewStatus);
+        article.setReviewReason(reason);
+        if (operation != null) {
+            article.setIsReviewed(1);
+        }
         articleDao.updateById(article);
-        moderationService.writeLog(articleId, "ai_manual", verdict.reason(), "ai");
-        return publishResult(articleId, "manual", verdict.reason());
+        if (operation != null) {
+            // 驳回路径从不发索引消息（未入索引），发布态须按新文档 CREATE 建索引
+            indexMessageService.sendIndexAfterCommit(article, dto.getTags(), operation);
+        }
+        if (logType != null) {
+            moderationService.writeLog(articleId, logType, reason, "ai");
+        }
+        return publishResult(articleId, reviewStatus, reason);
     }
 
     /** 组装 publish 返回：恒含 articleId/verdict/reason，前端据此提示"已驳回+原因/审核中" */
