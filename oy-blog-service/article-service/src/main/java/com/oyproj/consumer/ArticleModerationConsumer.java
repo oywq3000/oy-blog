@@ -48,13 +48,16 @@ public class ArticleModerationConsumer {
     private final ModerationProperties properties;
 
     @RabbitListener(queues = ArticleMQConstant.ARTICLE_MODERATION_QUEUE)
+    @Transactional(rollbackFor = Exception.class)
     public void onMessage(ArticleModerationMessage body, @Header(name = ATTEMPT_HEADER, required = false) Integer attempt) {
-        // 消息体由默认 Jackson converter 解析；为兼容未带头的首投，attempt 缺省 0
+        // 消息体由默认 Jackson converter 解析；为兼容未带头的首投，attempt 缺省 0。
+        // 事务必须放在监听器方法：容器经代理调用，事务真实生效；
+        // this.handle() 是同类自调用，代理不拦截，注解放 handle 上从未生效（每条写独立提交）。
+        // HTTP 审核调用期间持连接：最坏 30s（moderation.timeout-ms），博客量级可接受。
         handle(body.getArticleId(), attempt == null ? 0 : attempt);
     }
 
-    /** 主处理入口（测试直接调用此方法） */
-    @Transactional(rollbackFor = Exception.class)
+    /** 主处理入口（测试直接调用此方法；生产经 onMessage 的事务代理进入） */
     public void handle(String articleId, int attempt) {
         try {
             Article article = articleDao.getById(articleId);
@@ -90,10 +93,28 @@ public class ArticleModerationConsumer {
                 return;
             }
 
+            // 竞态闸：moderate 耗时 3~15 秒，窗口内作者可能删稿（软删）、兜底扫描或人工可能已处理。
+            // apply 前重读，任一条件不满足 → 清待生效区收尾后直接返回：
+            // 不 updateById（不复活已删文章）、不发 ES 索引消息（否则已删文章重新出现在搜索里）。
+            Article latest = articleDao.getById(articleId);
+            if (latest == null || latest.getDeletedAt() != null) {
+                pendingContentMapper.deleteById(articleId);
+                return;
+            }
             if (editReviewing) {
-                applyEditVerdict(article, pending, verdict);
+                ArticlePendingContent latestPending = pendingContentMapper.selectById(articleId);
+                if (latestPending == null
+                        || !("published".equals(latest.getStatus()) && "ai_reviewing".equals(latest.getReviewStatus()))) {
+                    pendingContentMapper.deleteById(articleId);
+                    return;
+                }
+                applyEditVerdict(latest, latestPending, verdict);
             } else {
-                applyNewVerdict(article, verdict);
+                if (!("ai_reviewing".equals(latest.getStatus()) && "ai_reviewing".equals(latest.getReviewStatus()))) {
+                    pendingContentMapper.deleteById(articleId);
+                    return;
+                }
+                applyNewVerdict(latest, verdict);
             }
         } catch (Exception e) {
             // DB 异常等一律吞掉（不抛 → 不无限 requeue）。
