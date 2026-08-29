@@ -22,8 +22,8 @@ import com.oyproj.service.ArticleBizService;
 import com.oyproj.service.ArticleChapterService;
 import com.oyproj.service.ArticleIndexMessageService;
 import com.oyproj.service.ArticleMessageProducer;
+import com.oyproj.service.ArticleModerationProducer;
 import com.oyproj.service.ModerationService;
-import com.oyproj.service.ModerationVerdict;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +57,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
     @NotNull private final ModerationService moderationService;
     @NotNull private final ArticlePendingContentMapper pendingContentMapper;
     @NotNull private final ArticleChapterService chapterService;
+    @NotNull private final ArticleModerationProducer articleModerationProducer; // Task4：提交即审，事务提交后发审核消息
 
     /**
      * 保存草稿
@@ -93,64 +94,62 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
             throw new NotFoundException(I18nUtils.t("article.not_found"));
         }
         boolean editingPublished = existing != null && "published".equals(existing.getStatus());
-        // 驳回重发：驳回路径从不发索引消息（未入索引），审核通过后须按新文档 CREATE 建索引
-        boolean isRejectedResubmit = existing != null && "rejected".equals(existing.getStatus());
-        // 发布态建索引动作：新文章/驳回重发按 CREATE，已发布编辑按 UPDATE
-        MQOperation publishOp = (isNew || isRejectedResubmit) ? MQOperation.CREATE : MQOperation.UPDATE;
 
-        // 审核门：开关关闭或豁免用户 → 直接放行
+        // 审核中守卫：AI 审核中 / 编辑审核中，不允许再次提交（防频繁重审；可删除）
+        if (existing != null
+                && ("ai_reviewing".equals(existing.getStatus()) || "ai_reviewing".equals(existing.getReviewStatus()))) {
+            return Result.error("审核中，请稍候");
+        }
+
+        // 豁免路径：开关关闭或豁免用户 → 直接放行（同步、秒过，不做异步）
         if (!moderationService.isEnabled() || moderationService.isExempt()) {
-            return persistWithReview(dto, "published", "exempt", "审核豁免", publishOp, null);
+            // 驳回重发：驳回路径从不发索引消息（未入索引），审核通过后须按新文档 CREATE 建索引
+            boolean isRejectedResubmit = existing != null && "rejected".equals(existing.getStatus());
+            // 发布态建索引动作：新文章/驳回重发按 CREATE，已发布编辑按 UPDATE
+            MQOperation op = (isNew || isRejectedResubmit) ? MQOperation.CREATE : MQOperation.UPDATE;
+            return persistWithReview(dto, "published", "exempt", "审核豁免", op, null);
         }
 
-        // AI 审核（先审后写：已发布文章的编辑在此阶段尚未覆盖内容）
-        ModerationVerdict verdict = moderationService.moderate(
-                isNew ? "" : dto.getId(), dto.getTitle(), dto.getSummary(), dto.getContentMd());
-
-        if (verdict.isApproved()) {
-            return persistWithReview(dto, "published", "approved", verdict.reason(), publishOp, "ai_approve");
-        }
-
-        if (verdict.isRejected()) {
-            if (editingPublished) {
-                // 先审后生效：本次编辑全部丢弃，旧版继续对外展示
-                existing.setReviewStatus("rejected");
-                existing.setReviewReason(verdict.reason());
-                articleDao.updateById(existing);
-                moderationService.writeLog(existing.getId(), "ai_reject", verdict.reason(), "ai");
-                return publishResult(existing.getId(), "rejected", verdict.reason());
-            }
-            // 新文章/重发：内容照常保存为已驳回状态，作者可改后重新发布
-            return persistWithReview(dto, "rejected", "rejected", verdict.reason(), null, "ai_reject");
-        }
-
-        // manual：转人工
         if (editingPublished) {
-            // 新版本进待生效区，旧版继续 published；封面/允许评论/标签属未审字段，本次正常生效
+            // 编辑已发布文章：新内容进待生效区（旧版继续 published），异步审核后替换生效
             existing.setCoverUrl(dto.getCoverUrl());
             existing.setAllowComment(dto.getAllowComment() != null ? dto.getAllowComment() : 1);
             existing.setUpdateAt(LocalDateTime.now());
-            existing.setReviewStatus("manual");
-            existing.setReviewReason(verdict.reason());
+            existing.setReviewStatus("ai_reviewing");
+            existing.setReviewReason("");
             articleDao.updateById(existing);
             saveRelations(existing.getId(), dto);
-            savePendingContent(existing.getId(), dto, verdict.reason());
-            moderationService.writeLog(existing.getId(), "ai_manual", verdict.reason(), "ai");
-            return publishResult(existing.getId(), "manual", verdict.reason());
+            savePendingContent(existing.getId(), dto, "");
+            sendModerationAfterCommit(existing.getId());
+            return publishResult(existing.getId(), "ai_reviewing", "已提交 AI 审核");
         }
-        // 新文章/重发：先落库为待人工审核，管理员审核通过后再发布建索引
-        return persistWithReview(dto, "pending_review", "manual", verdict.reason(), null, "ai_manual");
+
+        // 新文章/草稿转发布/驳回重发：落库为"AI 审核中"，消息驱动后台审核
+        Result<Map<String, String>> result =
+                persistWithReview(dto, "ai_reviewing", "ai_reviewing", "", null, null);
+        sendModerationAfterCommit(result.getData().get("articleId"));
+        return publishResult(result.getData().get("articleId"), "ai_reviewing", "已提交 AI 审核");
+    }
+
+    /** 事务提交后发审核消息（DB 已提交，消费者读到的状态一定存在） */
+    private void sendModerationAfterCommit(String articleId) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                articleModerationProducer.sendModerationMessage(articleId);
+            }
+        });
     }
 
     /**
-     * 落库文章并写审核结果（publish 四路分支共用：豁免/通过/驳回/转人工）。
+     * 落库文章并写审核结果（publish 各分支共用：豁免/提交即审；通过/驳回/转人工已移入 Task 5 消费者）。
      * 统一完成：基础信息 → 修订 → 内容 → 章节 → 标签 → 审核字段 → 审核日志。
      *
-     * @param status       落库状态：published / rejected / pending_review
-     * @param reviewStatus 审核状态：exempt / approved / rejected / manual
-     * @param reason       审核原因（豁免为固定文案，其余取 AI verdict）
+     * @param status       落库状态：published / rejected / pending_review / ai_reviewing
+     * @param reviewStatus 审核状态：exempt / approved / rejected / manual / ai_reviewing
+     * @param reason       审核原因（豁免为固定文案，AI 审核中为空串，其余取 AI verdict）
      * @param operation    发布态传 CREATE/UPDATE（同时标记已审并建索引）；非发布态传 null（仅落库不建索引）
-     * @param logType      审核日志类型（ai_approve/ai_reject/ai_manual）；null 不写日志（豁免路径）
+     * @param logType      审核日志类型（ai_approve/ai_reject/ai_manual）；null 不写日志（豁免路径/提交即审）
      */
     private Result<Map<String, String>> persistWithReview(ArticleSaveDto dto, String status, String reviewStatus,
                                                           String reason, MQOperation operation, String logType) {
