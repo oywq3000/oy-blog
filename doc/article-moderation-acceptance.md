@@ -98,3 +98,24 @@ tests/test_graph.py 5 / test_llm.py 9 / test_protocol.py 6 / test_registry.py 9 
 2. **管理前端审核页面**：后端端点已在 Task 10-12 就位，页面随 `docs/superpowers/plans/2026-08-26-oy-blog-admin-frontend.md` 管理前端计划落地。
 3. **作者创作中心提示**：publish 返回 map 已带 `verdict`/`reason`，"审核中/已驳回"展示需前端配合小改动（另行处理）。
 4. **BlogAgent 分支合并**：feat-moderation 分支待合并；README §6 测试数已按本次实测更新（64 个，63 过 + 1 预存失败）。
+
+## 异步化补充（2026-08-29，spec: docs/superpowers/specs/2026-08-29-async-moderation-design.md）
+
+### 本机已验证
+- [X] 单测：publish 异步化（提交即审/审核中守卫/编辑待生效）重构全绿
+- [X] 单测：审核消费者幂等闸四分支 + 三态流转 + 失败重试/转人工
+- [X] 单测：延迟重试 TTL 序列（10s/30s/90s）+ x-attempt 头
+- [X] 单测：兜底扫描超时转人工
+- [X] article-service 全量测试通过
+
+### 待部署后验证（🔶 本机无 RabbitMQ/MySQL）
+- [ ] 发布秒回"AI 审核中"→ 1 分钟内列表状态自动流转
+- [ ] 编辑已发布文章 → 旧版持续展示 → 通过后自动替换
+- [ ] 断 BlogAgent → 观察重试回路（10s/30s/90s）→ 转人工
+- [ ] 杀消费端/丢消息 → 15 分钟兜底扫描转人工
+- [ ] 审核中删除文章 → 消费端收尾
+- [ ] 幂等实测：手工重发消息无害
+
+### 前端配合项（另行处理）
+- [ ] publish 返回 verdict=ai_reviewing → 关闭 loading、提示"已提交审核"
+- [ ] 创作中心列表 10~20 秒自动轮询，按 status/reviewStatus 显示"AI 审核中/编辑审核中/待人工审核/已驳回+原因"
