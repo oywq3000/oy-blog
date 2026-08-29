@@ -90,6 +90,7 @@ tests/test_graph.py 5 / test_llm.py 9 / test_protocol.py 6 / test_registry.py 9 
 
 1. **全链路验收（最高优先）**：服务器部署后执行（dev 库 192.168.200.130 本机不可达，本地无法起完整 Java 服务）：
    - [ ] 先执行 `doc/sql/article_moderation_migration.sql`（两段式：先 SQL 后发布新代码；服务器 jar 内烘焙配置注意重打包）
+   - [X] `doc/sql/article_status_enum_to_varchar_migration.sql` —— **已在服务器（100.110.148.14）执行（2026-08-29）**：status/review_status 原为 ENUM（draft/published/archived 与 pending/approved/rejected），审核状态字面量不在枚举内会报 Data truncated；已 ALTER 为 VARCHAR(32)
    - [ ] Nacos/yml 配置 `oy-blog.article.moderation.base-url` 指向 BlogAgent（服务器为 `http://oy-blog-python-agent:8001` 同网段直连；本地调试为 `http://localhost:8001`）
    - [ ] 普通用户发布三篇样例 → 分别验证：published 可见 / rejected 不公开且作者见驳回原因 / pending_review 不可公开读但作者列表可见
    - [ ] 管理员 `POST /admin/moderation/page` 见两篇待审 → audit 通过/驳回 → 状态流转 + ES 检索（approve 能搜到、驳回搜不到）
