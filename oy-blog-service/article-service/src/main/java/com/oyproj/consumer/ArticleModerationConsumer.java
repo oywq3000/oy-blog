@@ -86,7 +86,7 @@ public class ArticleModerationConsumer {
                 verdict = moderationService.moderate(articleId, title, summary, content);
             } catch (Exception e) {
                 log.warn("AI 审核调用失败, articleId: {}, attempt: {}, 错误: {}", articleId, attempt, e.getMessage());
-                onModerateFailure(articleId, attempt, newReviewing, editReviewing);
+                onModerateFailure(articleId, attempt);
                 return;
             }
 
@@ -172,16 +172,22 @@ public class ArticleModerationConsumer {
             moderationService.writeLog(article.getId(), "ai_reject", verdict.reason(), "ai");
             return;
         }
-        // manual：待生效区保留，进人工队列
+        // manual：待生效区保留，进人工队列；理由同步到待生效区（人工队列 EDIT 类目读 pending.reviewReason）
         article.setReviewStatus("manual");
         article.setReviewReason(verdict.reason());
         article.setUpdateAt(LocalDateTime.now());
         articleDao.updateById(article);
+        pending.setReviewReason(verdict.reason());
+        pendingContentMapper.updateById(pending);
         moderationService.writeLog(article.getId(), "ai_manual", verdict.reason(), "ai");
     }
 
-    /** 失败路径：attempt < maxAttempt → 延迟重试；否则转人工（fail-closed） */
-    private void onModerateFailure(String articleId, int attempt, boolean newReviewing, boolean editReviewing) {
+    /**
+     * 失败路径：attempt < maxAttempt → 延迟重试；否则转人工（fail-closed）。
+     * 转人工以重读状态为准（不依赖调用前的 newReviewing/editReviewing 参数）：
+     * 失败期间人工可能已处理，重读后仍非审核中则直接放弃，绝不覆盖人工结论。
+     */
+    private void onModerateFailure(String articleId, int attempt) {
         if (attempt < properties.getMaxAttempt()) {
             retrySender.sendRetry(articleId, attempt + 1);
             return;
@@ -191,8 +197,20 @@ public class ArticleModerationConsumer {
             pendingContentMapper.deleteById(articleId);
             return;
         }
-        if (newReviewing || "ai_reviewing".equals(article.getStatus())) {
+        if (!"ai_reviewing".equals(article.getReviewStatus())) {
+            log.debug("审核失败兜底跳过（状态已被人工变更）, articleId: {}", articleId);
+            return;
+        }
+        if ("ai_reviewing".equals(article.getStatus())) {
+            // 新文章：审核中 → 转人工队列
             article.setStatus("pending_review");
+        } else {
+            // 编辑场景（published + 审核中）：旧版继续展示，仅标记人工；理由同步到待生效区
+            ArticlePendingContent pending = pendingContentMapper.selectById(articleId);
+            if (pending != null) {
+                pending.setReviewReason(MANUAL_FALLBACK_REASON);
+                pendingContentMapper.updateById(pending);
+            }
         }
         article.setReviewStatus("manual");
         article.setReviewReason(MANUAL_FALLBACK_REASON);
