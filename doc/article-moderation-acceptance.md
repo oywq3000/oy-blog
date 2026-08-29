@@ -116,7 +116,9 @@ tests/test_graph.py 5 / test_llm.py 9 / test_protocol.py 6 / test_registry.py 9 
 - [ ] 杀消费端/丢消息 → 15 分钟兜底扫描转人工
 - [ ] 审核中删除文章 → 消费端收尾
 - [ ] 幂等实测：手工重发消息无害
+- [ ] 前端真实数据联调（真实待审数据流经管理端审核页与创作中心状态流转；本机已通过 vitest/vue-tsc/vite build 静态验证）
 
-### 前端配合项（另行处理）
-- [ ] publish 返回 verdict=ai_reviewing → 关闭 loading、提示"已提交审核"
-- [ ] 创作中心列表 10~20 秒自动轮询，按 status/reviewStatus 显示"AI 审核中/编辑审核中/待人工审核/已驳回+原因"
+### 前端配合项（已实现）
+- [X] publish 返回 verdict=ai_reviewing → 关闭 loading、提示"已提交审核"（oy-blog-front-dev1 3f35a86；驳回留编辑器提示原因）
+- [X] 创作中心列表 10~20 秒自动轮询，按 status/reviewStatus 显示"AI 审核中/编辑审核中/待人工审核/已驳回+原因"（oy-blog-front-dev1 c3681d5/2f4ecd8/3f35a86；轮询 15s）
+- [X] 管理端文章审核页（待审队列+通过/驳回）（oy-blog-admin 7693753，feat-moderation 分支待合并）
