@@ -20,7 +20,8 @@ import java.util.Map;
 
 /**
  * 文章 AI 审核服务：豁免判定、调用 BlogAgent 审核端点、写审核日志。
- * 铁律：任何调用异常一律回退 manual（转人工），绝不放行——AI 挂了不等于审核门洞开。
+ * 铁律：传输层/响应转换异常一律抛出（由消费端重试阶梯接管，绝不静默放行）；
+ * AI 返回未知 verdict 时回退 manual（转人工）——AI 挂了不等于审核门洞开。
  */
 @Slf4j
 @Service
@@ -56,7 +57,12 @@ public class ModerationService extends ArticleBaseBizService {
         return request.getHeader(HeaderConstant.USER_TYPE.getValue());
     }
 
-    /** 调用 BlogAgent 审核。HTTP 失败/超时/响应异常 → manual（fail-closed）。 */
+    /**
+     * 调用 BlogAgent 审核。
+     * 传输层/响应转换异常（连接失败/超时/4xx/5xx/转换失败）→ 抛出原始异常，
+     * 由消费端重试阶梯接管（不降级 manual，否则 Task 3 的 TTL 重试回路永远不可达）。
+     * AI 返回未知 verdict → manual（fail-closed）。
+     */
     public ModerationVerdict moderate(String articleId, String title, String summary, String contentMd) {
         Map<String, String> body = new HashMap<>();
         body.put("articleId", articleId);
@@ -80,7 +86,7 @@ public class ModerationService extends ArticleBaseBizService {
             return ModerationVerdict.manual(reason); // manual 或未知值 → 转人工
         } catch (Exception e) {
             log.warn("文章 AI 审核调用失败, articleId: {}, 错误: {}", articleId, e.getMessage());
-            return ModerationVerdict.manual("审核服务不可用，转人工审核");
+            throw e;
         }
     }
 

@@ -42,17 +42,23 @@ public class ArticleIndexMessageService {
                 .getOrDefault(articleId, Collections.emptyList());
     }
 
-    /** 在事务提交后发送索引消息（afterCommit：消费方读到的数据已提交） */
+    /** 在事务提交后发送索引消息（afterCommit：消费方读到的数据已提交）；无活动事务时直接发送兜底（不丢 ES 消息） */
     public void sendIndexAfterCommit(Article article, List<String> tags, MQOperation operation) {
         ArticleIndexMessage message = buildIndexMessage(article, tags, operation);
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        articleMessageProducer.sendArticleIndexMessage(message);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            articleMessageProducer.sendArticleIndexMessage(message);
+                        }
                     }
-                }
-        );
+            );
+        } else {
+            // 防御：事务代理链未生效（如消费端代理异常时）直接发送，避免索引消息丢失
+            articleMessageProducer.sendArticleIndexMessage(message);
+            log.warn("无活动事务，直接发送索引消息, articleId: {}", article.getId());
+        }
     }
 
     /** 构建索引消息（逻辑与抽取前完全一致，tags 改为入参） */
