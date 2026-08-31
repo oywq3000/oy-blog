@@ -93,16 +93,21 @@ public class ArticleDaoImpl extends ServiceImpl<ArticleMapper, Article> implemen
     }
 
     /**
-     * 按作者和状态分页查询文章
+     * 按作者和状态分页查询文章；status 为 all 时合并查询三个审核中状态
      */
     @Override
     public List<Article> listByAuthorAndStatus(String authorId, String status, Page<Article> page) {
-        return baseMapper.selectPage(page, new LambdaQueryWrapper<Article>()
+        LambdaQueryWrapper<Article> wrapper = new LambdaQueryWrapper<Article>()
                 .eq(Article::getAuthorId, authorId)
-                .eq(Article::getStatus, status)
                 .isNull(Article::getDeletedAt)
-                .orderByDesc(Article::getUpdatedAt))
-                .getRecords();
+                .orderByDesc(Article::getUpdatedAt);
+        if ("all".equals(status)) {
+            // all = 三个审核中状态合并查询（AI 审核中 / 待人工审核 / 已驳回）
+            wrapper.in(Article::getStatus, "ai_reviewing", "pending_review", "rejected");
+        } else {
+            wrapper.eq(Article::getStatus, status);
+        }
+        return baseMapper.selectPage(page, wrapper).getRecords();
     }
 
     /**
