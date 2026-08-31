@@ -148,13 +148,13 @@ public class ArticleController {
     /**
      * 查询当前用户的文章列表（按状态分页）
      *
-     * @param status 文章状态：published（已发布）或 draft（草稿），默认 published
+     * @param status 文章状态：published（已发布）、draft（草稿），或 all（全部审核中：AI 审核中/待人工审核/已驳回），默认 published
      * @return 分页的文章列表（含 total / currentPage / totalPages）
      */
     @GetMapping("/creator/me")
-    @Operation(summary = "查询当前用户的文章列表", description = "按状态分页查询当前登录用户的文章，支持 published 和 draft")
+    @Operation(summary = "查询当前用户的文章列表", description = "按状态分页查询当前登录用户的文章，支持 published、draft 及 all（三个审核中状态合并）")
     public Result<PageVo<List<ArticleInfoVo>>> listMine(
-            @Parameter(description = "文章状态：published 或 draft", example = "published")
+            @Parameter(description = "文章状态：published / draft / all（全部审核中）", example = "published")
             @RequestParam(defaultValue = "published") String status) {
         return readBiz.listMine(status);
     }

@@ -321,7 +321,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     /**
      * 查询当前用户的文章列表（按状态分页，含分页元数据）
      *
-     * @param status 文章状态 (published/draft)
+     * @param status 文章状态 (published/draft，或 all=三个审核中状态合并)
      * @return 分页的文章列表
      */
     @Override

@@ -61,7 +61,7 @@ public interface ArticleDao extends IService<Article> {
      * 按作者和状态分页查询文章
      *
      * @param authorId 作者ID
-     * @param status   文章状态 (published/draft)
+     * @param status   文章状态 (published/draft/ai_reviewing/pending_review/rejected，或 all=三个审核中状态合并)
      * @param page     MP 分页对象（传入 pageNum/pageSize，查询后填充 total/pages）
      * @return 文章列表
      */
