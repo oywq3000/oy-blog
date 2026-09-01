@@ -99,6 +99,26 @@ public class ArticleReadController {
     }
 
     /**
+     * 按作者分页查询已发布文章列表（他人主页展示用，公开接口）
+     *
+     * @param userId   作者ID
+     * @param pageNum  页码（从 1 开始）
+     * @param pageSize 每页条数
+     * @return 分页的文章列表
+     */
+    @GetMapping("/published/by-author/{userId}")
+    @Operation(summary = "按作者分页查询已发布文章列表", description = "查询指定作者已发布文章，置顶优先，其余按发布时间降序分页返回")
+    public Result<PageVo<List<ArticleInfoVo>>> listPublishedByAuthor(
+            @Parameter(description = "作者ID", required = true)
+            @PathVariable("userId") @NotNull String userId,
+            @Parameter(description = "页码（从 1 开始）", example = "1")
+            @RequestParam(defaultValue = "1") int pageNum,
+            @Parameter(description = "每页条数", example = "10")
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return biz.listPublishedByAuthor(userId, pageNum, pageSize);
+    }
+
+    /**
      * 按热度分页查询已发布文章列表
      *
      * @param pageNum  页码（从 1 开始）

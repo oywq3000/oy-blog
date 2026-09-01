@@ -106,6 +106,7 @@ public class UserProfileBizServiceImpl extends UserBizBase implements UserProfil
         userPublicVo.setName(user.getUsername());
         userPublicVo.setAvatar(user.getAvatarUrl());
         userPublicVo.setBio(user.getBio());
+        userPublicVo.setCreatedAt(user.getCreatedAt());
         Result<UserArticleStatDto> userStats = articleControllerClient.getUserStats(userId);
         if(userStats.getIsSuccess()&&userStats.getData()!=null){
             userPublicVo.setArticleCount(userStats.getData().getArticleCount());

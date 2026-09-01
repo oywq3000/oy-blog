@@ -79,12 +79,15 @@ auth:
     - /user-service/auth/password/reset
     # 邮箱验证：send-code/confirm 供未登录用户使用；request 对游客在业务层返回 400 友好提示
     - /user-service/email/verification/**
+    # 对外公开的信息接口
     - /user-service/profile/info/**
     - /article-service/article/read/**
     - /article-service/article/comment/*/comment-count
     - /article-service/article/comment/*/comments
     - /article-service/article/comment/*/replies
     - /article-service/article/interaction/*/view
+    - /article-service/article/stats/heatmap/{userId}
+    - /article-service/article/stats/{userId}
     - /search-service/essearch/**
     # AI 助手：游客可聊（前端 SSE 用 fetch 手拼 token，游客为空），由 AuthenticationFilter 注入 x-user-id（真实 userId 或 guestId）
     # 安全底线：agent-service 内部所有写接口必须按 x-user-id 做 owner 校验

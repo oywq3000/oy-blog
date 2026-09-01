@@ -134,6 +134,18 @@ public class ArticleController {
     }
 
     /**
+     * 获取指定用户活跃度热力图（公开，他人主页展示用）
+     *
+     * @param userId 用户ID
+     * @return 最近12个月每日活跃数据
+     */
+    @GetMapping("/stats/heatmap/{userId}")
+    @Operation(summary = "获取指定用户活跃度热力图", description = "最近12个月发文章/评论/回复/点赞/收藏的每日活跃数据")
+    public Result<List<HeatmapDayVo>> getUserHeatmap(@PathVariable("userId") @NotNull String userId) {
+        return statsBiz.getUserHeatmap(userId);
+    }
+
+    /**
      * 获取指定用户文章统计
      *
      * @param userId 用户ID

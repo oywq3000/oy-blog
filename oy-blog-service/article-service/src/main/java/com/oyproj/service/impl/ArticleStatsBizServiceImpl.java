@@ -46,6 +46,14 @@ public class ArticleStatsBizServiceImpl extends ArticleBaseBizService implements
         return Result.ok(activityHeatmapDao.listActivityDays(userId, LocalDate.now().minusMonths(12)));
     }
 
+    /**
+     * 指定用户最近12个月活跃度热力图（公开，不受当前登录态影响）
+     */
+    @Override
+    public Result<List<HeatmapDayVo>> getUserHeatmap(String userId) {
+        return Result.ok(activityHeatmapDao.listActivityDays(userId, LocalDate.now().minusMonths(12)));
+    }
+
     @Override
     public Result<ArticleStatsVo> getGlobalStats() {
         ArticleStatsVo vo = new ArticleStatsVo();

@@ -119,6 +119,27 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     }
 
     /**
+     * 按作者分页查询已发布文章列表（置顶优先 + publishAt/createdAt/id 降序）
+     *
+     * @param authorId 作者ID
+     * @param pageNum  页码（1-based）
+     * @param pageSize 每页大小
+     * @return 分页的文章列表
+     */
+    @Override
+    public Result<PageVo<List<ArticleInfoVo>>> listPublishedByAuthor(String authorId, int pageNum, int pageSize) {
+        int[] p = normalizePage(pageNum, pageSize);
+        long total = articleDao.countPublishedByAuthor(authorId);
+        List<ArticleInfoVo> voList = total == 0
+                ? Collections.emptyList()
+                : copyList(articleDao.listPublishedByAuthor(authorId, p[0], p[1]), ArticleInfoVo.class);
+        enrichWithStats(voList);
+        enrichWithAuthorInfo(voList);
+        enrichWithTags(voList);
+        return Result.ok(buildPageVo(p[0], p[1], total, voList));
+    }
+
+    /**
      * 按热度分页查询已发布文章列表（加权评分降序）
      *
      * @param pageNum  页码（1-based）

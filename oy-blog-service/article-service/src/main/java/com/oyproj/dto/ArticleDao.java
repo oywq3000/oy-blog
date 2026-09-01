@@ -58,6 +58,24 @@ public interface ArticleDao extends IService<Article> {
     Long countByAuthorId(String authorId);
 
     /**
+     * 统计指定作者已发布未删除的文章数量
+     *
+     * @param authorId 作者ID
+     * @return 文章数量
+     */
+    Long countPublishedByAuthor(String authorId);
+
+    /**
+     * 按作者分页查询已发布未删除的文章（置顶优先 + publishAt/createdAt/id 降序）
+     *
+     * @param authorId 作者ID
+     * @param pageNum  页码（1-based）
+     * @param pageSize 每页大小
+     * @return 文章列表
+     */
+    List<Article> listPublishedByAuthor(String authorId, int pageNum, int pageSize);
+
+    /**
      * 按作者和状态分页查询文章
      *
      * @param authorId 作者ID
