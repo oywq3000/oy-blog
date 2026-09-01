@@ -13,6 +13,13 @@ public interface ArticleStatsBizService {
     Result<List<HeatmapDayVo>> getMyHeatmap();
 
     /**
+     * 指定用户最近12个月活跃度热力图（公开，他人主页展示用）
+     *
+     * @param userId 目标用户ID
+     */
+    Result<List<HeatmapDayVo>> getUserHeatmap(String userId);
+
+    /**
      * 全库文章数据统计（已发布文章数、阅读量总和、点赞数总和、标签总数）
      */
     Result<ArticleStatsVo> getGlobalStats();

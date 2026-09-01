@@ -49,6 +49,16 @@ public interface ArticleReadBizService {
     Result<PageVo<List<ArticleInfoVo>>> listPublished(int pageNum, int pageSize);
 
     /**
+     * 按作者分页查询该用户已发布文章列表（置顶优先 + publishAt 降序）
+     *
+     * @param authorId 作者ID
+     * @param pageNum  页码（1-based）
+     * @param pageSize 每页大小
+     * @return 分页的文章列表
+     */
+    Result<PageVo<List<ArticleInfoVo>>> listPublishedByAuthor(String authorId, int pageNum, int pageSize);
+
+    /**
      * 按热度分页查询已发布文章列表（加权评分降序）
      *
      * @param pageNum  页码（1-based）

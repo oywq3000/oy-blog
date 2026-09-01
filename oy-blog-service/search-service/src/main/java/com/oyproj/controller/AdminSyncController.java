@@ -19,9 +19,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 public class AdminSyncController {
-
     private final IndexReconciler indexReconciler;
-
     /**
      * 手动触发全量索引重建
      */

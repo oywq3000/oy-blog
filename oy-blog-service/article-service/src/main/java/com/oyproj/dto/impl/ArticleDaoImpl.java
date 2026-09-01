@@ -138,6 +138,34 @@ public class ArticleDaoImpl extends ServiceImpl<ArticleMapper, Article> implemen
     }
 
     /**
+     * 统计指定作者已发布未删除的文章数量
+     */
+    @Override
+    public Long countPublishedByAuthor(String authorId) {
+        return baseMapper.selectCount(new LambdaQueryWrapper<Article>()
+                .eq(Article::getStatus, "published")
+                .isNull(Article::getDeletedAt)
+                .eq(Article::getAuthorId, authorId));
+    }
+
+    /**
+     * 按作者分页查询已发布未删除的文章（置顶优先 + publishAt/createdAt/id 降序）
+     */
+    @Override
+    public List<Article> listPublishedByAuthor(String authorId, int pageNum, int pageSize) {
+        return baseMapper.selectPage(new Page<>(pageNum, pageSize),
+                new LambdaQueryWrapper<Article>()
+                        .eq(Article::getStatus, "published")
+                        .isNull(Article::getDeletedAt)
+                        .eq(Article::getAuthorId, authorId)
+                        .orderByDesc(Article::getIsTop)
+                        .orderByDesc(Article::getPublishAt)
+                        .orderByDesc(Article::getCreatedAt)
+                        .orderByDesc(Article::getId))
+                .getRecords();
+    }
+
+    /**
      * 按热度分页查询已发布未删除的文章（加权评分降序 + id 降序兜底）
      */
     @Override
