@@ -1,0 +1,38 @@
+# oy-blog Filebeat 配置：采集宿主机挂载的日志目录进复用 ES
+# 路径映射：宿主机 logs/<module>/<file>.log ↔ 容器内 /logs/<module>/<file>.log（只读挂载）
+filebeat.inputs:
+  - type: filestream
+    id: oyblog-business
+    enabled: true
+    paths:
+      - /logs/*/*.log                # 7 个服务业务日志（含历史滚动文件）
+    parsers:
+      - ndjson:
+          target: ""                 # 字段上浮到根层级
+          add_error_key: false       # 解析失败的行（旧纯文本）保留原文进 message
+  - type: filestream
+    id: oyblog-access
+    enabled: true
+    paths:
+      - /logs/*/*-access.log         # 访问日志
+    parsers:
+      - ndjson:
+          target: ""
+          add_error_key: false
+
+# 输出到复用 ES（容器名直连，内部网络绕防火墙）
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  username: "${ES_USERNAME}"
+  password: "${ES_PASSWORD}"
+  index: "oyblog-logs-%{+yyyy.MM.dd}"
+
+# ILM：15 天自动删除
+setup.ilm.enabled: true
+setup.ilm.policy_id: oyblog-logs-policy
+setup.ilm.rollover_alias: oyblog-logs
+setup.template.name: oyblog-logs
+setup.template.pattern: "oyblog-logs-*"
+
+logging.level: info
+logging.to_files: false

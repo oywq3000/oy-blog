@@ -121,6 +121,21 @@ services:
     volumes:
       - ./logs/agent-service:/app/logs
 
+  filebeat:
+    <<: *common
+    image: elastic/filebeat:8.17.10
+    container_name: oy-blog-filebeat
+    cpus: "0.2"
+    mem_limit: 128m
+    volumes:
+      - ./logs:/logs:ro                          # 只读挂载宿主机日志目录
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    environment:
+      ES_USERNAME: elastic
+      ES_PASSWORD: ${ES_PASSWORD}                # 复用业务编排 .env
+    depends_on:
+      - gateway
+
 # 外部网络：中间件编排（/home/oy/app/oyblog/）创建的 oyblog_oyblog-net（172.19.0.0/16），
 # 业务容器挂上去后与中间件同网段二层直连，互访不经过宿主机防火墙
 networks:
