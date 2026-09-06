@@ -6,7 +6,7 @@ filebeat.inputs:
     enabled: true
     paths:
       - /logs/*/*.log                # 7 个服务业务日志（含历史滚动文件）
-    exclude_files: ['-access\.log$'] # 排除访问日志，避免与 access input 双采
+    exclude_files: ['-access(\..*)?\.log$'] # 排除访问日志（含滚动文件），避免与 access input 双采
     parsers:
       - ndjson:
           target: ""                 # 字段上浮到根层级
@@ -15,7 +15,7 @@ filebeat.inputs:
     id: oyblog-access
     enabled: true
     paths:
-      - /logs/*/*-access.log         # 访问日志
+      - /logs/*/*-access*.log        # 访问日志（含滚动文件）
     parsers:
       - ndjson:
           target: ""
@@ -28,10 +28,21 @@ output.elasticsearch:
   password: "${ES_PASSWORD}"
   index: "oyblog-logs-%{+yyyy.MM.dd}"
 
-# ILM：15 天自动删除
+# ILM：15 天自动删除（内联定义策略，避免 ES 中无此 policy 时回落到内置 30 天默认策略）
 setup.ilm.enabled: true
 setup.ilm.policy_id: oyblog-logs-policy
 setup.ilm.rollover_alias: oyblog-logs
+setup.ilm.policy:
+  phases:
+    hot:
+      actions:
+        rollover:
+          max_size: 50gb
+          max_age: 15d
+    delete:
+      min_age: 15d
+      actions:
+        delete: {}
 setup.template.name: oyblog-logs
 setup.template.pattern: "oyblog-logs-*"
 
