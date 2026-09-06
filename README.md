@@ -223,6 +223,34 @@ oy-blog-gateway (8080) ── JWT 统一认证 · 白名单放行 · 前缀路�
 
 ---
 
+## ELK 日志体系
+
+生产环境日志统一走 **ELK**（复用业务 Elasticsearch + Kibana）：7 个服务通过 Logback 输出**单行 JSON 结构化日志**（含 `svc` 服务标识、`recordId` 全链路追踪字段），由 **Filebeat**（`128m` 内存限制）采集进 ES 数据流 `oyblog-logs-*`。
+
+| 项 | 说明 |
+| :--- | :--- |
+| 组件 | 7 服务 Logback JSON 化（`svc` 字段）+ Filebeat（128m）+ 复用 ES + Kibana |
+| Kibana 入口 | `http://100.110.148.14:5601/`（`elastic` / `es24862486`） |
+| Data View | `oyblog-logs-*`（时间字段 `@timestamp`，字段含 `svc` / `level` / `recordId` / `logger_name` / `thread_name` / `message`） |
+| 索引与保留 | 索引 `oyblog-logs-*`，ILM 策略 `oyblog-logs-policy`：hot 15 天 / 50GB 滚动，15 天自动删除 |
+| 排查方式 | SSH 到服务器 `grep` 宿主机日志文件依然可用（`logs/<svc>/<svc>/*.log`，JSON 单行文本） |
+
+常用检索（Discover / ES）：
+
+* 按服务 + 级别过滤：`svc : article-service AND level : ERROR`
+* 全链路追踪：复制任意一条日志的 `recordId` 检索，可命中同一请求的 `[REQUEST]` / `[RESPONSE]` 及中间 SQL 日志
+* 访问日志：过滤 `message : "[REQUEST]"` 或 `"[RESPONSE]"`
+
+**运维备忘**：Filebeat 配置 `scp` 重传后，文件属主会变成 `uid 10000`，触发 Filebeat 严格属主检查导致**重启循环**。重传后需恢复属主为 root（用一次性容器执行 `chown`）：
+
+```bash
+docker run --rm -v /home/oy/app/oyblogdeploy/oyblog-back/filebeat.yml:/f:ro ubuntu chown 0:0 /f
+```
+
+或启动 Filebeat 时附加 `--strict.perms=false`。
+
+---
+
 ## 目录结构
 
 项目采用 Maven 多模块组织，公共能力下沉、业务服务按领域拆分：
