@@ -24,7 +24,7 @@
             <!-- 保留 recordId 全链路追踪字段 -->
             <includeMdcKeyName>recordId</includeMdcKeyName>
             <!-- 服务标识，Kibana 按此过滤 -->
-            <customFields>{"service":"user-service"}</customFields>
+            <customFields>{"svc":"user-service"}</customFields>
         </encoder>
     </appender>
 
@@ -41,7 +41,7 @@
             <!-- 保留 recordId 全链路追踪字段 -->
             <includeMdcKeyName>recordId</includeMdcKeyName>
             <!-- 服务标识，Kibana 按此过滤 -->
-            <customFields>{"service":"user-service"}</customFields>
+            <customFields>{"svc":"user-service"}</customFields>
         </encoder>
     </appender>
 
