@@ -1,11 +1,12 @@
 # oy-blog Filebeat 配置：采集宿主机挂载的日志目录进复用 ES
-# 路径映射：宿主机 logs/<module>/<file>.log ↔ 容器内 /logs/<module>/<file>.log（只读挂载）
+# 路径映射：宿主机 logs/<module>/<module>/<file>.log ↔ 容器内 /logs/<module>/<module>/<file>.log（只读挂载）
+# 注意：应用内 logback 会把日志写到 /app/logs/<module>/ 子目录，故实际是两级目录，glob 用 /logs/*/*/*.log
 filebeat.inputs:
   - type: filestream
     id: oyblog-business
     enabled: true
     paths:
-      - /logs/*/*.log                # 7 个服务业务日志（含历史滚动文件）
+      - /logs/*/*/*.log              # 7 个服务业务日志（含历史滚动文件）；服务器实际布局 logs/<svc>/<svc>/*.log 两级目录
     exclude_files: ['-access(\..*)?\.log$'] # 排除访问日志（含滚动文件），避免与 access input 双采
     parsers:
       - ndjson:
@@ -15,7 +16,7 @@ filebeat.inputs:
     id: oyblog-access
     enabled: true
     paths:
-      - /logs/*/*-access*.log        # 访问日志（含滚动文件）
+      - /logs/*/*/*-access*.log      # 访问日志（含滚动文件）
     parsers:
       - ndjson:
           target: ""
