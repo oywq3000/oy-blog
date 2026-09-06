@@ -40,7 +40,7 @@ build/
 
 logs/
 .claude
-
+.superpowers
 # env
 .env
 .env.*

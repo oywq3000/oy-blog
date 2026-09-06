@@ -132,7 +132,7 @@ services:
       - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
       - ./ilm-policy.json:/usr/share/filebeat/ilm-policy.json:ro
     environment:
-      ES_USERNAME: elastic
+      ES_USERNAME: ${ES_USERNAME:-elastic}       # 复用业务编排 .env，缺省兜底 elastic
       ES_PASSWORD: ${ES_PASSWORD}                # 复用业务编排 .env
     depends_on:
       - gateway
