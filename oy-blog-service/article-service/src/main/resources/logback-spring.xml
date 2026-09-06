@@ -5,6 +5,7 @@
         LOG_PATH can be overridden via application.yml
         or JVM argument -DLOG_PATH=/var/log/oy-blog
     ============================================-->
+    <!-- JSON 结构化输出：FILE/ACCESS 落盘为一行一条 JSON，供 Filebeat 采集进 ELK -->
     <property name="LOG_PATH" value="${LOG_PATH:-logs}" />
     <property name="MODULE_NAME" value="article-service" />
     <property name="MAX_HISTORY" value="15" />
@@ -32,8 +33,11 @@
                 <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
             </timeBasedFileNamingAndTriggeringPolicy>
         </rollingPolicy>
-        <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{recordId:-no-record}] - %msg%n</pattern>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- 保留 recordId 全链路追踪字段 -->
+            <includeMdcKeyName>recordId</includeMdcKeyName>
+            <!-- 服务标识，Kibana 按此过滤 -->
+            <customFields>{"service":"article-service"}</customFields>
         </encoder>
     </appender>
 
@@ -50,8 +54,11 @@
                 <maxFileSize>200MB</maxFileSize>
             </timeBasedFileNamingAndTriggeringPolicy>
         </rollingPolicy>
-        <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{recordId:-no-record}] - %msg%n</pattern>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- 保留 recordId 全链路追踪字段 -->
+            <includeMdcKeyName>recordId</includeMdcKeyName>
+            <!-- 服务标识，Kibana 按此过滤 -->
+            <customFields>{"service":"article-service"}</customFields>
         </encoder>
     </appender>
 
