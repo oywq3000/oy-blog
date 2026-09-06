@@ -154,6 +154,13 @@
         <version>${elasticsearch.client.version}</version>
       </dependency>
 
+      <!-- 结构化日志 JSON 编码（logback 1.5 / Spring Boot 3.4 兼容） -->
+      <dependency>
+        <groupId>net.logstash.logback</groupId>
+        <artifactId>logstash-logback-encoder</artifactId>
+        <version>8.0</version>
+      </dependency>
+
       <dependency>
         <groupId>com.alibaba</groupId>
         <artifactId>transmittable-thread-local</artifactId>
