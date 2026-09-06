@@ -6,6 +6,7 @@ filebeat.inputs:
     enabled: true
     paths:
       - /logs/*/*.log                # 7 个服务业务日志（含历史滚动文件）
+    exclude_files: ['-access\.log$'] # 排除访问日志，避免与 access input 双采
     parsers:
       - ndjson:
           target: ""                 # 字段上浮到根层级
