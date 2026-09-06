@@ -28,21 +28,10 @@ output.elasticsearch:
   password: "${ES_PASSWORD}"
   index: "oyblog-logs-%{+yyyy.MM.dd}"
 
-# ILM：15 天自动删除（内联定义策略，避免 ES 中无此 policy 时回落到内置 30 天默认策略）
+# ILM：15 天自动删除（策略经 policy_file 定义，避免 ES 中无此 policy 时回落到内置 30 天默认策略）
 setup.ilm.enabled: true
-setup.ilm.policy_id: oyblog-logs-policy
-setup.ilm.rollover_alias: oyblog-logs
-setup.ilm.policy:
-  phases:
-    hot:
-      actions:
-        rollover:
-          max_size: 50gb
-          max_age: 15d
-    delete:
-      min_age: 15d
-      actions:
-        delete: {}
+setup.ilm.policy_name: oyblog-logs-policy
+setup.ilm.policy_file: /usr/share/filebeat/ilm-policy.json
 setup.template.name: oyblog-logs
 setup.template.pattern: "oyblog-logs-*"
 

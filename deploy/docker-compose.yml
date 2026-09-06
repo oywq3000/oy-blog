@@ -130,6 +130,7 @@ services:
     volumes:
       - ./logs:/logs:ro                          # 只读挂载宿主机日志目录
       - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./ilm-policy.json:/usr/share/filebeat/ilm-policy.json:ro
     environment:
       ES_USERNAME: elastic
       ES_PASSWORD: ${ES_PASSWORD}                # 复用业务编排 .env
