@@ -41,6 +41,7 @@ build/
 logs/
 .claude
 .superpowers
+
 # env
 .env
 .env.*
@@ -49,3 +50,7 @@ logs/
 ### Python ###
 __pycache__/
 *.pyc
+
+# superpowers 工作流产物（不入库）
+.superpowers/
+docs/
