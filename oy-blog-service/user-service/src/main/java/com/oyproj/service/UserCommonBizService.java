@@ -1,5 +1,6 @@
 package com.oyproj.service;
 
+import com.oyproj.api.file.domain.vo.FileVo;
 import com.oyproj.common.base.Result;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -11,7 +12,7 @@ public interface UserCommonBizService {
      * 上传用户头像
      *
      * @param file 头像文件
-     * @return 访问URL
+     * @return 上传成功的文件信息（与封面等上传接口返回结构一致）
      */
-    Result<String> uploadAvatar(MultipartFile file);
+    Result<FileVo> uploadAvatar(MultipartFile file);
 }
