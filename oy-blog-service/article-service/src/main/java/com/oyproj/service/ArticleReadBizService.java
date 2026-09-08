@@ -6,6 +6,8 @@ import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.domain.vo.ArticleChapterVo;
 import com.oyproj.domain.vo.ArticleContentVo;
 import com.oyproj.domain.vo.ArticleInfoVo;
+import com.oyproj.domain.vo.SeriesDetailVo;
+import com.oyproj.domain.vo.SeriesReadVo;
 import com.oyproj.domain.vo.TagStatVo;
 
 import java.util.List;
@@ -96,5 +98,22 @@ public interface ArticleReadBizService {
      * @return 分页的文章列表
      */
     Result<PageVo<List<ArticleInfoVo>>> listMine(String status);
+
+    /**
+     * 专栏列表（前台，含每栏已发布成员数，按创建时间升序）
+     *
+     * @return 专栏列表
+     */
+    Result<List<SeriesReadVo>> listSeriesRead();
+
+    /**
+     * 专栏详情（前台，已发布成员按 sort_order 升序分页）
+     *
+     * @param seriesId 专栏 ID
+     * @param pageNum  页码（1-based，默认 1）
+     * @param pageSize 每页大小（默认 10）
+     * @return 专栏详情（含分页元数据）
+     */
+    Result<SeriesDetailVo> getSeriesDetail(String seriesId, Integer pageNum, Integer pageSize);
 }
 

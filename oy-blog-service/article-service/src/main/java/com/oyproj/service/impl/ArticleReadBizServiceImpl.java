@@ -1,5 +1,6 @@
 package com.oyproj.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
@@ -11,14 +12,23 @@ import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.config.HotWeightProperties;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.domain.entity.ArticleLog;
+import com.oyproj.domain.entity.ArticleSeries;
+import com.oyproj.domain.entity.ArticleSeriesItem;
 import com.oyproj.domain.entity.ArticleStats;
 import com.oyproj.domain.vo.ArticleChapterVo;
 import com.oyproj.domain.vo.ArticleContentVo;
 import com.oyproj.domain.vo.ArticleInfoVo;
 import com.oyproj.domain.vo.PageDomain;
+import com.oyproj.domain.vo.SeriesArticleLinkVo;
+import com.oyproj.domain.vo.SeriesDetailVo;
+import com.oyproj.domain.vo.SeriesMemberCountVo;
+import com.oyproj.domain.vo.SeriesReadVo;
 import com.oyproj.domain.vo.TableSupport;
 import com.oyproj.domain.vo.TagStatVo;
 import com.oyproj.dto.*;
+import com.oyproj.mapper.ArticleMapper;
+import com.oyproj.mapper.ArticleSeriesItemMapper;
+import com.oyproj.mapper.ArticleSeriesMapper;
 import com.oyproj.service.ArticleReadBizService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -27,9 +37,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -50,6 +62,9 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     @NotNull private final ArticleStatsDao articleStatsDao;
     @NotNull private final UserClient userClient;
     @NotNull private final HotWeightProperties hotWeightProperties;
+    private final ArticleMapper articleMapper;
+    private final ArticleSeriesMapper seriesMapper;
+    private final ArticleSeriesItemMapper seriesItemMapper;
 
     /**
      * 根据slug查询文章
@@ -67,6 +82,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         enrichWithAuthorInfo(Collections.singletonList(vo));
         enrichWithStats(Collections.singletonList(vo));
         enrichWithTags(Collections.singletonList(vo));
+        enrichWithSeries(Collections.singletonList(vo));
         return Result.ok(vo);
     }
 
@@ -296,6 +312,63 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     }
 
     /**
+     * 为文章VO列表批量注入所属专栏链接（含专栏名称/封面、文内排序与各栏已发布总数）。
+     * 无专栏关联时保持 seriesList 为 null，前端判空隐藏。
+     *
+     * @param voList 文章VO列表（详情接口用，通常单元素）
+     */
+    private void enrichWithSeries(List<ArticleInfoVo> voList) {
+        if (voList == null || voList.isEmpty()) {
+            return;
+        }
+        List<String> articleIds = voList.stream()
+                .map(ArticleInfoVo::getId)
+                .collect(Collectors.toList());
+        if (articleIds.isEmpty()) {
+            return;
+        }
+        List<ArticleSeriesItem> items = seriesItemMapper.selectList(
+                new LambdaQueryWrapper<ArticleSeriesItem>()
+                        .in(ArticleSeriesItem::getArticleId, articleIds)
+                        .orderByAsc(ArticleSeriesItem::getSortOrder));
+        if (items.isEmpty()) {
+            return;
+        }
+        Set<String> involvedSeriesIds = items.stream()
+                .map(ArticleSeriesItem::getSeriesId)
+                .collect(Collectors.toSet());
+        Map<String, ArticleSeries> seriesMap = seriesMapper.selectBatchIds(involvedSeriesIds).stream()
+                .collect(Collectors.toMap(ArticleSeries::getId, s -> s));
+        Map<String, Long> countMap = articleMapper.selectPublishedCountGroupBySeries().stream()
+                .collect(Collectors.toMap(SeriesMemberCountVo::getSeriesId,
+                        vo -> vo.getArticleCount() == null ? 0L : vo.getArticleCount()));
+        Map<String, List<ArticleSeriesItem>> byArticle = items.stream()
+                .collect(Collectors.groupingBy(ArticleSeriesItem::getArticleId));
+        for (ArticleInfoVo vo : voList) {
+            List<ArticleSeriesItem> mine = byArticle.get(vo.getId());
+            if (mine == null) {
+                continue;
+            }
+            List<SeriesArticleLinkVo> links = new ArrayList<>();
+            for (ArticleSeriesItem item : mine) {
+                ArticleSeries s = seriesMap.get(item.getSeriesId());
+                if (s == null) {
+                    continue; // 专栏已删、关系行残留则跳过
+                }
+                SeriesArticleLinkVo link = new SeriesArticleLinkVo();
+                link.setSeriesId(s.getId());
+                link.setName(s.getName());
+                link.setCoverUrl(s.getCoverUrl());
+                link.setSortOrder(item.getSortOrder());
+                link.setTotalCount(countMap.getOrDefault(s.getId(), 0L));
+                links.add(link);
+            }
+            links.sort(Comparator.comparing(SeriesArticleLinkVo::getSeriesId)); // 稳定展示序
+            vo.setSeriesList(links.isEmpty() ? null : links);
+        }
+    }
+
+    /**
      * 查询常用标签及文章数统计
      *
      * @return 常用标签统计列表（按文章数降序，仅统计已发布且未软删的文章）
@@ -321,6 +394,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         enrichWithAuthorInfo(Collections.singletonList(vo));
         enrichWithStats(Collections.singletonList(vo));
         enrichWithTags(Collections.singletonList(vo));
+        enrichWithSeries(Collections.singletonList(vo));
         return Result.ok(vo);
     }
 
@@ -357,6 +431,62 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         enrichWithTags(voList);
         return Result.ok(new PageVo<>((int) page.getCurrent(), (int) page.getSize(),
                 page.getTotal(), (int) page.getPages(), voList));
+    }
+
+    // ===== 专栏前台读 =====
+
+    /**
+     * 专栏列表（前台）：全部专栏按创建时间升序，并附已发布成员数角标
+     *
+     * @return 专栏列表（含 articleCount，无有效成员为 0）
+     */
+    @Override
+    public Result<List<SeriesReadVo>> listSeriesRead() {
+        List<ArticleSeries> seriesList = seriesMapper.selectList(
+                new LambdaQueryWrapper<ArticleSeries>().orderByAsc(ArticleSeries::getCreatedAt));
+        Map<String, Long> countMap = articleMapper.selectPublishedCountGroupBySeries().stream()
+                .collect(Collectors.toMap(SeriesMemberCountVo::getSeriesId,
+                        vo -> vo.getArticleCount() == null ? 0L : vo.getArticleCount()));
+        List<SeriesReadVo> vos = new ArrayList<>();
+        for (ArticleSeries s : seriesList) {
+            SeriesReadVo vo = copyProperties(s, SeriesReadVo.class);
+            vo.setArticleCount(countMap.getOrDefault(s.getId(), 0L));
+            vos.add(vo);
+        }
+        return Result.ok(vos);
+    }
+
+    /**
+     * 专栏详情（前台）：已发布成员按 sort_order 升序分页（显式计算分页，页码 ≥1、每页默认 10）
+     *
+     * @param seriesId 专栏 ID
+     * @param pageNum  页码（1-based，null/<1 按 1）
+     * @param pageSize 每页大小（null/<1 按 10）
+     * @return 专栏详情（成员文章含统计/作者/标签 enrich）
+     */
+    @Override
+    public Result<SeriesDetailVo> getSeriesDetail(String seriesId, Integer pageNum, Integer pageSize) {
+        ArticleSeries series = seriesMapper.selectById(seriesId);
+        if (series == null) {
+            throw new NotFoundException(I18nUtils.t("series.not_found"));
+        }
+        int page = pageNum == null || pageNum < 1 ? 1 : pageNum;
+        int size = pageSize == null || pageSize < 1 ? 10 : pageSize;
+        List<Article> articles = articleMapper.selectSeriesMemberPage(seriesId, (page - 1) * size, size);
+        List<ArticleInfoVo> vos = articles.stream()
+                .map(a -> copyProperties(a, ArticleInfoVo.class))
+                .collect(Collectors.toList());
+        enrichWithStats(vos);
+        enrichWithAuthorInfo(vos);
+        enrichWithTags(vos);
+        long total = articleMapper.selectSeriesMemberCount(seriesId);
+        SeriesDetailVo detail = copyProperties(series, SeriesDetailVo.class);
+        detail.setPageNum(page);
+        detail.setPageSize(size);
+        detail.setTotal(total);
+        detail.setTotalPages((int) ((total + size - 1) / size));
+        detail.setArticles(vos);
+        return Result.ok(detail);
     }
 }
 

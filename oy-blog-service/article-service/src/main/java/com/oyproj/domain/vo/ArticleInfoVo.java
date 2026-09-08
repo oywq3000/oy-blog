@@ -66,4 +66,9 @@ public class ArticleInfoVo {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime favoritedAt;
+
+    /**
+     * 所属专栏链接（仅详情接口 enrich 返回；无专栏时为 null，前端判空隐藏）
+     */
+    private List<SeriesArticleLinkVo> seriesList;
 }

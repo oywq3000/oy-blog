@@ -166,6 +166,37 @@ public class ArticleReadController {
         return biz.listPopularTags();
     }
 
+    /**
+     * 查询专栏列表（含已发布成员数）
+     *
+     * @return 专栏列表
+     */
+    @GetMapping("/series")
+    @Operation(summary = "查询专栏列表", description = "查询全部专栏，附已发布成员数角标")
+    public Result<List<SeriesReadVo>> listSeriesRead() {
+        return biz.listSeriesRead();
+    }
+
+    /**
+     * 查询专栏详情（已发布成员文章按 sort_order 升序分页）
+     *
+     * @param seriesId 专栏ID
+     * @param pageNum  页码（从 1 开始）
+     * @param pageSize 每页条数
+     * @return 专栏详情（含分页元数据与成员文章）
+     */
+    @GetMapping("/series/{seriesId}")
+    @Operation(summary = "查询专栏详情", description = "查询专栏元数据及其已发布成员文章，按 sort_order 升序分页")
+    public Result<SeriesDetailVo> getSeriesDetail(
+            @Parameter(description = "专栏ID", required = true)
+            @PathVariable("seriesId") @NotNull String seriesId,
+            @Parameter(description = "页码（从 1 开始）", example = "1")
+            @RequestParam(defaultValue = "1") int pageNum,
+            @Parameter(description = "每页条数", example = "10")
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return biz.getSeriesDetail(seriesId, pageNum, pageSize);
+    }
+
 
 }
 
