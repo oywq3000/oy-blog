@@ -120,7 +120,7 @@ public class AdminArticleController {
         return biz.moveSeriesArticle(seriesId, articleId, direction);
     }
 
-    @PutMapping("/article/{articleId}/series")
+    @PutMapping("/{articleId}/series")
     @RequirePermission("admin:article:write")
     @Operation(summary = "整文改绑专栏")
     public Result<Boolean> replaceArticleSeries(@PathVariable("articleId") String articleId,
