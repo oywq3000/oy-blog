@@ -54,7 +54,7 @@ public interface AdminArticleClient {
 
     // ===== 专栏成员管理 =====
     @PostMapping("/article/admin/series/{seriesId}/articles")
-    Result<Integer> addSeriesArticles(@PathVariable("seriesId") String seriesId,
+    Result<Long> addSeriesArticles(@PathVariable("seriesId") String seriesId,
                                       @RequestBody SeriesMemberBindDto dto);
 
     @DeleteMapping("/article/admin/series/{seriesId}/articles/{articleId}")

@@ -33,7 +33,7 @@ public interface AdminArticleBizService {
 
     Result<List<SeriesAdminVo>> listSeries();
 
-    Result<Integer> addSeriesArticles(String seriesId, SeriesMemberBindDto dto);
+    Result<Long> addSeriesArticles(String seriesId, SeriesMemberBindDto dto);
 
     Result<Boolean> removeSeriesArticle(String seriesId, String articleId);
 

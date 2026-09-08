@@ -138,10 +138,10 @@ public class ArticleAdminBizServiceImpl extends ArticleBaseBizService implements
     }
 
     @Override
-    public Result<Integer> addSeriesArticles(String seriesId, SeriesMemberBindDto dto) {
+    public Result<Long> addSeriesArticles(String seriesId, SeriesMemberBindDto dto) {
         int added = seriesBizService.addSeriesArticles(seriesId,
                 dto == null ? null : dto.getArticleIds());
-        return Result.ok(added, I18n(ResultCode.SUCCESS));
+        return Result.ok((long) added); // long 避开 ok(Integer errCode) 重载陷阱（见 ArticleCommentBizServiceImpl 惯例）
     }
 
     @Override

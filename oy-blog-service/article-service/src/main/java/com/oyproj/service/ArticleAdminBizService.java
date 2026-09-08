@@ -41,7 +41,7 @@ public interface ArticleAdminBizService {
     Result<List<SeriesAdminVo>> listSeries();
 
     /** 批量收录文章进专栏，返回实际新增数 */
-    Result<Integer> addSeriesArticles(String seriesId, SeriesMemberBindDto dto);
+    Result<Long> addSeriesArticles(String seriesId, SeriesMemberBindDto dto);
 
     /** 将文章移出专栏 */
     Result<Boolean> removeSeriesArticle(String seriesId, String articleId);

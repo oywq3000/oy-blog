@@ -106,7 +106,7 @@ public class AdminArticleClientFallbackFactory implements FallbackFactory<AdminA
             }
 
             @Override
-            public Result<Integer> addSeriesArticles(String seriesId, SeriesMemberBindDto dto) {
+            public Result<Long> addSeriesArticles(String seriesId, SeriesMemberBindDto dto) {
                 log.warn("文章服务管理接口调用失败(批量收录文章进专栏)，系列ID: {}, 错误: {}", seriesId, cause.getMessage());
                 return Result.error(ResultCode.SERVICE_UNAVAILABLE.getErrCode(), I18nUtils.t("error.unavailable"));
             }

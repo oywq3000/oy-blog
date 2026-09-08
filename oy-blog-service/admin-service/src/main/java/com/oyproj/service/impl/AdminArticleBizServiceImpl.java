@@ -73,7 +73,7 @@ public class AdminArticleBizServiceImpl extends AdminBizBase implements AdminArt
     }
 
     @Override
-    public Result<Integer> addSeriesArticles(String seriesId, SeriesMemberBindDto dto) {
+    public Result<Long> addSeriesArticles(String seriesId, SeriesMemberBindDto dto) {
         return client.addSeriesArticles(seriesId, dto);
     }
 

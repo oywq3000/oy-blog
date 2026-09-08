@@ -98,7 +98,7 @@ public class AdminArticleController {
     @PostMapping("/series/{seriesId}/articles")
     @RequirePermission("admin:article:write")
     @Operation(summary = "批量收录文章进专栏")
-    public Result<Integer> addSeriesArticles(@PathVariable("seriesId") String seriesId,
+    public Result<Long> addSeriesArticles(@PathVariable("seriesId") String seriesId,
                                              @RequestBody SeriesMemberBindDto dto) {
         return biz.addSeriesArticles(seriesId, dto);
     }
