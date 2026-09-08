@@ -19,5 +19,10 @@ public class ArticleSaveDto {
     private String contentHtml;
     private String coverUrl;
     private List<String> tags;
+
+    /**
+     * 所属专栏ID列表（发布时全量替换，≤3）
+     */
+    private List<String> seriesIds;
     private Integer allowComment;
 }

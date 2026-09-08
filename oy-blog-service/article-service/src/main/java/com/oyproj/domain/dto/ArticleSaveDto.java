@@ -56,6 +56,12 @@ public class ArticleSaveDto {
     private List<String> tags;
 
     /**
+     * 所属专栏ID列表（发布时全量替换，≤3）
+     */
+    @Schema(description = "所属专栏ID列表（发布时全量替换，≤3）")
+    private List<String> seriesIds;
+
+    /**
      * 是否允许评论
      */
     @Schema(description = "是否允许评论", example = "1")

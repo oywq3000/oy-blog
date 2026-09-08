@@ -46,6 +46,12 @@ public class ArticleSeries {
     private String code;
 
     /**
+     * 封面URL
+     */
+    @TableField("cover_url")
+    private String coverUrl;
+
+    /**
      * 创建时间
      */
     @TableField("created_at")
