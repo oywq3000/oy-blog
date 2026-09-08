@@ -1,8 +1,20 @@
-# 专栏功能后端验收清单（article-columns）
+# 专栏功能验收清单（article-columns）
 
-> 分支: `feat-columns` | 代码: 88eced0..2b8e188（T1-T7，9 个 commit）| 日期: 2026-09-08
-> 状态: **代码完成 + 本地单测全绿；全链路（起服 curl/页面）验收待执行**
-> 服务器执行记录：**待部署时补**（本清单第三节供部署后逐条打勾；第四节为部署顺序提醒）
+> 分支: `feat-columns` | 后端代码: 88eced0..122676c（T1-T8）| 日期: 2026-09-08/09
+> 状态: **三端代码完成（后端 + oy-blog-admin + oy-blog-front 同名单分支），全量单测绿：后端 97 / 管理前端 78 / 博客前台 47；全链路（起服 curl/页面）验收待执行**——按第三节清单逐条打勾
+> 服务器执行记录：**待部署时补**（SQL 已于 2026-09-08 在 dev 库 100.110.148.14 幂等执行，服务器若即该库无需重跑；脚本可重复执行）
+
+> 前端分支对照（2026-09-09 更新）：
+> - oy-blog-admin `feat-columns`（基 feat-moderation）：API 封装 + 专栏管理弹窗（成员展开/收录/排序/移除/封面/描述）+ 文章编辑页所属专栏 ≤3 —— commit 7693753..16dbb95
+> - oy-blog-front `feat-columns`（基 master）：专栏读 API/i18n/类型 + 详情页专栏系列卡片（真数据）+ 编辑器专栏点选（≤3）+ 专栏主页 /column/:id —— commit 1744e1b..4b5e34a
+
+## 零、待办移交（deferred，勿丢）
+
+1. **恢复侧栏任务**：ArticleDetail.vue:569 的 SeriesCard 现渲染在评论区之后（注释块约束所致），恢复侧栏时必须**移入 aside 原注释位而非另加一份**（防双卡）。
+2. 管理端系列列表**行级成员数**未显示（仅在展开区显示"成员(N)"）；如需行级计数，后端 listSeries 需加全量成员聚合（口径≠published 计数），另立一期。
+3. tag_framework_migration.sql 1.2/1.3 存在与专栏迁移同款"多语句 PREPARE"缺陷（MySQL 8 报 1064）——该文件是 tag 框架待执行迁移，部署前须按 article_series_migration.sql 的拆分修法先行修复。
+4. 并发单写者假设：MAX=3 校验是 check-then-insert（uk 仅兜底同对组合），同文章并发双写不同栏可能超限；个人站可接受，已注释为设计取舍。
+5. 分页钳制硬化（建议）：前台读端点 pageSize 无上限钳制、大 pageNum 有 int 溢出风险，与既有 normalizePage(1~100) 对齐即可。详见 specs/2026-09-08-columns-feature-design.md。
 
 ## 一、本期交付范围
 
