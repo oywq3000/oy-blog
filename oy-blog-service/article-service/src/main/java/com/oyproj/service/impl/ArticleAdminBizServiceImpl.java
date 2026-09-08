@@ -21,8 +21,10 @@ import com.oyproj.mapper.ArticleSeriesMapper;
 import com.oyproj.mapper.ArticleStatsMapper;
 import com.oyproj.mapper.TagMapper;
 import com.oyproj.service.ArticleAdminBizService;
+import com.oyproj.service.ArticleSeriesBizService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.Collections;
@@ -42,6 +44,7 @@ public class ArticleAdminBizServiceImpl extends ArticleBaseBizService implements
     private final ArticleStatsMapper articleStatsMapper;
     private final TagMapper tagMapper;
     private final ArticleSeriesMapper seriesMapper;
+    private final ArticleSeriesBizService seriesBizService;
 
     @Override
     public Result<PageVo<List<ArticleAdminItemVo>>> adminPage(ArticleAdminPageDto dto) {
@@ -117,7 +120,9 @@ public class ArticleAdminBizServiceImpl extends ArticleBaseBizService implements
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Result<Boolean> deleteSeries(String id) {
+        seriesBizService.clearBySeries(id);
         boolean ok = seriesMapper.deleteById(id) > 0;
         return ok ? Result.ok(true) : Result.error(false);
     }

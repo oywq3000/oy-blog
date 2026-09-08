@@ -23,6 +23,7 @@ import com.oyproj.service.ArticleChapterService;
 import com.oyproj.service.ArticleIndexMessageService;
 import com.oyproj.service.ArticleMessageProducer;
 import com.oyproj.service.ArticleModerationProducer;
+import com.oyproj.service.ArticleSeriesBizService;
 import com.oyproj.service.ModerationService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +59,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
     @NotNull private final ArticlePendingContentMapper pendingContentMapper;
     @NotNull private final ArticleChapterService chapterService;
     @NotNull private final ArticleModerationProducer articleModerationProducer; // Task4：提交即审，事务提交后发审核消息
+    @NotNull private final ArticleSeriesBizService seriesBizService; // 专栏：发布链全量替换落库 + 删文章级联清理
 
     /**
      * 保存草稿
@@ -228,6 +230,8 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         if (article != null) {
             article.setDeletedAt(LocalDateTime.now());
             articleDao.updateById(article);
+            // 级联清理文章-专栏成员关系行（软删文章不再出现在任何专栏成员列表）
+            seriesBizService.clearByArticle(id);
             // 事务提交后同步删除ES索引
             TransactionSynchronizationManager.registerSynchronization(
                     new TransactionSynchronization() {
@@ -395,6 +399,10 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
                      articleTagMapper.insert(at);
                  }
             }
+        }
+        // 专栏关系（与 tags 同语义：全量替换；仅 publish 链调用，draft 不落库）
+        if (dto.getSeriesIds() != null) {
+            seriesBizService.replaceArticleSeries(articleId, dto.getSeriesIds());
         }
     }
 
