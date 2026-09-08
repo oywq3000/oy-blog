@@ -457,11 +457,14 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     }
 
     /**
-     * 专栏详情（前台）：已发布成员按 sort_order 升序分页（显式计算分页，页码 ≥1、每页默认 10）
+     * 专栏详情（前台）：已发布成员按 sort_order 升序分页。
+     * 分页钳制（公开白名单端点，防超大 LIMIT / 负 offset）：page 1~10000（深分页钳制）、
+     * size 1~100（默认 10，上限与既有 normalizePage 口径一致）；钳制后 (page-1)*size ≤
+     * 9999*100 ≈ 1e6，int 运算无溢出，mapper int 参数无需改动。
      *
      * @param seriesId 专栏 ID
-     * @param pageNum  页码（1-based，null/<1 按 1）
-     * @param pageSize 每页大小（null/<1 按 10）
+     * @param pageNum  页码（1-based，null/<1 按 1，>10000 按 10000）
+     * @param pageSize 每页大小（null/<1 按 10，>100 按 100）
      * @return 专栏详情（成员文章含统计/作者/标签 enrich）
      */
     @Override
@@ -470,8 +473,8 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         if (series == null) {
             throw new NotFoundException(I18nUtils.t("series.not_found"));
         }
-        int page = pageNum == null || pageNum < 1 ? 1 : pageNum;
-        int size = pageSize == null || pageSize < 1 ? 10 : pageSize;
+        int page = pageNum == null || pageNum < 1 ? 1 : Math.min(pageNum, 10000);
+        int size = pageSize == null || pageSize < 1 ? 10 : Math.min(pageSize, 100);
         List<Article> articles = articleMapper.selectSeriesMemberPage(seriesId, (page - 1) * size, size);
         List<ArticleInfoVo> vos = articles.stream()
                 .map(a -> copyProperties(a, ArticleInfoVo.class))
