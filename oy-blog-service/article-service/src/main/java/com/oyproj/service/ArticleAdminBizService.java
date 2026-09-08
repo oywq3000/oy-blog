@@ -1,10 +1,13 @@
 package com.oyproj.service;
 
 import com.oyproj.api.article.domain.dto.ArticleAdminPageDto;
+import com.oyproj.api.article.domain.dto.ArticleSeriesBindDto;
+import com.oyproj.api.article.domain.dto.SeriesMemberBindDto;
 import com.oyproj.api.article.domain.dto.SeriesSaveDto;
 import com.oyproj.api.article.domain.dto.TagSaveDto;
 import com.oyproj.api.article.domain.vo.ArticleAdminItemVo;
 import com.oyproj.api.article.domain.vo.SeriesAdminVo;
+import com.oyproj.api.article.domain.vo.SeriesMemberAdminVo;
 import com.oyproj.api.article.domain.vo.TagAdminVo;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.vo.PageVo;
@@ -36,4 +39,19 @@ public interface ArticleAdminBizService {
 
     /** 系列全量列表 */
     Result<List<SeriesAdminVo>> listSeries();
+
+    /** 批量收录文章进专栏，返回实际新增数 */
+    Result<Integer> addSeriesArticles(String seriesId, SeriesMemberBindDto dto);
+
+    /** 将文章移出专栏 */
+    Result<Boolean> removeSeriesArticle(String seriesId, String articleId);
+
+    /** 专栏成员排序（direction=up/down） */
+    Result<Boolean> moveSeriesArticle(String seriesId, String articleId, String direction);
+
+    /** 整文改绑专栏（全量替换语义） */
+    Result<Boolean> replaceArticleSeries(String articleId, ArticleSeriesBindDto dto);
+
+    /** 管理端专栏成员列表（含草稿，按 sort_order 升序） */
+    Result<List<SeriesMemberAdminVo>> listSeriesMembers(String seriesId);
 }

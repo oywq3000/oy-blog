@@ -52,6 +52,27 @@ public interface AdminArticleClient {
     @GetMapping("/article/admin/series")
     Result<List<SeriesAdminVo>> listSeries();
 
+    // ===== 专栏成员管理 =====
+    @PostMapping("/article/admin/series/{seriesId}/articles")
+    Result<Integer> addSeriesArticles(@PathVariable("seriesId") String seriesId,
+                                      @RequestBody SeriesMemberBindDto dto);
+
+    @DeleteMapping("/article/admin/series/{seriesId}/articles/{articleId}")
+    Result<Boolean> removeSeriesArticle(@PathVariable("seriesId") String seriesId,
+                                        @PathVariable("articleId") String articleId);
+
+    @PutMapping("/article/admin/series/{seriesId}/articles/{articleId}/move")
+    Result<Boolean> moveSeriesArticle(@PathVariable("seriesId") String seriesId,
+                                      @PathVariable("articleId") String articleId,
+                                      @RequestParam("direction") String direction);
+
+    @PutMapping("/article/admin/articles/{articleId}/series")
+    Result<Boolean> replaceArticleSeries(@PathVariable("articleId") String articleId,
+                                         @RequestBody ArticleSeriesBindDto dto);
+
+    @GetMapping("/article/admin/series/{seriesId}/members")
+    Result<List<SeriesMemberAdminVo>> listSeriesMembers(@PathVariable("seriesId") String seriesId);
+
     // ===== 评论审核 =====
     @PostMapping("/article/comment/admin/page")
     Result<PageVo<List<CommentAdminItemVo>>> adminCommentPage(@RequestBody CommentAdminPageDto dto);

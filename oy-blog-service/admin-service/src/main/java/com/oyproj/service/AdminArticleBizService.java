@@ -32,4 +32,14 @@ public interface AdminArticleBizService {
     Result<Boolean> deleteSeries(String id);
 
     Result<List<SeriesAdminVo>> listSeries();
+
+    Result<Integer> addSeriesArticles(String seriesId, SeriesMemberBindDto dto);
+
+    Result<Boolean> removeSeriesArticle(String seriesId, String articleId);
+
+    Result<Boolean> moveSeriesArticle(String seriesId, String articleId, String direction);
+
+    Result<Boolean> replaceArticleSeries(String articleId, ArticleSeriesBindDto dto);
+
+    Result<List<SeriesMemberAdminVo>> listSeriesMembers(String seriesId);
 }

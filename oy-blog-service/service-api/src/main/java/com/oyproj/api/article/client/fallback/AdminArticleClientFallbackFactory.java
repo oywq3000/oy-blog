@@ -104,6 +104,36 @@ public class AdminArticleClientFallbackFactory implements FallbackFactory<AdminA
                 log.warn("文章服务管理接口调用失败(置顶评论)，评论ID: {}, 错误: {}", id, cause.getMessage());
                 return Result.error(ResultCode.SERVICE_UNAVAILABLE.getErrCode(), I18nUtils.t("error.unavailable"));
             }
+
+            @Override
+            public Result<Integer> addSeriesArticles(String seriesId, SeriesMemberBindDto dto) {
+                log.warn("文章服务管理接口调用失败(批量收录文章进专栏)，系列ID: {}, 错误: {}", seriesId, cause.getMessage());
+                return Result.error(ResultCode.SERVICE_UNAVAILABLE.getErrCode(), I18nUtils.t("error.unavailable"));
+            }
+
+            @Override
+            public Result<Boolean> removeSeriesArticle(String seriesId, String articleId) {
+                log.warn("文章服务管理接口调用失败(移出专栏)，系列ID: {}, 文章ID: {}, 错误: {}", seriesId, articleId, cause.getMessage());
+                return Result.error(ResultCode.SERVICE_UNAVAILABLE.getErrCode(), I18nUtils.t("error.unavailable"));
+            }
+
+            @Override
+            public Result<Boolean> moveSeriesArticle(String seriesId, String articleId, String direction) {
+                log.warn("文章服务管理接口调用失败(成员排序)，系列ID: {}, 文章ID: {}, 方向: {}, 错误: {}", seriesId, articleId, direction, cause.getMessage());
+                return Result.error(ResultCode.SERVICE_UNAVAILABLE.getErrCode(), I18nUtils.t("error.unavailable"));
+            }
+
+            @Override
+            public Result<Boolean> replaceArticleSeries(String articleId, ArticleSeriesBindDto dto) {
+                log.warn("文章服务管理接口调用失败(整文改绑专栏)，文章ID: {}, 错误: {}", articleId, cause.getMessage());
+                return Result.error(ResultCode.SERVICE_UNAVAILABLE.getErrCode(), I18nUtils.t("error.unavailable"));
+            }
+
+            @Override
+            public Result<List<SeriesMemberAdminVo>> listSeriesMembers(String seriesId) {
+                log.warn("文章服务管理接口调用失败(专栏成员列表)，系列ID: {}, 错误: {}", seriesId, cause.getMessage());
+                return Result.error(ResultCode.SERVICE_UNAVAILABLE.getErrCode(), I18nUtils.t("error.unavailable"));
+            }
         };
     }
 }

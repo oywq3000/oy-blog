@@ -94,4 +94,44 @@ public class AdminArticleController {
     public Result<List<SeriesAdminVo>> listSeries() {
         return biz.listSeries();
     }
+
+    @PostMapping("/series/{seriesId}/articles")
+    @RequirePermission("admin:article:write")
+    @Operation(summary = "批量收录文章进专栏")
+    public Result<Integer> addSeriesArticles(@PathVariable("seriesId") String seriesId,
+                                             @RequestBody SeriesMemberBindDto dto) {
+        return biz.addSeriesArticles(seriesId, dto);
+    }
+
+    @DeleteMapping("/series/{seriesId}/articles/{articleId}")
+    @RequirePermission("admin:article:write")
+    @Operation(summary = "将文章移出专栏")
+    public Result<Boolean> removeSeriesArticle(@PathVariable("seriesId") String seriesId,
+                                               @PathVariable("articleId") String articleId) {
+        return biz.removeSeriesArticle(seriesId, articleId);
+    }
+
+    @PutMapping("/series/{seriesId}/articles/{articleId}/move")
+    @RequirePermission("admin:article:write")
+    @Operation(summary = "调整专栏成员排序（上移/下移）")
+    public Result<Boolean> moveSeriesArticle(@PathVariable("seriesId") String seriesId,
+                                             @PathVariable("articleId") String articleId,
+                                             @RequestParam("direction") String direction) {
+        return biz.moveSeriesArticle(seriesId, articleId, direction);
+    }
+
+    @PutMapping("/article/{articleId}/series")
+    @RequirePermission("admin:article:write")
+    @Operation(summary = "整文改绑专栏")
+    public Result<Boolean> replaceArticleSeries(@PathVariable("articleId") String articleId,
+                                                @RequestBody ArticleSeriesBindDto dto) {
+        return biz.replaceArticleSeries(articleId, dto);
+    }
+
+    @GetMapping("/series/{seriesId}/members")
+    @RequirePermission("admin:article:read")
+    @Operation(summary = "管理端专栏成员列表")
+    public Result<List<SeriesMemberAdminVo>> listSeriesMembers(@PathVariable("seriesId") String seriesId) {
+        return biz.listSeriesMembers(seriesId);
+    }
 }

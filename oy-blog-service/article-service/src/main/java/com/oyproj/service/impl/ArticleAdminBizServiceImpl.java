@@ -3,10 +3,13 @@ package com.oyproj.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oyproj.api.article.domain.dto.ArticleAdminPageDto;
+import com.oyproj.api.article.domain.dto.ArticleSeriesBindDto;
+import com.oyproj.api.article.domain.dto.SeriesMemberBindDto;
 import com.oyproj.api.article.domain.dto.SeriesSaveDto;
 import com.oyproj.api.article.domain.dto.TagSaveDto;
 import com.oyproj.api.article.domain.vo.ArticleAdminItemVo;
 import com.oyproj.api.article.domain.vo.SeriesAdminVo;
+import com.oyproj.api.article.domain.vo.SeriesMemberAdminVo;
 import com.oyproj.api.article.domain.vo.TagAdminVo;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
@@ -132,5 +135,34 @@ public class ArticleAdminBizServiceImpl extends ArticleBaseBizService implements
         List<ArticleSeries> series = seriesMapper.selectList(
                 new LambdaQueryWrapper<ArticleSeries>().orderByAsc(ArticleSeries::getCreatedAt));
         return Result.ok(copyList(series, SeriesAdminVo.class));
+    }
+
+    @Override
+    public Result<Integer> addSeriesArticles(String seriesId, SeriesMemberBindDto dto) {
+        int added = seriesBizService.addSeriesArticles(seriesId,
+                dto == null ? null : dto.getArticleIds());
+        return Result.ok(added, I18n(ResultCode.SUCCESS));
+    }
+
+    @Override
+    public Result<Boolean> removeSeriesArticle(String seriesId, String articleId) {
+        return Result.ok(seriesBizService.removeSeriesArticle(seriesId, articleId));
+    }
+
+    @Override
+    public Result<Boolean> moveSeriesArticle(String seriesId, String articleId, String direction) {
+        return Result.ok(seriesBizService.moveSeriesArticle(seriesId, articleId, direction));
+    }
+
+    @Override
+    public Result<Boolean> replaceArticleSeries(String articleId, ArticleSeriesBindDto dto) {
+        seriesBizService.replaceArticleSeries(articleId,
+                dto == null ? null : dto.getSeriesIds());
+        return Result.ok(true, I18n(ResultCode.SUCCESS));
+    }
+
+    @Override
+    public Result<List<SeriesMemberAdminVo>> listSeriesMembers(String seriesId) {
+        return Result.ok(seriesBizService.listSeriesMembers(seriesId));
     }
 }

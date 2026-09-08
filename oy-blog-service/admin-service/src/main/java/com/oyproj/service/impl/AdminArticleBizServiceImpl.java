@@ -71,4 +71,29 @@ public class AdminArticleBizServiceImpl extends AdminBizBase implements AdminArt
     public Result<List<SeriesAdminVo>> listSeries() {
         return client.listSeries();
     }
+
+    @Override
+    public Result<Integer> addSeriesArticles(String seriesId, SeriesMemberBindDto dto) {
+        return client.addSeriesArticles(seriesId, dto);
+    }
+
+    @Override
+    public Result<Boolean> removeSeriesArticle(String seriesId, String articleId) {
+        return client.removeSeriesArticle(seriesId, articleId);
+    }
+
+    @Override
+    public Result<Boolean> moveSeriesArticle(String seriesId, String articleId, String direction) {
+        return client.moveSeriesArticle(seriesId, articleId, direction);
+    }
+
+    @Override
+    public Result<Boolean> replaceArticleSeries(String articleId, ArticleSeriesBindDto dto) {
+        return client.replaceArticleSeries(articleId, dto);
+    }
+
+    @Override
+    public Result<List<SeriesMemberAdminVo>> listSeriesMembers(String seriesId) {
+        return client.listSeriesMembers(seriesId);
+    }
 }
