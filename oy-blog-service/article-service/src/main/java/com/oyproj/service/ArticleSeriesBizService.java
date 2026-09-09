@@ -2,6 +2,7 @@ package com.oyproj.service;
 
 import com.oyproj.api.article.domain.dto.SeriesSaveDto;
 import com.oyproj.api.article.domain.vo.SeriesMemberAdminVo;
+import com.oyproj.domain.vo.SeriesAddResultVo;
 import com.oyproj.domain.vo.SeriesReadVo;
 
 import java.util.List;
@@ -29,6 +30,17 @@ public interface ArticleSeriesBizService {
      * 一篇文章最多加入的专栏数
      */
     int MAX_SERIES_PER_ARTICLE = 3;
+
+    // ---- 宽容批量收录（creator 编辑页批量添加）跳过原因码：前端按码做 i18n 本地化，服务端不回文案 ----
+
+    /** 文章不存在或已删除 */
+    String SKIP_REASON_NOT_FOUND = "not_found";
+    /** 文章非操作者本人创作 */
+    String SKIP_REASON_NOT_OWNER = "not_owner";
+    /** 文章未发布（status != published） */
+    String SKIP_REASON_NOT_PUBLISHED = "not_published";
+    /** 文章当前占用专栏数已达 {@link #MAX_SERIES_PER_ARTICLE} */
+    String SKIP_REASON_LIMIT3 = "limit3";
 
     /**
      * 批量收录：逐篇校验 ≤{@link #MAX_SERIES_PER_ARTICLE}，重复（已在专栏内）跳过；
@@ -134,4 +146,65 @@ public interface ArticleSeriesBizService {
      * @return 成员 VO 列表（可为空）
      */
     List<SeriesMemberAdminVo> listSeriesMembers(String seriesId);
+
+    // ================================================================
+    //  creator 编辑页成员管理（spec §十，owner 专属语义）
+    //  ================================================================
+
+    /**
+     * 宽容批量收录自己的已发表文章进专栏（creator 编辑页"添加文章"）。
+     *
+     * <p>与 admin 严格版 {@link #addSeriesArticles} 不同：逐篇独立校验、违规只跳过不中断、
+     * 返回结构化结果而非抛异常回滚。逐篇规则（按序）：</p>
+     * <ol>
+     *   <li>栏本身非 operator 所有（含站长级专栏）→ 整单抛 {@code ForbiddenException}，无任何写入；</li>
+     *   <li>已在目标专栏 → 静默跳过（幂等，不计 added 不进 skipped）；</li>
+     *   <li>文章不存在/已软删 → skipped（{@link #SKIP_REASON_NOT_FOUND}）；</li>
+     *   <li>authorId != operatorId → skipped（{@link #SKIP_REASON_NOT_OWNER}）；</li>
+     *   <li>status != published → skipped（{@link #SKIP_REASON_NOT_PUBLISHED}）；</li>
+     *   <li>文章当前占用栏数 ≥ {@link #MAX_SERIES_PER_ARTICLE}（selectCount 按 articleId 维，
+     *       目标栏内既有成员因步骤 2 已滤掉不计入）→ skipped（{@link #SKIP_REASON_LIMIT3}）；</li>
+     *   <li>通过 → 追加到目标栏队尾（sort_order = 当前 max+1），added++。</li>
+     * </ol>
+     * 入参列表去重保序；并发撞 uk_series_article 按幂等静默跳过。整体事务，success 路径无回滚点。
+     *
+     * @param seriesId   目标专栏 ID（不存在抛 NotFoundException）
+     * @param operatorId 操作者用户 ID（null 视同越权，抛 ForbiddenException）
+     * @param articleIds 候选文章 ID 列表（null/空返回全零结果）
+     * @return addedCount + 逐篇 skipped（空跳过为空列表）
+     */
+    SeriesAddResultVo addOwnArticlesToSeries(String seriesId, String operatorId, List<String> articleIds);
+
+    /**
+     * 我的专栏成员列表（creator 编辑页）：owner 校验（非本人专栏含站长级一律
+     * {@code ForbiddenException}，ADMIN 不走此方法）后复用 {@link #listSeriesMembers} 同款口径。
+     *
+     * @param seriesId   专栏 ID（不存在抛 NotFoundException）
+     * @param operatorId 操作者用户 ID
+     * @return 成员 VO 列表（可为空）
+     */
+    List<SeriesMemberAdminVo> listOwnSeriesMembers(String seriesId, String operatorId);
+
+    /**
+     * 我的专栏成员上移/下移（creator 编辑页）：owner 校验通过后复用 {@link #moveSeriesArticle} 语义
+     * （队首 up / 队尾 down / 非法 direction / 成员不存在均为 no-op false）。
+     *
+     * @param seriesId   专栏 ID（不存在抛 NotFoundException）
+     * @param articleId  文章 ID
+     * @param direction  up / down
+     * @param operatorId 操作者用户 ID（非本人专栏含站长级一律 ForbiddenException）
+     * @return 是否执行了 swap
+     */
+    boolean moveOwnSeriesArticle(String seriesId, String articleId, String direction, String operatorId);
+
+    /**
+     * 将文章移出我的专栏（creator 编辑页）：owner 校验通过后复用 {@link #removeSeriesArticle} 语义
+     * （关系行不存在返回 false 幂等）。
+     *
+     * @param seriesId   专栏 ID（不存在抛 NotFoundException）
+     * @param articleId  文章 ID
+     * @param operatorId 操作者用户 ID（非本人专栏含站长级一律 ForbiddenException）
+     * @return 是否确有删除
+     */
+    boolean removeOwnSeriesArticle(String seriesId, String articleId, String operatorId);
 }

@@ -11,8 +11,10 @@ import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.domain.entity.ArticleSeries;
 import com.oyproj.domain.entity.ArticleSeriesItem;
+import com.oyproj.domain.vo.SeriesAddResultVo;
 import com.oyproj.domain.vo.SeriesMemberCountVo;
 import com.oyproj.domain.vo.SeriesReadVo;
+import com.oyproj.domain.vo.SeriesSkipVo;
 import com.oyproj.dto.ArticleDao;
 import com.oyproj.mapper.ArticleMapper;
 import com.oyproj.mapper.ArticleSeriesItemMapper;
@@ -283,6 +285,14 @@ public class ArticleSeriesBizServiceImpl extends ArticleBaseBizService implement
     @Override
     public List<SeriesMemberAdminVo> listSeriesMembers(String seriesId) {
         requireSeries(seriesId);
+        return buildMemberVos(seriesId);
+    }
+
+    /**
+     * 成员 VO 列表主体（不做存在性/owner 校验，管理端与 creator 编辑页共用）。
+     * 已不存在或已软删的文章不列入；按 sort_order 升序（itemsOfSeries 已排序）。
+     */
+    private List<SeriesMemberAdminVo> buildMemberVos(String seriesId) {
         List<ArticleSeriesItem> items = itemsOfSeries(seriesId);
         if (items.isEmpty()) {
             return List.of();
@@ -305,5 +315,105 @@ public class ArticleSeriesBizServiceImpl extends ArticleBaseBizService implement
             result.add(vo);
         }
         return result;
+    }
+
+    // ================================================================
+    //  creator 编辑页成员管理（spec §十）：owner 专属语义，内部复用上方既有逻辑
+    //  既有管理端方法签名与行为不动；四个入口一律 requireSeriesOwner(..., isAdmin=false)
+    // ================================================================
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public SeriesAddResultVo addOwnArticlesToSeries(String seriesId, String operatorId, List<String> articleIds) {
+        ArticleSeries series = requireSeries(seriesId);
+        requireSeriesOwner(series, operatorId, false); // 非本人（含站长级）整单 403，零写入
+        if (articleIds == null || articleIds.isEmpty()) {
+            return emptyAddResult();
+        }
+        List<ArticleSeriesItem> exists = itemsOfSeries(seriesId);
+        Set<String> inSeries = exists.stream().map(ArticleSeriesItem::getArticleId).collect(Collectors.toSet());
+        int maxSort = exists.stream().mapToInt(ArticleSeriesItem::getSortOrder).max().orElse(0);
+        List<String> ids = new ArrayList<>(new LinkedHashSet<>(articleIds)); // 去重保序
+        Map<String, Article> byId = articleDao.listByIds(ids).stream()
+                .collect(Collectors.toMap(Article::getId, a -> a));
+        int added = 0;
+        List<SeriesSkipVo> skipped = new ArrayList<>();
+        for (String articleId : ids) {
+            if (inSeries.contains(articleId)) {
+                continue; // 已在目标栏：幂等静默跳过（不计 added 不进 skipped）
+            }
+            Article article = byId.get(articleId);
+            if (article == null || article.getDeletedAt() != null) {
+                skipped.add(skip(articleId, SKIP_REASON_NOT_FOUND)); // 不存在或已软删
+                continue;
+            }
+            if (!Objects.equals(article.getAuthorId(), operatorId)) {
+                skipped.add(skip(articleId, SKIP_REASON_NOT_OWNER));
+                continue;
+            }
+            if (!"published".equals(article.getStatus())) {
+                skipped.add(skip(articleId, SKIP_REASON_NOT_PUBLISHED));
+                continue;
+            }
+            if (countColumnsOfArticle(articleId) >= MAX_SERIES_PER_ARTICLE) {
+                // 占用计数按 articleId 维；含目标栏的重复行已在 inSeries 分支滤掉，不会误判
+                skipped.add(skip(articleId, SKIP_REASON_LIMIT3));
+                continue;
+            }
+            try {
+                seriesItemMapper.insert(ArticleSeriesItem.builder()
+                        .id(getId())
+                        .seriesId(seriesId)
+                        .articleId(articleId)
+                        .sortOrder(++maxSort) // 追加队尾
+                        .build());
+            } catch (DuplicateKeyException e) {
+                continue; // 并发下被 uk_series_article 兜底：幂等静默跳过
+            }
+            inSeries.add(articleId); // 本批内同 id 防重（入参已去重，双保险）
+            added++;
+        }
+        SeriesAddResultVo result = new SeriesAddResultVo();
+        result.setAddedCount(added);
+        result.setSkipped(skipped);
+        return result;
+    }
+
+    @Override
+    public List<SeriesMemberAdminVo> listOwnSeriesMembers(String seriesId, String operatorId) {
+        ArticleSeries series = requireSeries(seriesId);
+        requireSeriesOwner(series, operatorId, false);
+        return buildMemberVos(seriesId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean moveOwnSeriesArticle(String seriesId, String articleId, String direction, String operatorId) {
+        ArticleSeries series = requireSeries(seriesId);
+        requireSeriesOwner(series, operatorId, false);
+        return moveSeriesArticle(seriesId, articleId, direction);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean removeOwnSeriesArticle(String seriesId, String articleId, String operatorId) {
+        ArticleSeries series = requireSeries(seriesId);
+        requireSeriesOwner(series, operatorId, false);
+        return removeSeriesArticle(seriesId, articleId);
+    }
+
+    /** 空入参的宽容收录结果（skipped 非 null，JSON 序列化为 []） */
+    private SeriesAddResultVo emptyAddResult() {
+        SeriesAddResultVo result = new SeriesAddResultVo();
+        result.setAddedCount(0);
+        result.setSkipped(List.of());
+        return result;
+    }
+
+    private SeriesSkipVo skip(String articleId, String reasonCode) {
+        SeriesSkipVo vo = new SeriesSkipVo();
+        vo.setArticleId(articleId);
+        vo.setReasonCode(reasonCode);
+        return vo;
     }
 }

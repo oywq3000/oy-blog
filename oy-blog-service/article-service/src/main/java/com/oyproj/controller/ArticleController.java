@@ -1,6 +1,8 @@
 package com.oyproj.controller;
 import com.oyproj.api.article.domain.UserArticleStatDto;
+import com.oyproj.api.article.domain.dto.SeriesMemberBindDto;
 import com.oyproj.api.article.domain.dto.SeriesSaveDto;
+import com.oyproj.api.article.domain.vo.SeriesMemberAdminVo;
 import com.oyproj.api.file.domain.vo.FileVo;
 import com.oyproj.common.base.OpLog;
 import com.oyproj.common.base.Result;
@@ -12,6 +14,7 @@ import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.domain.dto.ArticleSaveDto;
 import com.oyproj.domain.vo.ArticleInfoVo;
 import com.oyproj.domain.vo.HeatmapDayVo;
+import com.oyproj.domain.vo.SeriesAddResultVo;
 import com.oyproj.domain.vo.SeriesReadVo;
 import com.oyproj.service.ArticleBizService;
 import com.oyproj.service.ArticleCommonBizService;
@@ -237,6 +240,72 @@ public class ArticleController {
     public Result<Boolean> deleteSeries(@PathVariable("id") String id, HttpServletRequest request) {
         seriesBiz.deleteOwnSeries(id, request.getHeader(HeaderConstant.USER_ID.getValue()), isAdminUser(request));
         return Result.ok(true);
+    }
+
+    // 以下四个端点属 creator 编辑页（spec §十）：一律 owner 模式——不传 isAdmin（ADMIN 无例外），
+    // 身份仅取 X-User-Id，越权整单 403 在业务层 requireSeriesOwner 处抛
+
+    /**
+     * 我的专栏成员列表（编辑页用）
+     *
+     * @param id 专栏 ID
+     * @return 成员 VO 列表（含草稿，sort_order 升序）
+     */
+    @GetMapping("/creator/series/{id}/members")
+    @Operation(summary = "查询我的专栏成员", description = "本栏成员（含草稿，sort_order 升序；仅专栏创建者，他人 403）")
+    public Result<List<SeriesMemberAdminVo>> listMySeriesMembers(@PathVariable("id") String id,
+                                                                 HttpServletRequest request) {
+        return Result.ok(seriesBiz.listOwnSeriesMembers(id, request.getHeader(HeaderConstant.USER_ID.getValue())));
+    }
+
+    /**
+     * 宽容批量收录我的已发表文章进专栏（编辑页"添加文章"）
+     *
+     * @param id  专栏 ID
+     * @param dto 候选文章 ID 列表
+     * @return addedCount + 逐篇 skipped（reasonCode 供前端本地化）
+     */
+    @PostMapping("/creator/series/{id}/articles")
+    @Operation(summary = "批量收录我的已发表文章到专栏", description = "宽容语义：他人/未发布/不存在/已占满 3 栏的文章逐篇跳过并返回原因，不中断其余添加")
+    public Result<SeriesAddResultVo> addMyArticlesToSeries(@PathVariable("id") String id,
+                                                           @RequestBody SeriesMemberBindDto dto,
+                                                           HttpServletRequest request) {
+        List<String> articleIds = dto == null ? null : dto.getArticleIds();
+        return Result.ok(seriesBiz.addOwnArticlesToSeries(id, request.getHeader(HeaderConstant.USER_ID.getValue()), articleIds));
+    }
+
+    /**
+     * 我的专栏成员上移/下移（编辑页排序）
+     *
+     * @param id         专栏 ID
+     * @param articleId  成员文章 ID
+     * @param direction  up / down
+     * @return 是否执行了交换（队首 up / 队尾 down 为 no-op false）
+     */
+    @PutMapping("/creator/series/{id}/articles/{articleId}/move")
+    @Operation(summary = "调整我的专栏成员排序", description = "上移/下移（相邻交换 sort_order；仅专栏创建者，他人 403）")
+    public Result<Boolean> moveMySeriesArticle(@PathVariable("id") String id,
+                                               @PathVariable("articleId") String articleId,
+                                               @RequestParam("direction") String direction,
+                                               HttpServletRequest request) {
+        return Result.ok(seriesBiz.moveOwnSeriesArticle(id, articleId, direction,
+                request.getHeader(HeaderConstant.USER_ID.getValue())));
+    }
+
+    /**
+     * 将文章移出我的专栏（编辑页移除成员）
+     *
+     * @param id         专栏 ID
+     * @param articleId  成员文章 ID
+     * @return 是否确有删除（关系行不存在返回 false）
+     */
+    @DeleteMapping("/creator/series/{id}/articles/{articleId}")
+    @Operation(summary = "移除我的专栏成员", description = "把文章移出本栏（仅专栏创建者，他人 403）")
+    public Result<Boolean> removeMySeriesArticle(@PathVariable("id") String id,
+                                                 @PathVariable("articleId") String articleId,
+                                                 HttpServletRequest request) {
+        return Result.ok(seriesBiz.removeOwnSeriesArticle(id, articleId,
+                request.getHeader(HeaderConstant.USER_ID.getValue())));
     }
 
     /**
