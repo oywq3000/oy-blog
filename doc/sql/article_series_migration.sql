@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `article_series` (
     `description` TEXT         NULL COMMENT '专栏描述',
     `code`        VARCHAR(100) NULL COMMENT '唯一编码（保留字段）',
     `cover_url`   VARCHAR(500) NULL COMMENT '专栏封面URL',
+    `author_id`   VARCHAR(64)  NULL COMMENT '创建者用户ID（NULL=站长级专栏）',
     `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`)

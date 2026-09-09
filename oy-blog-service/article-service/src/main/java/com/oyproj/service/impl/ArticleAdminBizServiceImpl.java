@@ -156,8 +156,9 @@ public class ArticleAdminBizServiceImpl extends ArticleBaseBizService implements
 
     @Override
     public Result<Boolean> replaceArticleSeries(String articleId, ArticleSeriesBindDto dto) {
+        // 管理端改绑：operatorId=null 走免校验模式（无 owner 约束，可绑全站含站长级专栏）
         seriesBizService.replaceArticleSeries(articleId,
-                dto == null ? null : dto.getSeriesIds());
+                dto == null ? null : dto.getSeriesIds(), null);
         return Result.ok(true, I18n(ResultCode.SUCCESS));
     }
 

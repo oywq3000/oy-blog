@@ -1,15 +1,20 @@
 package com.oyproj.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.oyproj.api.article.domain.dto.SeriesSaveDto;
 import com.oyproj.api.article.domain.vo.SeriesMemberAdminVo;
 import com.oyproj.base.ArticleBaseBizService;
+import com.oyproj.common.exception.ForbiddenException;
 import com.oyproj.common.exception.NotFoundException;
 import com.oyproj.common.exception.ValidationException;
 import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.domain.entity.ArticleSeries;
 import com.oyproj.domain.entity.ArticleSeriesItem;
+import com.oyproj.domain.vo.SeriesMemberCountVo;
+import com.oyproj.domain.vo.SeriesReadVo;
 import com.oyproj.dto.ArticleDao;
+import com.oyproj.mapper.ArticleMapper;
 import com.oyproj.mapper.ArticleSeriesItemMapper;
 import com.oyproj.mapper.ArticleSeriesMapper;
 import com.oyproj.service.ArticleSeriesBizService;
@@ -40,6 +45,7 @@ public class ArticleSeriesBizServiceImpl extends ArticleBaseBizService implement
     private final ArticleSeriesMapper seriesMapper;
     private final ArticleSeriesItemMapper seriesItemMapper;
     private final ArticleDao articleDao;
+    private final ArticleMapper articleMapper;
 
     /**
      * 取专栏，不存在抛 NotFoundException
@@ -50,6 +56,18 @@ public class ArticleSeriesBizServiceImpl extends ArticleBaseBizService implement
             throw new NotFoundException(I18nUtils.t("series.not_found"));
         }
         return series;
+    }
+
+    /**
+     * 非 ADMIN 操作的 owner 校验：专栏非本人创建（authorId 缺失=站长级专栏，或归属他人）一律视同越权。
+     */
+    private void requireSeriesOwner(ArticleSeries series, String operatorId, boolean isAdmin) {
+        if (isAdmin) {
+            return;
+        }
+        if (series.getAuthorId() == null || !series.getAuthorId().equals(operatorId)) {
+            throw new ForbiddenException(I18nUtils.t("series.forbidden"));
+        }
     }
 
     /**
@@ -136,14 +154,18 @@ public class ArticleSeriesBizServiceImpl extends ArticleBaseBizService implement
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void replaceArticleSeries(String articleId, List<String> seriesIds) {
+    public void replaceArticleSeries(String articleId, List<String> seriesIds, String operatorId) {
         List<String> want = seriesIds == null ? List.of() : seriesIds.stream()
                 .filter(Objects::nonNull).distinct().collect(Collectors.toList());
         if (want.size() > MAX_SERIES_PER_ARTICLE) {
             throw new ValidationException(I18nUtils.t("series.limit_exceeded"));
         }
         for (String seriesId : want) {
-            requireSeries(seriesId); // 校验全部存在
+            ArticleSeries series = requireSeries(seriesId); // 校验全部存在
+            if (operatorId != null) {
+                // 创作端 publish 链归属校验：只可绑定自己的专栏；站长级（authorId null）专栏仅 ADMIN 可绑
+                requireSeriesOwner(series, operatorId, false);
+            }
         }
         List<ArticleSeriesItem> oldItems = seriesItemMapper.selectList(
                 new LambdaQueryWrapper<ArticleSeriesItem>()
@@ -186,6 +208,66 @@ public class ArticleSeriesBizServiceImpl extends ArticleBaseBizService implement
     public void clearBySeries(String seriesId) {
         seriesItemMapper.delete(new LambdaQueryWrapper<ArticleSeriesItem>()
                 .eq(ArticleSeriesItem::getSeriesId, seriesId));
+    }
+
+    // ================================================================
+    //  创作端专栏 CRUD（spec §九）：仅本人专栏；authorId null=站长级专栏对非 ADMIN 越权
+    // ================================================================
+
+    @Override
+    public List<SeriesReadVo> listOwnSeries(String userId) {
+        if (userId == null) {
+            return List.of();
+        }
+        List<ArticleSeries> mySeries = seriesMapper.selectList(
+                new LambdaQueryWrapper<ArticleSeries>()
+                        .eq(ArticleSeries::getAuthorId, userId)
+                        .orderByAsc(ArticleSeries::getCreatedAt));
+        if (mySeries.isEmpty()) {
+            return List.of();
+        }
+        // 已发布公开成员数：全局分组统计后按我的专栏 id 交集（复用前台专栏列表同款口径）
+        Map<String, Long> countMap = articleMapper.selectPublishedCountGroupBySeries().stream()
+                .collect(Collectors.toMap(SeriesMemberCountVo::getSeriesId,
+                        vo -> vo.getArticleCount() == null ? 0L : vo.getArticleCount()));
+        List<SeriesReadVo> vos = new ArrayList<>(mySeries.size());
+        for (ArticleSeries s : mySeries) {
+            SeriesReadVo vo = copyProperties(s, SeriesReadVo.class);
+            vo.setArticleCount(countMap.getOrDefault(s.getId(), 0L));
+            vos.add(vo);
+        }
+        return vos;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String createSeries(SeriesSaveDto dto, String userId) {
+        ArticleSeries series = copyProperties(dto, ArticleSeries.class);
+        series.setId(getId());
+        series.setAuthorId(userId); // 归属当前用户；id/author_id 不信任入参
+        seriesMapper.insert(series);
+        return series.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateSeries(String id, SeriesSaveDto dto, String operatorId, boolean isAdmin) {
+        ArticleSeries series = requireSeries(id);
+        requireSeriesOwner(series, operatorId, isAdmin);
+        // 只允许改 名称/描述/封面（code 保留）；description/coverUrl 传 "" 即清空
+        series.setName(dto.getName());
+        series.setDescription(dto.getDescription());
+        series.setCoverUrl(dto.getCoverUrl());
+        seriesMapper.updateById(series);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteOwnSeries(String id, String operatorId, boolean isAdmin) {
+        ArticleSeries series = requireSeries(id);
+        requireSeriesOwner(series, operatorId, isAdmin);
+        clearBySeries(id); // 级联清成员（同一事务）
+        seriesMapper.deleteById(id);
     }
 
     @Override

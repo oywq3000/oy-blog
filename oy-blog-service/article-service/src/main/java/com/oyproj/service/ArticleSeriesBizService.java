@@ -1,6 +1,8 @@
 package com.oyproj.service;
 
+import com.oyproj.api.article.domain.dto.SeriesSaveDto;
 import com.oyproj.api.article.domain.vo.SeriesMemberAdminVo;
+import com.oyproj.domain.vo.SeriesReadVo;
 
 import java.util.List;
 
@@ -15,6 +17,11 @@ import java.util.List;
  *   <li>整文改绑为全量替换语义：不在新集合的旧关系删除、缺失的新关系追加到各专栏队尾；</li>
  *   <li>删除文章/专栏时级联清理关系行（物理删）。</li>
  * </ul>
+ *
+ * <p>归属契约（spec §九）：专栏可属于某用户（author_id）或为 null（站长级）。
+ * 创作端（creator 端点/publish 链）只能操作自己的专栏：更新/删除校验 owner，
+ * 发布绑定时逐目标校验 author_id 归属；authorId 为 null 的站长级专栏对非 ADMIN 视同越权
+ * （抛 {@code ForbiddenException}）。ADMIN 例外放行（operatorId=null 或 isAdmin=true）。</p>
  */
 public interface ArticleSeriesBizService {
 
@@ -55,12 +62,55 @@ public interface ArticleSeriesBizService {
 
     /**
      * 整文全量改绑（publish 链与管理端用）：seriesIds=null 视为空。
-     * 新集合超 {@link #MAX_SERIES_PER_ARTICLE} 或含不存在的专栏抛异常（整体回滚，不产生部分改动）。
+     * 新集合超 {@link #MAX_SERIES_PER_ARTICLE}、含不存在的专栏抛异常；
+     * operatorId 非 null（创作端 publish 链）时逐目标校验归属：
+     * 专栏 author_id 必须等于 operatorId，author_id 为 null 的站长级专栏一律拒绝——
+     * 两种越权均抛 {@code ForbiddenException}（整体回滚，不产生部分改动）。
      *
-     * @param articleId 文章 ID
-     * @param seriesIds 目标专栏 ID 列表（可含 null/重复，会被去重）
+     * @param articleId  文章 ID
+     * @param seriesIds  目标专栏 ID 列表（可含 null/重复，会被去重）
+     * @param operatorId 操作者用户 ID；null = 管理端/免校验模式（admin 改绑走此路径）
      */
-    void replaceArticleSeries(String articleId, List<String> seriesIds);
+    void replaceArticleSeries(String articleId, List<String> seriesIds, String operatorId);
+
+    /**
+     * 我的专栏（创作中心列表/发布选栏器用）：仅本人创建的专栏（author_id=userId），
+     * 附已发布公开文章计数（复用 {@code ArticleMapper.selectPublishedCountGroupBySeries} 后按我的 id 交集）。
+     *
+     * @param userId 当前登录用户 ID
+     * @return 我的专栏列表（按创建时间升序；无则空列表）
+     */
+    List<SeriesReadVo> listOwnSeries(String userId);
+
+    /**
+     * 新建专栏：author_id = userId（任何登录用户可创建自己的专栏）。
+     *
+     * @param dto    名称必填；description/coverUrl 可选
+     * @param userId 创建者用户 ID
+     * @return 新专栏 ID
+     */
+    String createSeries(SeriesSaveDto dto, String userId);
+
+    /**
+     * 更新专栏（改名/描述/封面，code 不动）。
+     *
+     * @param id         专栏 ID（不存在抛 NotFoundException）
+     * @param dto        新值（name 必填）
+     * @param operatorId 操作者用户 ID
+     * @param isAdmin    是否 ADMIN（X-User-Type=ADMIN 例外放行，可改全站含站长级专栏）
+     * @throws com.oyproj.common.exception.ForbiddenException 非本人专栏（含站长级）且非 ADMIN
+     */
+    void updateSeries(String id, SeriesSaveDto dto, String operatorId, boolean isAdmin);
+
+    /**
+     * 删除我的专栏：owner 校验 + 事务内级联清空成员（复用 {@link #clearBySeries}）再删行。
+     *
+     * @param id         专栏 ID（不存在抛 NotFoundException）
+     * @param operatorId 操作者用户 ID
+     * @param isAdmin    是否 ADMIN（例外放行，可删全站含站长级专栏）
+     * @throws com.oyproj.common.exception.ForbiddenException 非本人专栏（含站长级）且非 ADMIN
+     */
+    void deleteOwnSeries(String id, String operatorId, boolean isAdmin);
 
     /**
      * 删除文章时清理其全部关联行（物理删，软删文章不参与展示）

@@ -52,6 +52,12 @@ public class ArticleSeries {
     private String coverUrl;
 
     /**
+     * 创建者用户ID（null=站长级专栏）
+     */
+    @TableField("author_id")
+    private String authorId;
+
+    /**
      * 创建时间
      */
     @TableField("created_at")

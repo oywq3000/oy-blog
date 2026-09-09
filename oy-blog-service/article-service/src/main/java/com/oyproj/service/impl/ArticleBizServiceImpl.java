@@ -400,9 +400,11 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
                  }
             }
         }
-        // 专栏关系（与 tags 同语义：全量替换；仅 publish 链调用，draft 不落库）
+        // 专栏关系（与 tags 同语义：全量替换；仅 publish 链调用，draft 不落库）。
+        // 归属校验（spec §九）：ADMIN（X-User-Type=ADMIN）传 null=免校验；
+        // 非 ADMIN 传当前用户 ID，逐个目标专栏校验 author_id 归属（站长级专栏仅 ADMIN 可绑）
         if (dto.getSeriesIds() != null) {
-            seriesBizService.replaceArticleSeries(articleId, dto.getSeriesIds());
+            seriesBizService.replaceArticleSeries(articleId, dto.getSeriesIds(), isAdminUser() ? null : getUserId());
         }
     }
 
