@@ -1,5 +1,6 @@
 package com.oyproj.controller;
 
+import com.oyproj.api.file.domain.vo.FileVo;
 import com.oyproj.common.annotation.Log;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.dto.UserDTO;
@@ -67,7 +68,7 @@ public class UserProfileController {
 
 
     /**
-     * 根据用户ID获取用户名
+     * 根据用户ID获取用户
      *
      * @param userId 用户ID
      * @return 用户名
@@ -105,7 +106,7 @@ public class UserProfileController {
      */
     @PostMapping("/avatar")
     @Operation(summary = "上传用户头像", description = "上传并更新当前用户的头像")
-    public Result<String> uploadAvatar(@RequestPart("file") MultipartFile file) {
+    public Result<FileVo> uploadAvatar(@RequestPart("file") MultipartFile file) {
         return commonBiz.uploadAvatar(file);
     }
 

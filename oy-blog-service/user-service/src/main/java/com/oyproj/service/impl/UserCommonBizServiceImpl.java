@@ -31,7 +31,7 @@ public class UserCommonBizServiceImpl extends UserBizBase implements UserCommonB
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Result<String> uploadAvatar(MultipartFile file) {
+    public Result<FileVo> uploadAvatar(MultipartFile file) {
         String userId = getCurrentUserId();
         User user = userDao.getById(userId);
         if (user == null) {
@@ -50,10 +50,13 @@ public class UserCommonBizServiceImpl extends UserBizBase implements UserCommonB
             uploadDto.setContentType(file.getContentType());
             uploadDto.setContentLength(file.getSize());
             Result<FileVo> upload = fileUploadClient.upload(uploadDto);
+            FileVo fileVo = upload.getData();
             // 更新用户头像
-            user.setAvatarUrl(upload.getData().getUrl());
+            user.setAvatarUrl(fileVo.getUrl());
             userDao.updateById(user);
-            return Result.ok(upload.getData().getUrl());
+            // 注意：勿用 Result.ok(url) 单参 String —— 会命中 ok(String errMsg) 重载
+            // 把 URL 塞进 errMsg 而 data 为 null；应返回文件信息对象走泛型重载
+            return Result.ok(fileVo);
         } catch (IOException e) {
             throw new RuntimeException("文件读取失败", e);
         }
