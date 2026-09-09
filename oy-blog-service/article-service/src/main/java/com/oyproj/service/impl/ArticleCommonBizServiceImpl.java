@@ -34,6 +34,11 @@ public class ArticleCommonBizServiceImpl extends ArticleBaseBizService implement
     }
 
     @Override
+    public Result<FileVo> uploadSeriesCover(MultipartFile file) {
+        return uploadFile(file, "series/cover");
+    }
+
+    @Override
     public Result<FileVo> uploadContentImage(MultipartFile file) {
         return uploadFile(file, "article/content");
     }
@@ -44,7 +49,7 @@ public class ArticleCommonBizServiceImpl extends ArticleBaseBizService implement
             String extension = FileUtils.getExtension(originalFilename);
             String filename = UUIDUtils.getId() + "." + extension;
             
-            // 按日期分目录: article/cover/2023/10/01/xxx.png
+            // 按日期分目录: article/cover/2023/10/01/xxx.png、series/cover/2026/09/09/xxx.png
             String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
             String path = folder + "/" + datePath + "/" + filename;
 

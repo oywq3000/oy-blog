@@ -88,6 +88,19 @@ public class ArticleController {
     }
 
     /**
+     * 上传专栏封面
+     * （创作者专栏专属；与文章封面共用文件服务，文件目录 series/cover，语义分离）
+     *
+     * @param file 封面文件
+     * @return 文件信息
+     */
+    @PostMapping("/creator/series/cover")
+    @Operation(summary = "上传专栏封面", description = "上传专栏封面图片")
+    public Result<FileVo> uploadSeriesCover(@RequestPart("file") MultipartFile file) {
+        return commonBiz.uploadSeriesCover(file);
+    }
+
+    /**
      * 上传文章内容图片
      *
      * @param file 图片文件
