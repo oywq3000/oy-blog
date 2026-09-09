@@ -178,6 +178,17 @@ public class ArticleReadController {
     }
 
     /**
+     * 随机专栏推荐（首页横向卡片区）：只含有已发布文章的专栏随机打散取前 8
+     *
+     * @return 随机专栏列表（最多 8 个）
+     */
+    @GetMapping("/series/random")
+    @Operation(summary = "随机专栏推荐", description = "从含已发布文章的专栏中随机返回最多 8 个，供首页展示")
+    public Result<List<SeriesReadVo>> randomSeriesRead() {
+        return biz.randomSeriesRead();
+    }
+
+    /**
      * 查询专栏详情（已发布成员文章按 sort_order 升序分页）
      *
      * @param seriesId 专栏ID

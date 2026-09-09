@@ -107,6 +107,13 @@ public interface ArticleReadBizService {
     Result<List<SeriesReadVo>> listSeriesRead();
 
     /**
+     * 首页随机专栏推荐（只含有已发布文章的专栏随机取前 8，每次请求不同）
+     *
+     * @return 随机专栏列表（最多 8 个；无有效专栏返回空列表）
+     */
+    Result<List<SeriesReadVo>> randomSeriesRead();
+
+    /**
      * 专栏详情（前台，已发布成员按 sort_order 升序分页）
      *
      * @param seriesId 专栏 ID

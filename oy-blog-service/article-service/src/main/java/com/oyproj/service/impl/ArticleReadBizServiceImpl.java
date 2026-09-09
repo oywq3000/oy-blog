@@ -53,6 +53,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements ArticleReadBizService {
 
+    /** 首页随机专栏推荐上限 */
+    private static final int RANDOM_SERIES_LIMIT = 8;
+
     @NotNull private final ArticleDao articleDao;
     @NotNull private final ArticleContentDao contentDao;
     @NotNull private final ArticleChapterDao chapterDao;
@@ -442,6 +445,28 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
      */
     @Override
     public Result<List<SeriesReadVo>> listSeriesRead() {
+        return Result.ok(buildSeriesReadVos());
+    }
+
+    /**
+     * 首页随机专栏推荐：只含有已发布文章的专栏参与随机，上限 8。
+     * 应用层 Collections.shuffle（表量小，避免 SQL RAND() 不可测），每次请求结果不同。
+     *
+     * @return 随机专栏列表（最多 8 个；无有效专栏返回空列表）
+     */
+    @Override
+    public Result<List<SeriesReadVo>> randomSeriesRead() {
+        List<SeriesReadVo> nonEmpty = buildSeriesReadVos().stream()
+                .filter(vo -> vo.getArticleCount() > 0)
+                .collect(Collectors.toList());
+        Collections.shuffle(nonEmpty);
+        return Result.ok(nonEmpty.subList(0, Math.min(nonEmpty.size(), RANDOM_SERIES_LIMIT)));
+    }
+
+    /**
+     * 全量专栏 VO 组装（按创建时间升序 + 已发布成员数角标，无有效成员为 0）
+     */
+    private List<SeriesReadVo> buildSeriesReadVos() {
         List<ArticleSeries> seriesList = seriesMapper.selectList(
                 new LambdaQueryWrapper<ArticleSeries>().orderByAsc(ArticleSeries::getCreatedAt));
         Map<String, Long> countMap = articleMapper.selectPublishedCountGroupBySeries().stream()
@@ -453,7 +478,7 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
             vo.setArticleCount(countMap.getOrDefault(s.getId(), 0L));
             vos.add(vo);
         }
-        return Result.ok(vos);
+        return vos;
     }
 
     /**
