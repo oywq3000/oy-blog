@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -242,9 +243,18 @@ public class ArticleSeriesBizServiceImpl extends ArticleBaseBizService implement
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String createSeries(SeriesSaveDto dto, String userId) {
+        if (userId == null) {
+            // 缺会话身份（网关正常流不可能；防直连/内部误用创建出 author_id 为 null 的"伪站长级"专栏）
+            throw new ForbiddenException();
+        }
+        if (!StringUtils.hasText(dto.getName())) {
+            // 双层防御：HTTP 层 @Valid 已挡 400；直连 biz 调用兜底（DTO 注解不拦截非 MVC 调用）
+            throw new ValidationException(I18nUtils.t("series.name_required"));
+        }
         ArticleSeries series = copyProperties(dto, ArticleSeries.class);
         series.setId(getId());
         series.setAuthorId(userId); // 归属当前用户；id/author_id 不信任入参
+        series.setCode(null);       // code 仅站长级预留：创作端新建不落 code（读写语义闭环）
         seriesMapper.insert(series);
         return series.getId();
     }

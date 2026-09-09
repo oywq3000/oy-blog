@@ -22,6 +22,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -204,7 +205,7 @@ public class ArticleController {
      */
     @PostMapping("/creator/series")
     @Operation(summary = "创建专栏", description = "以当前登录用户为创建者新建专栏")
-    public Result<String> createSeries(@RequestBody SeriesSaveDto dto, HttpServletRequest request) {
+    public Result<String> createSeries(@RequestBody @Valid SeriesSaveDto dto, HttpServletRequest request) {
         // Result.ok(String) 会被解析为 ok(errMsg)（data=null），返回 id 必须走二参 ok(data, errMsg)
         String id = seriesBiz.createSeries(dto, request.getHeader(HeaderConstant.USER_ID.getValue()));
         return Result.ok(id, I18nUtils.from(ResultCode.SUCCESS));
@@ -219,7 +220,7 @@ public class ArticleController {
      */
     @PutMapping("/creator/series/{id}")
     @Operation(summary = "更新专栏", description = "改名/描述/封面（仅专栏创建者；ADMIN 例外）")
-    public Result<Boolean> updateSeries(@PathVariable("id") String id, @RequestBody SeriesSaveDto dto,
+    public Result<Boolean> updateSeries(@PathVariable("id") String id, @RequestBody @Valid SeriesSaveDto dto,
                                         HttpServletRequest request) {
         seriesBiz.updateSeries(id, dto, request.getHeader(HeaderConstant.USER_ID.getValue()), isAdminUser(request));
         return Result.ok(true);
