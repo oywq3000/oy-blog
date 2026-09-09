@@ -14,6 +14,13 @@ public class SeriesDetailVo {
     private String description;
     private String coverUrl;
 
+    /**
+     * 归属作者（author_id 为 NULL 的旧数据/站长级专栏三项均空，前端判空隐藏作者行）
+     */
+    private String authorId;
+    private String authorName;
+    private String authorAvatar;
+
     private Integer pageNum;
     private Integer pageSize;
     private Long total;

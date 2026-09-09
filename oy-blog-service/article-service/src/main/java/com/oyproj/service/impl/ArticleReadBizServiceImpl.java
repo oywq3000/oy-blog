@@ -489,6 +489,18 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         detail.setTotal(total);
         detail.setTotalPages((int) ((total + size - 1) / size));
         detail.setArticles(vos);
+        // 专栏归属作者 enrich：author_id 为 NULL 的旧数据/站长级专栏三项保持空，前端判空隐藏作者行
+        if (series.getAuthorId() != null && !series.getAuthorId().isEmpty()) {
+            try {
+                Result<UserDTO> userResult = userClient.getUserDTO(series.getAuthorId());
+                if (userResult != null && userResult.getIsSuccess() && userResult.getData() != null) {
+                    detail.setAuthorName(userResult.getData().getUsername());
+                    detail.setAuthorAvatar(userResult.getData().getAvatarUrl());
+                }
+            } catch (Exception e) {
+                log.warn("获取专栏作者信息失败, seriesId: {}", seriesId, e);
+            }
+        }
         return Result.ok(detail);
     }
 }

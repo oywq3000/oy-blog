@@ -29,6 +29,7 @@ public class EmailVerifyController {
         return emailVerifyBiz.captcha();
     }
 
+
     /**
      * 向未注册邮箱发送 6 位数字验证码（5 分钟有效）
      */
