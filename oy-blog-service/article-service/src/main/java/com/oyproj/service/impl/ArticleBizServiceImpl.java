@@ -100,7 +100,7 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         // 审核中守卫：AI 审核中 / 编辑审核中，不允许再次提交（防频繁重审；可删除）
         if (existing != null
                 && ("ai_reviewing".equals(existing.getStatus()) || "ai_reviewing".equals(existing.getReviewStatus()))) {
-            return Result.error("审核中，请稍候");
+            return Result.error(I18n("article.under_review"));
         }
 
         // 豁免路径：开关关闭或豁免用户 → 直接放行（同步、秒过，不做异步）
