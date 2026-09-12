@@ -8,6 +8,7 @@ import com.oyproj.common.base.ResultCode;
 import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.domain.vo.PageVo;
+import com.oyproj.common.mq.constants.ArticleBehaviorType;
 import com.oyproj.domain.dto.CommentReactionDto;
 import com.oyproj.domain.dto.CommentReplySaveDto;
 import com.oyproj.domain.dto.CommentSaveDto;
@@ -23,6 +24,7 @@ import com.oyproj.dto.CommentDao;
 import com.oyproj.dto.CommentReactionDao;
 import com.oyproj.dto.CommentReplyDao;
 import com.oyproj.service.ArticleCommentBizService;
+import com.oyproj.service.ArticleEventPublisher;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +60,7 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
     @NotNull private final CommentReactionDao reactionDao;
     @NotNull private final UserClient userClient;
     @NotNull private final ArticleStatsDao statsDao;
+    @NotNull private final ArticleEventPublisher eventPublisher;
 
     /**
      * 统计文章评论数量
@@ -336,6 +339,8 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         commentDao.save(comment);
         // 更新文章评论统计
         statsDao.incComments(comment.getArticleId(), 1);
+        // 评论成功落库后才发行为事件；热榜是装饰功能，此处失败不影响评论接口返回
+        eventPublisher.publish(comment.getArticleId(), comment.getUserId(), ArticleBehaviorType.COMMENT);
         // 返回新建评论（含用户名/头像等展示信息），前端据此乐观插入列表，避免整表重载
         CommentVo vo = assembleCommentVos(Collections.singletonList(comment)).get(0);
         return Result.ok(vo);
