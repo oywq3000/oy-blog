@@ -53,6 +53,7 @@ public class IndexReconciler {
         SyncStats stats = new SyncStats();
         stats.setStartTime(start);
         int upserted = 0;
+        boolean snapshotComplete = true;
         Set<String> authoritativeIds = new HashSet<>();
 
         try {
@@ -62,8 +63,9 @@ public class IndexReconciler {
                 Result<PageVo<List<ArticleIndexMessage>>> result =
                         articleIndexClient.getIndexSnapshot(page, PAGE_SIZE);
                 if (result == null || !result.getIsSuccess() || result.getData() == null) {
-                    log.error("拉取文章索引快照失败, page: {}, 终止对账", page);
+                    log.error("拉取文章索引快照失败, page: {}, 中止本轮对账（跳过僵尸文档清理）", page);
                     stats.setHttpErrors(stats.getHttpErrors() + 1);
+                    snapshotComplete = false;
                     break;
                 }
 
@@ -92,6 +94,16 @@ public class IndexReconciler {
             }
 
             stats.setUpserted(upserted);
+
+            // 快照不完整时严禁清理僵尸文档：authoritativeIds 只有半截（首页失败时为空集），
+            // 拿它当"权威集合"会把尚未翻到的已发布文章——乃至整个索引——误判为僵尸删掉
+            if (!snapshotComplete) {
+                stats.setCompleted(false);
+                stats.setErrorMessage("文章索引快照拉取不完整，已跳过僵尸文档清理");
+                stats.setDurationMs(ChronoUnit.MILLIS.between(start, LocalDateTime.now()));
+                lastSyncStats.set(stats);
+                return;
+            }
 
             // 2. 清理 ES 中多余的文档（MySQL 已删除或取消发布的）
             int orphansDeleted = deleteOrphanDocuments(authoritativeIds);
