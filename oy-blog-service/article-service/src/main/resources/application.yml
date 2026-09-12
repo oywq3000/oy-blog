@@ -7,6 +7,10 @@ spring:
     url: jdbc:mysql://${MYSQL_HOST:192.168.200.130}:3306/oyblog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8&allowMultiQueries=true
     username: root
     password: root
+    hikari:
+      # 口径：审核并发 4 + HTTP 请求峰值 + 定时任务。两段事务只占毫秒级，正确性不依赖此值，
+      # 显式声明只是让口径可见、可调（默认 10 也够用）。
+      maximum-pool-size: ${DB_POOL_MAX:16}
   data:
     redis:
       host: ${REDIS_HOST:192.168.200.130}
@@ -38,6 +42,13 @@ spring:
     publisher-returns: true
     template:
       mandatory: true
+    # 审核消费者并发度（article-service 内唯一的 @RabbitListener，服务级配置只作用于它）。
+    # 环境变量覆盖无需重新打包；天花板由 BlogAgent/DeepSeek 的并发额度决定，429 会被重试阶梯接住。
+    listener:
+      simple:
+        concurrency: ${MODERATION_CONCURRENCY:4}
+        # 每条消费者最多预取的在途消息数：默认 250 会让消息被单一消费者预取光（隐性串行）
+        prefetch: ${MODERATION_PREFETCH:2}
 
 
 # ============ Logging Configuration ============
