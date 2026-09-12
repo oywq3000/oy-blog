@@ -134,6 +134,26 @@ public class ArticleReadController {
             @RequestParam(defaultValue = "10") int pageSize) {
         return biz.listPublishedByHot(pageNum, pageSize);
     }
+
+    /**
+     * 按趋势分页查询已发布文章列表（最近正在暴涨的）
+     *
+     * @param pageNum  页码（从 1 开始）
+     * @param pageSize 每页条数
+     * @return 分页的文章列表
+     */
+    @GetMapping("/published/hot/trend")
+    @Operation(summary = "按趋势分页查询已发布文章列表",
+            description = "趋势分 = 18×今日热度 − 前 6 日热度和（等价的 6×(3×今日 − 前6日均值)）。"
+                    + "Redis 无数据时回退为全时段加权总榜")
+    public Result<PageVo<List<ArticleInfoVo>>> listPublishedByTrend(
+            @Parameter(description = "页码（从 1 开始）", example = "1")
+            @RequestParam(defaultValue = "1") int pageNum,
+            @Parameter(description = "每页条数", example = "10")
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return biz.listPublishedByTrend(pageNum, pageSize);
+    }
+
     /**
      * 获取全库文章数据统计
      *

@@ -7,8 +7,10 @@ import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.exception.NotFoundException;
+import com.oyproj.common.service.CommonCache;
 import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.common.domain.vo.PageVo;
+import com.oyproj.config.HotRankProperties;
 import com.oyproj.config.HotWeightProperties;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.domain.entity.ArticleLog;
@@ -30,6 +32,7 @@ import com.oyproj.mapper.ArticleMapper;
 import com.oyproj.mapper.ArticleSeriesItemMapper;
 import com.oyproj.mapper.ArticleSeriesMapper;
 import com.oyproj.service.ArticleReadBizService;
+import com.oyproj.service.HotRankService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +44,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -68,6 +72,9 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     private final ArticleMapper articleMapper;
     private final ArticleSeriesMapper seriesMapper;
     private final ArticleSeriesItemMapper seriesItemMapper;
+    @NotNull private final HotRankService hotRankService;
+    @NotNull private final HotRankProperties hotRankProperties;
+    @NotNull private final CommonCache<Object> commonCache;
 
     /**
      * 根据slug查询文章
@@ -159,14 +166,85 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     }
 
     /**
+     * 按热度分页查询已发布文章（优先读 Redis 近 7 天榜，读不到回退 MySQL 全时段总榜）。
+     */
+    @Override
+    public Result<PageVo<List<ArticleInfoVo>>> listPublishedByHot(int pageNum, int pageSize) {
+        return listPublishedByRank(HotRankServiceImpl.KEY_SEVEN_DAY, pageNum, pageSize);
+    }
+
+    /**
+     * 按趋势分页查询已发布文章（Redis 趋势榜，读不到回退 MySQL 全时段总榜）。
+     */
+    @Override
+    public Result<PageVo<List<ArticleInfoVo>>> listPublishedByTrend(int pageNum, int pageSize) {
+        return listPublishedByRank(HotRankServiceImpl.KEY_TREND, pageNum, pageSize);
+    }
+
+    /**
+     * 榜单读取通用路径：Redis 有数据且请求页在窗口内就走 Redis，否则回退 MySQL。
+     */
+    private Result<PageVo<List<ArticleInfoVo>>> listPublishedByRank(String rankKey, int pageNum, int pageSize) {
+        int[] p = normalizePage(pageNum, pageSize);
+        PageVo<List<ArticleInfoVo>> fromRedis = buildRankPageFromRedis(rankKey, p[0], p[1]);
+        if (fromRedis != null) {
+            return Result.ok(fromRedis);
+        }
+        return listPublishedByHotFromDb(p[0], p[1]);
+    }
+
+    /**
+     * 从 Redis 榜组装分页结果。
+     *
+     * @return null 表示"应该回退 MySQL"（榜为空 / 请求页超出窗口 / 该页无有效文章 / Redis 异常）
+     */
+    private PageVo<List<ArticleInfoVo>> buildRankPageFromRedis(String rankKey, int pageNum, int pageSize) {
+        int window = hotRankProperties.getWindowSize();
+        // 这里必须用 long 相乘：normalizePage 只兜 pageNum 的下界，公开端点可传 1073741825，
+        // int 乘法翻负后会骗过窗口判断，把负 offset 带进下面的 subList（500）。
+        if (window <= 0 || (long) pageNum * pageSize > window) {
+            return null;   // 请求页超出 Redis 榜窗口，交回 MySQL
+        }
+        List<String> rankedIds = hotRankService.topArticleIds(rankKey, window);
+        if (rankedIds.isEmpty()) {
+            return null;   // 冷水启动尚无榜数据，或 Redis 不可用
+        }
+
+        Map<String, Article> byId = articleDao.listByIds(rankedIds).stream()
+                .filter(a -> "published".equals(a.getStatus()) && a.getDeletedAt() == null)
+                .collect(Collectors.toMap(Article::getId, Function.identity(), (a, b) -> a));
+
+        // listByIds 不保证顺序，且榜单里可能残留已下架/删除的文章 —— 按榜序重排并剔除
+        List<Article> ordered = rankedIds.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        int from = (pageNum - 1) * pageSize;
+        if (from >= ordered.size()) {
+            return null;
+        }
+        int to = Math.min(from + pageSize, ordered.size());
+
+        List<ArticleInfoVo> voList = copyList(ordered.subList(from, to), ArticleInfoVo.class);
+        enrichWithStats(voList);
+        enrichWithAuthorInfo(voList);
+        enrichWithTags(voList);
+        return buildPageVo(pageNum, pageSize, (long) ordered.size(), voList);
+    }
+
+    /**
      * 按热度分页查询已发布文章列表（加权评分降序）
+     *
+     * <p>MySQL 全时段加权总榜：Redis 榜不可用（冷启动 / 挂了 / 请求页超出窗口）时的降级路径，
+     * 逻辑与引入 Redis 前完全一致。不对外暴露（接口只声明 Redis 优先的 listPublishedByHot），
+     * 故不再带 @Override。</p>
      *
      * @param pageNum  页码（1-based）
      * @param pageSize 每页大小
      * @return 分页的文章列表
      */
-    @Override
-    public Result<PageVo<List<ArticleInfoVo>>> listPublishedByHot(int pageNum, int pageSize) {
+    public Result<PageVo<List<ArticleInfoVo>>> listPublishedByHotFromDb(int pageNum, int pageSize) {
         int[] p = normalizePage(pageNum, pageSize);
         long total = articleDao.countPublished();
         List<ArticleInfoVo> voList = total == 0

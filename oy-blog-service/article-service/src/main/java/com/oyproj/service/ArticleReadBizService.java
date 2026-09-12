@@ -70,6 +70,11 @@ public interface ArticleReadBizService {
     Result<PageVo<List<ArticleInfoVo>>> listPublishedByHot(int pageNum, int pageSize);
 
     /**
+     * 按趋势分页查询已发布文章列表（正在暴涨的）
+     */
+    Result<PageVo<List<ArticleInfoVo>>> listPublishedByTrend(int pageNum, int pageSize);
+
+    /**
      * 查询用户浏览历史
      *
      * @return 文章列表
