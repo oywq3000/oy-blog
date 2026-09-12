@@ -4,11 +4,15 @@ import com.oyproj.common.service.CommonCache;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.zset.Aggregate;
+import org.springframework.data.redis.connection.zset.Weights;
 import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.support.atomic.RedisAtomicLong;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -446,5 +450,51 @@ public class CommonCacheImpl implements CommonCache {
     @Override
     public Long zRemove(String key, String... value) {
         return redisTemplate.opsForZSet().remove(key, value);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p><b>为什么用底层 RedisCallback 而不是 opsForZSet()：</b>Spring Data 的
+     * {@code ZSetOperations.unionAndStore} 不支持 WEIGHTS，趋势榜的负权重必须走底层命令。</p>
+     *
+     * <p><b>为什么 key 要用 serializer 转字节：</b>项目未自定义 RedisTemplate，
+     * key 与 member 都是 {@code JdkSerializationRedisSerializer} 产出的二进制。
+     * 若在此手写 {@code key.getBytes(UTF_8)}，生成的 key 与日桶 key 字节不一致，
+     * ZUNIONSTORE 会合并出一片空集。</p>
+     *
+     * <p><b>为什么参数写裸 List 而不是 {@code List<String>}：</b>本类以裸类型
+     * {@code implements CommonCache} 实现接口，接口方法的泛型已被擦除为 {@code List}，
+     * 写成 {@code List<String>} 会与擦除后的方法同名冲突（name clash）而非覆盖。</p>
+     */
+    @Override
+    public Long zUnionStore(String destKey, List sourceKeys, int[] weights) {
+        if (sourceKeys == null || sourceKeys.isEmpty()) {
+            return 0L;
+        }
+        byte[] dest = keyBytes(destKey);
+        byte[][] sets = new byte[sourceKeys.size()][];
+        for (int i = 0; i < sourceKeys.size(); i++) {
+            sets[i] = keyBytes((String) sourceKeys.get(i));
+        }
+        return redisTemplate.execute((RedisCallback<Long>) connection ->
+                connection.zUnionStore(dest, Aggregate.SUM, Weights.of(weights), sets));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Boolean expire(String key, long seconds) {
+        return redisTemplate.expire(key, Duration.ofSeconds(seconds));
+    }
+
+    /**
+     * 用当前 RedisTemplate 的 key 序列化器把字符串 key 转成字节，保证与 opsForZSet() 写出的 key 完全一致。
+     */
+    @SuppressWarnings("unchecked")
+    private byte[] keyBytes(String key) {
+        RedisSerializer<Object> serializer = (RedisSerializer<Object>) redisTemplate.getKeySerializer();
+        return serializer.serialize(key);
     }
 }

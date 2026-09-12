@@ -296,4 +296,25 @@ public interface CommonCache<T> {
      * @return 删除数量
      */
     Long zRemove(String key, String... value);
+
+    /**
+     * 服务端合并多个 Sorted Set 到目标 key（ZUNIONSTORE ... WEIGHTS ... AGGREGATE SUM）。
+     *
+     * <p>权重按 {@code sourceKeys} 顺序一一对应，可为负数（用于"今天 × 18 − 前 6 天"这类趋势分）。</p>
+     *
+     * @param destKey    目标 key
+     * @param sourceKeys 源 key 列表（顺序即权重顺序）
+     * @param weights    权重数组，长度必须等于 sourceKeys 长度
+     * @return 目标集合中的元素个数
+     */
+    Long zUnionStore(String destKey, List<String> sourceKeys, int[] weights);
+
+    /**
+     * 给已存在的 key 设置过期时间（对 ZSet 同样生效）。
+     *
+     * @param key     key
+     * @param seconds 过期秒数
+     * @return 是否设置成功
+     */
+    Boolean expire(String key, long seconds);
 }
