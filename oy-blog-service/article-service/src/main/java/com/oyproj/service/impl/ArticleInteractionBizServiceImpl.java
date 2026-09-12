@@ -22,6 +22,7 @@ import com.oyproj.dto.ArticleFavoriteDao;
 import com.oyproj.dto.ArticleLikeDao;
 import com.oyproj.dto.ArticleLogDao;
 import com.oyproj.dto.ArticleStatsDao;
+import com.oyproj.service.ArticleEventPublisher;
 import com.oyproj.service.ArticleInteractionBizService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotNull;
@@ -57,6 +58,7 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
     @NotNull private final ArticleDao articleDao;
     @NotNull private final CommonCache<Object> commonCache;
     @NotNull private final UserClient userClient;
+    @NotNull private final ArticleEventPublisher eventPublisher;
 
     /**
      * 点赞文章
@@ -70,6 +72,7 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
         if (!likeDao.hasLiked(articleId, userId)) {
             likeDao.like(articleId, userId);
             statsDao.incLikes(articleId, 1);
+            eventPublisher.publishLike(articleId, userId, false);   // 仅在状态真的变化时发布
         }
         return Result.ok();
     }
@@ -86,6 +89,7 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
         if (likeDao.hasLiked(articleId, userId)) {
             likeDao.unlike(articleId, userId);
             statsDao.incLikes(articleId, -1);
+            eventPublisher.publishLike(articleId, userId, true);    // 负权重回灌，榜单可跌
         }
         return Result.ok();
     }
@@ -105,6 +109,7 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
         if (!favoriteDao.hasFavorited(articleId, userId)) {
             favoriteDao.favorite(articleId, userId);
             statsDao.incFavorites(articleId, 1);
+            eventPublisher.publishFavorite(articleId, userId, false);
         }
         return Result.ok();
     }
@@ -124,6 +129,7 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
         if (favoriteDao.hasFavorited(articleId, userId)) {
             favoriteDao.unfavorite(articleId, userId);
             statsDao.incFavorites(articleId, -1);
+            eventPublisher.publishFavorite(articleId, userId, true);
         }
         return Result.ok();
     }
@@ -251,6 +257,7 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
                         .favorites(0L)
                         .build();
                 statsDao.save(stats);
+                eventPublisher.publishView(articleId, userId);
                 return Result.ok(1L);
             } catch (DuplicateKeyException e) {
                 // 并发创建时，另一请求已创建，降级为更新
@@ -260,8 +267,11 @@ public class ArticleInteractionBizServiceImpl extends ArticleBaseBizService impl
             statsDao.incViews(articleId, 1);
         }
 
+        // 走到这里说明去重已通过且计数已递增 —— 此时才发布行为事件。
+        // 放在方法开头会在 IP/用户去重命中时重复灌榜（去重分支提前 return，不进这里）。
+        eventPublisher.publishView(articleId, userId);
+
         // 5. 返回递增后的观看次数
-        //stats = statsDao.getById(articleId);
         return Result.ok(stats != null ? stats.getViews()+1 : 1L);
     }
 
