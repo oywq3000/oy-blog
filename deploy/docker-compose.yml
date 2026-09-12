@@ -62,14 +62,14 @@ services:
     image: oy-blog/article-service:1.0-SNAPSHOT
     container_name: oy-blog-article-service
     cpus: "1.2"
-    mem_limit: 448m      # Xmx192（MyBatis + MQ 较重）
+    mem_limit: 512m      # Xmx256（新增 Kafka 生产者+消费者）
     build:
       context: ./jar
       dockerfile: ../docker/Dockerfile
       args:
         JAR_FILE: article-service-1.0-SNAPSHOT.jar
     environment:
-      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:MaxMetaspaceSize=128m"   # MyBatis + MQ 较重
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m"   # MyBatis + MQ + Kafka 客户端
     volumes:
       - ./logs/article-service:/app/logs
 
