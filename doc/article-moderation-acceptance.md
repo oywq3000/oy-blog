@@ -122,3 +122,20 @@ tests/test_graph.py 5 / test_llm.py 9 / test_protocol.py 6 / test_registry.py 9 
 - [X] publish 返回 verdict=ai_reviewing → 关闭 loading、提示"已提交审核"（oy-blog-front-dev1 3f35a86；驳回留编辑器提示原因）
 - [X] 创作中心列表 10~20 秒自动轮询，按 status/reviewStatus 显示"AI 审核中/编辑审核中/待人工审核/已驳回+原因"（oy-blog-front-dev1 c3681d5/2f4ecd8/3f35a86；轮询 15s）
 - [X] 管理端文章审核页（待审队列+通过/驳回）（oy-blog-admin 7693753，feat-moderation 分支待合并）
+
+## 并发化补充（2026-09-12，spec: docs/superpowers/specs/2026-09-12-moderation-concurrency-design.md）
+
+改造内容：审核消费从"一个长事务包住 AI 调用"改为两段短事务（TX1 读闸 → 事务外调 AI → TX2 应用 / TX2b 失败路径），并把并发度、预取、连接池改为可配旋钮（`MODERATION_CONCURRENCY` / `MODERATION_PREFETCH` / `DB_POOL_MAX`）。
+
+### 本机已验证（单测 + 静态检查，**不是**运行时验证）
+- [X] `ArticleModerationWorkflowTest` **12 条单测全绿**（`mvn -pl oy-blog-service/article-service test -Dtest=ArticleModerationWorkflowTest`；surefire `Tests run: 12, Failures: 0, Errors: 0, Skipped: 0`），其中含"AI 调用夹在两段短事务之间"的结构断言
+- [X] 消费端已无 `@Transactional` 注解（`ArticleModerationConsumer` 里只剩一条"千万不要在这里加"的警示注释），旧状态机逻辑（`applyNewVerdict` / `applyEditVerdict` / `onModerateFailure` / `loadContentMd`）全部迁入 `ArticleModerationWorkflowImpl`，`grep` 验证无残留
+- [X] 三个并发旋钮已在 `application.yml` 就位且带默认值（4 / 2 / 16），部署侧经 `deploy/docker-compose.env.example` 暴露（改环境变量即可，无需重新打包）
+
+> 本机无法起完整服务（dev 库 `192.168.200.130` 不可达，见第一节），**本次改造没有做过任何运行时验证**——并发度是否真生效、AI 调用期间是否真不占 DB 连接，都必须部署后在服务器上验证。
+
+### 待部署后验证
+- 🔶 启动后 `article.moderation.queue` 的 consumers = 4（`MODERATION_CONCURRENCY` 生效）
+- 🔶 并发投递 N 篇：总耗时显著优于串行，状态结论与串行一致，无误转人工
+- 🔶 审核期间 `SHOW PROCESSLIST` / Hikari 指标：连接不被长时间占用（AI 调用期间应有 0 条审核相关连接）
+- 🔶 `MODERATION_CONCURRENCY=1` 回归：行为与改造前一致
