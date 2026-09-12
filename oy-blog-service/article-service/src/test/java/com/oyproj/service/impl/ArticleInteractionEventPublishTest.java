@@ -4,6 +4,7 @@ import com.oyproj.api.user.client.UserClient;
 import com.oyproj.common.service.CommonCache;
 import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.domain.entity.Article;
+import com.oyproj.domain.entity.ArticleStats;
 import com.oyproj.dto.ArticleDao;
 import com.oyproj.dto.ArticleFavoriteDao;
 import com.oyproj.dto.ArticleLikeDao;
@@ -127,5 +128,49 @@ class ArticleInteractionEventPublishTest {
         service.view("A1");
 
         verify(eventPublisher, never()).publishView(any(), any());
+    }
+
+    // ---- 以下 4 例是评审补的覆盖缺口 ----
+    // 没有它们，把发布调用移出 if / 删掉 view 末尾那次发布，前面 7 例**依然全绿**，
+    // 而"事件发在正确时刻"正是本任务唯一的成功标准。
+
+    @Test
+    void view_whenStatsRowExists_publishesViewEvent() {
+        // 生产中最常见的路径：stats 行已存在，走方法末尾那次发布（不是 stats==null 的创建分支）
+        when(articleDao.getById("A1")).thenReturn(Article.builder().id("A1").build());
+        when(commonCache.hasKey(any())).thenReturn(false);
+        when(statsDao.getById("A1")).thenReturn(
+                ArticleStats.builder().articleId("A1").views(5L).build());
+
+        service.view("A1");
+
+        verify(eventPublisher).publishView(eq("A1"), any());
+    }
+
+    @Test
+    void unlike_whenNotLiked_doesNotPublish() {
+        when(likeDao.hasLiked("A1", "U1")).thenReturn(false);
+
+        service.unlike("A1");
+
+        verify(eventPublisher, never()).publishLike(any(), any(), anyBoolean());
+    }
+
+    @Test
+    void favorite_whenAlreadyFavorited_doesNotPublish() {
+        when(favoriteDao.hasFavorited("A1", "U1")).thenReturn(true);
+
+        service.favorite("A1");
+
+        verify(eventPublisher, never()).publishFavorite(any(), any(), anyBoolean());
+    }
+
+    @Test
+    void unfavorite_whenNotFavorited_doesNotPublish() {
+        when(favoriteDao.hasFavorited("A1", "U1")).thenReturn(false);
+
+        service.unfavorite("A1");
+
+        verify(eventPublisher, never()).publishFavorite(any(), any(), anyBoolean());
     }
 }
