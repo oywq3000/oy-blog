@@ -226,7 +226,7 @@ Workflow 用【待生效区的内容】去审（不是线上正文）→ 三态�
 
 RabbitMQ 的 **TTL + 死信队列**机制正好能实现第 2 点，这是整个设计里最巧的一块。
 
-### 5.2 涉及四个常量，三个是队列/交换机，一个是路由键
+### 5.2 涉及五个常量（四个队列/交换机，一个路由键）
 
 `oy-blog-common/.../mq/constants/ArticleMQConstant.java:16-21`
 
@@ -352,7 +352,7 @@ t ≈ 130.1s   消费者 attempt=3 调 AI → 失败
 
 ## 六、消费端的三道闸门
 
-三道闸长在消费端的状态机 `ArticleModerationWorkflowImpl` 上——MQ 入口壳 `ArticleModerationConsumer` 只管解析消息、转交、吞异常（见 6.4）。它们不再挤在同一个方法里，而是分居一条消息的三段处理中：
+三道闸长在消费端的状态机 `ArticleModerationWorkflowImpl` 上——MQ 入口壳 `ArticleModerationConsumer` 只管解析消息、转交、吞异常（见 6.5）。它们不再挤在同一个方法里，而是分居一条消息的三段处理中：
 
 | 闸 | 在哪一段 | 挡什么 |
 |---|---|---|
