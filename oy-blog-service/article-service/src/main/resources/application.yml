@@ -58,6 +58,15 @@ spring:
       properties:
         # 关掉类型头：否则消费端会按全限定类名反序列化，跨模块/改包名即炸
         spring.json.add.type.headers: false
+        # 【必须有】send() 是在用户请求线程上同步调用的。Kafka 的 max.block.ms 默认 60000ms，
+        # broker 不可达或发送缓冲区满时 send() 会一直阻塞到超时才抛异常（然后被发布器的 catch 吞掉）——
+        # 那意味着一次浏览/点赞接口最长卡 60 秒，直接违反"发事件失败绝不能影响用户浏览"这条契约。
+        # 100ms 足以覆盖正常路径（发完即走），异常路径快速失败。
+        # 只能写在这里：KafkaProperties.Producer 没有 maxBlockMs 绑定目标（Boot 3.4.11 可绑定键仅
+        # acks/batchSize/bootstrapServers/bufferMemory/clientId/compressionType/keySerializer/
+        # valueSerializer/retries/transactionIdPrefix），写成 spring.kafka.producer.max-block-ms
+        # 会被静默忽略、成为空操作；只有 properties 透传才能进到 ProducerConfig。
+        max.block.ms: 100
     consumer:
       group-id: article-hot-rank
       auto-offset-reset: earliest
