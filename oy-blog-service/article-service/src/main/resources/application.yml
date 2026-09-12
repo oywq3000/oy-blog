@@ -49,6 +49,25 @@ spring:
         concurrency: ${MODERATION_CONCURRENCY:4}
         # 每条消费者最多预取的在途消息数：默认 250 会让消息被单一消费者预取光（隐性串行）
         prefetch: ${MODERATION_PREFETCH:2}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:192.168.200.130:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      properties:
+        # 关掉类型头：否则消费端会按全限定类名反序列化，跨模块/改包名即炸
+        spring.json.add.type.headers: false
+    consumer:
+      group-id: article-hot-rank
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.value.default.type: com.oyproj.common.mq.domain.ArticleBehaviorEvent
+        spring.json.trusted.packages: com.oyproj.common.mq.domain
+    listener:
+      ack-mode: manual
 
 
 # ============ Logging Configuration ============
