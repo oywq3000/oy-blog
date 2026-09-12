@@ -2,6 +2,7 @@ package com.oyproj.service.impl;
 
 import com.oyproj.common.mq.domain.ArticleBehaviorEvent;
 import com.oyproj.common.service.CommonCache;
+import com.oyproj.common.util.FaultLogThrottle;
 import com.oyproj.config.HotRankProperties;
 import com.oyproj.service.HotRankService;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,11 @@ public class HotRankServiceImpl implements HotRankService {
     private final CommonCache<Object> commonCache;
     private final HotRankProperties hotRankProperties;
 
+    /** 故障日志限流：畸形事件是逐条来的，不限流时它自己就是一场日志风暴 */
+    private final FaultLogThrottle parseFailureLog = new FaultLogThrottle();
+    /** 故障日志限流：Redis 挂掉时 /published/hot 每个请求都会走这里 */
+    private final FaultLogThrottle readFailureLog = new FaultLogThrottle();
+
     @Override
     public void recordEvent(ArticleBehaviorEvent event) {
         if (event == null || event.getArticleId() == null || event.getArticleId().isEmpty()) {
@@ -50,7 +56,11 @@ public class HotRankServiceImpl implements HotRankService {
             // 按事件发生时间归日，而非处理时间：消息延迟到达时窗口归属才稳定
             dayKey = dayKey(OffsetDateTime.parse(event.getOccurredAt()).toLocalDate());
         } catch (Exception e) {
-            log.warn("行为事件时间戳无法解析，跳过, eventId: {}", event.getEventId(), e);
+            // 限流：畸形事件通常成批出现（上游格式变更/时钟异常），逐条打堆栈会淹掉日志管道
+            if (parseFailureLog.allow()) {
+                log.warn("行为事件时间戳无法解析，跳过（本窗口已抑制 {} 条同类故障）, eventId: {}",
+                        parseFailureLog.drainSuppressed(), event.getEventId(), e);
+            }
             return;
         }
         commonCache.incrementScore(dayKey, event.getArticleId(), event.getWeight());
@@ -89,7 +99,10 @@ public class HotRankServiceImpl implements HotRankService {
             }
             return ids;
         } catch (Exception e) {
-            log.warn("读取热榜失败, rankKey: {}", rankKey, e);
+            if (readFailureLog.allow()) {
+                log.warn("读取热榜失败，降级为 MySQL 榜（本窗口已抑制 {} 条同类故障）, rankKey: {}",
+                        readFailureLog.drainSuppressed(), rankKey, e);
+            }
             return Collections.emptyList();
         }
     }

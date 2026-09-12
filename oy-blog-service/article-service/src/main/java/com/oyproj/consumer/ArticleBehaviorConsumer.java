@@ -2,6 +2,7 @@ package com.oyproj.consumer;
 
 import com.oyproj.common.mq.config.KafkaTopicConfig;
 import com.oyproj.common.mq.domain.ArticleBehaviorEvent;
+import com.oyproj.common.util.FaultLogThrottle;
 import com.oyproj.service.HotRankService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,12 @@ public class ArticleBehaviorConsumer {
 
     private final HotRankService hotRankService;
 
+    /**
+     * 故障日志限流：Redis 挂掉时本方法是逐条事件进入 catch 的，
+     * 不限流则一次 Redis 故障 ≈ 每秒几十条 WARN+堆栈灌进 ELK。
+     */
+    private final FaultLogThrottle recordFailureLog = new FaultLogThrottle();
+
     @KafkaListener(
             topics = KafkaTopicConfig.TOPIC_ARTICLE_BEHAVIOR,
             groupId = "${spring.kafka.consumer.group-id:article-hot-rank}")
@@ -30,7 +37,10 @@ public class ArticleBehaviorConsumer {
         try {
             hotRankService.recordEvent(event);
         } catch (Exception e) {
-            log.warn("处理行为事件失败，跳过（不阻塞分区）, event: {}", event, e);
+            if (recordFailureLog.allow()) {
+                log.warn("处理行为事件失败，跳过（不阻塞分区，本窗口已抑制 {} 条同类故障）, event: {}",
+                        recordFailureLog.drainSuppressed(), event, e);
+            }
         } finally {
             ack.acknowledge();
         }

@@ -62,7 +62,11 @@ services:
     image: oy-blog/article-service:1.0-SNAPSHOT
     container_name: oy-blog-article-service
     cpus: "1.2"
-    mem_limit: 512m      # Xmx256（新增 Kafka 生产者+消费者）
+    # 576m 取自 Redpanda 事件流设计 spec §3.4；Xmx256 之外的 320m 是给非堆部分的：
+    # 线程栈、NIO direct buffer、Lettuce/Netty 连接、Kafka 客户端收发缓冲 —— 这些都不计入 -Xmx。
+    # 实测 RSS ≈485MiB，512m 只剩 ~27MiB 余量，扛不住 Kafka rebalance 批量拉取、Redis 重连风暴
+    # 或一次 GC 峰值；撞上 mem_limit 时配 restart: always 就是静默重启（30~60s 不可用 + 消费组重平衡）。
+    mem_limit: 576m
     build:
       context: ./jar
       dockerfile: ../docker/Dockerfile

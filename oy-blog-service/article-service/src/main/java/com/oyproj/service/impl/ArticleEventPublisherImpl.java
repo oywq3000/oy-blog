@@ -3,6 +3,7 @@ package com.oyproj.service.impl;
 import com.oyproj.common.mq.config.KafkaTopicConfig;
 import com.oyproj.common.mq.constants.ArticleBehaviorType;
 import com.oyproj.common.mq.domain.ArticleBehaviorEvent;
+import com.oyproj.common.util.FaultLogThrottle;
 import com.oyproj.service.ArticleEventPublisher;
 import com.oyproj.service.ArticleEventWeights;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,12 @@ public class ArticleEventPublisherImpl implements ArticleEventPublisher {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ArticleEventWeights articleEventWeights;
+
+    /**
+     * 故障日志限流：broker 不可达时每个浏览/点赞请求都会走到 catch，
+     * 不限流就是「一次 Kafka 故障 → 每秒几十条 WARN+堆栈」灌进 ELK。
+     */
+    private final FaultLogThrottle publishFailureLog = new FaultLogThrottle();
 
     @Override
     public void publishView(String articleId, String userId) {
@@ -60,7 +67,10 @@ public class ArticleEventPublisherImpl implements ArticleEventPublisher {
             kafkaTemplate.send(KafkaTopicConfig.TOPIC_ARTICLE_BEHAVIOR, articleId, event);
         } catch (Exception e) {
             // 装饰功能：吞掉异常，绝不影响调用方
-            log.warn("发布行为事件失败, articleId: {}, type: {}", articleId, type, e);
+            if (publishFailureLog.allow()) {
+                log.warn("发布行为事件失败（本窗口已抑制 {} 条同类故障）, articleId: {}, type: {}",
+                        publishFailureLog.drainSuppressed(), articleId, type, e);
+            }
         }
     }
 }

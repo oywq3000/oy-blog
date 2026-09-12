@@ -13,9 +13,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -103,6 +103,23 @@ class HotRankServiceImplTest {
         verify(commonCache, never()).incrementScore(any(), any(), anyInt());
     }
 
+    /**
+     * 期望的 7 个日桶 key，从「今天」往前推：{@code [today, today-1, ..., today-6]}。
+     *
+     * <p>必须逐项断言全量，不能只查 {@code size==7} 和 {@code keys[0]}：那样只钉住了
+     * 下标 0，1~6 是自由的。把 {@code today.minusDays(i)} 写成 {@code plusDays(i)}
+     * （窗口指向未来）时两个断言都还是绿的，而 7 天榜会静默变空、接口静默回退
+     * MySQL 全时段榜 —— 没有任何报错。</p>
+     */
+    private static List<String> expectedDayKeys() {
+        LocalDate today = LocalDate.now();
+        List<String> keys = new ArrayList<>(7);
+        for (int i = 0; i < 7; i++) {
+            keys.add("hot:article:" + today.minusDays(i).format(DateTimeFormatter.BASIC_ISO_DATE));
+        }
+        return keys;
+    }
+
     @Test
     void recompute_sevenDay_usesEqualWeightsOverSevenDays() {
         service.recompute();
@@ -112,11 +129,9 @@ class HotRankServiceImplTest {
         verify(commonCache).zUnionStore(eq(HotRankServiceImpl.KEY_SEVEN_DAY),
                 keysCaptor.capture(), weightsCaptor.capture());
 
-        assertEquals(7, keysCaptor.getValue().size());
         assertArrayEquals(new int[]{1, 1, 1, 1, 1, 1, 1}, weightsCaptor.getValue());
-        // 顺序：今天在最前，往前推 6 天
-        String today = "hot:article:" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
-        assertEquals(today, keysCaptor.getValue().get(0));
+        // 顺序：今天在最前，往前推 6 天 —— 全量逐项比对（下标 1~6 也要钉住）
+        assertEquals(expectedDayKeys(), keysCaptor.getValue());
     }
 
     @Test
@@ -129,8 +144,9 @@ class HotRankServiceImplTest {
                 keysCaptor.capture(), weightsCaptor.capture());
 
         assertArrayEquals(new int[]{18, -1, -1, -1, -1, -1, -1}, weightsCaptor.getValue());
-        assertEquals(7, keysCaptor.getValue().size());
-        assertTrue(keysCaptor.getValue().get(0).startsWith("hot:article:"));
+        // 权重是按位置跟 key 对齐的：18 必须落在今天、-1 落在过去 6 天，
+        // 所以这里的全量 key 断言同时保护了权重的对齐关系
+        assertEquals(expectedDayKeys(), keysCaptor.getValue());
     }
 
     @Test

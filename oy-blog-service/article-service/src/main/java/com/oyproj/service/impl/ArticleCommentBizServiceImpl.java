@@ -339,10 +339,12 @@ public class ArticleCommentBizServiceImpl extends ArticleBaseBizService implemen
         commentDao.save(comment);
         // 更新文章评论统计
         statsDao.incComments(comment.getArticleId(), 1);
-        // 评论成功落库后才发行为事件；热榜是装饰功能，此处失败不影响评论接口返回
-        eventPublisher.publish(comment.getArticleId(), comment.getUserId(), ArticleBehaviorType.COMMENT);
         // 返回新建评论（含用户名/头像等展示信息），前端据此乐观插入列表，避免整表重载
         CommentVo vo = assembleCommentVos(Collections.singletonList(comment)).get(0);
+        // 发行为事件必须排在最后一个可能抛异常的点之后（本方法是增删改里唯一没有 @Transactional 的，
+        // 落库不可回滚）：assembleCommentVos 内部还要查 reaction/回复，那里抛异常时调用方拿到 500，
+        // 用户重试会重复落库 —— 若事件已先发出去，热榜还会把这篇文章重复计一次权重。
+        eventPublisher.publish(comment.getArticleId(), comment.getUserId(), ArticleBehaviorType.COMMENT);
         return Result.ok(vo);
     }
 
