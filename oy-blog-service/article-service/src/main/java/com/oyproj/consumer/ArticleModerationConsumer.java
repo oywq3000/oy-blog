@@ -137,7 +137,6 @@ public class ArticleModerationConsumer {
             article.setPublishAt(LocalDateTime.now());
             article.setReviewStatus("approved");
             article.setReviewReason(verdict.reason());
-            article.setIsReviewed(1);
             article.setUpdateAt(LocalDateTime.now());
             articleDao.updateById(article);
             indexMessageService.sendIndexAfterCommit(article, indexMessageService.loadTagNames(article.getId()), MQOperation.CREATE);

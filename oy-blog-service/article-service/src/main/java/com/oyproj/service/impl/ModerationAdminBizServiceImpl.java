@@ -115,7 +115,6 @@ public class ModerationAdminBizServiceImpl extends ArticleBaseBizService impleme
                 article.setPublishAt(LocalDateTime.now());
                 article.setReviewStatus("approved");
                 article.setReviewReason(reason);
-                article.setIsReviewed(1);
                 article.setUpdateAt(LocalDateTime.now());
                 articleDao.updateById(article);
                 indexMessageService.sendIndexAfterCommit(article, indexMessageService.loadTagNames(article.getId()), MQOperation.CREATE);

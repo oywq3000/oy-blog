@@ -163,9 +163,6 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         saveRelations(articleId, dto);
         article.setReviewStatus(reviewStatus);
         article.setReviewReason(reason);
-        if (operation != null) {
-            article.setIsReviewed(1);
-        }
         articleDao.updateById(article);
         if (operation != null) {
             // 驳回路径从不发索引消息（未入索引），发布态须按新文档 CREATE 建索引
@@ -313,7 +310,6 @@ public class ArticleBizServiceImpl extends ArticleBaseBizService implements Arti
         if (isNew) {
             article.setAuthorId(getUserId());
             article.setCreatedAt(LocalDateTime.now());
-            article.setIsReviewed(0); // 默认未审核
             // 生成Slug (简单处理，实际应用可能需要更复杂的逻辑)
             if (!StringUtils.hasText(article.getSlug())) {
                 article.setSlug(getId());

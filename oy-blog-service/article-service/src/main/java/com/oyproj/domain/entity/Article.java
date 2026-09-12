@@ -130,12 +130,6 @@ public class Article {
     private Integer allowComment;
 
     /**
-     * 是否已审核
-     */
-    @TableField("is_reviewed")
-    private Integer isReviewed;
-
-    /**
      * 审核状态
      */
     @TableField("review_status")
