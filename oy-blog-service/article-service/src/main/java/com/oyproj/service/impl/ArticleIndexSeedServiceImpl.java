@@ -27,9 +27,18 @@ import java.util.concurrent.TimeUnit;
  *
  * <p><b>分页约定（踩过坑）</b>：{@code getIndexSnapshot} 的 {@code pageNum} 直达 MyBatis-Plus 的
  * {@code new Page<>(pageNum, size)}，而 MP 的 Page 是 <b>1-based</b>（{@code IPage.offset()}:
- * {@code current <= 1 → 0}）—— 故本类从 <b>1</b> 开始翻页；从 0 开始会把第 0、1 页读成同一页，
- * 从而漏掉第 {@code PAGE_SIZE} 篇之后的全部文章（而且 total/succeeded/failed 三个数字都看不出来）。
- * 终止也<b>不能</b>等"空页"：生产拦截器 {@code overflow=true} 在 {@code current > pages} 时会把
+ * {@code current <= 1 → 0}）—— 故本类从 <b>1</b> 开始翻页。</p>
+ *
+ * <p><b>从 0 开始会怎样（2026-09-13 更正）</b>：它<b>不会漏文章</b>。第 0、1 页读成同一页，
+ * 而本类的终止条件是"<b>请求页号</b> &gt;= 总页数"——{@code page.getCurrentPage()} 是 controller
+ * 回填的<b>请求</b> pageNum（{@code new PageVo<>(pageNum, …)}），不是 MP 内部的 current
+ * ——所以 0-based 起始只是让循环多跑一轮：请求 {@code 0..T} → 内容页 {@code 1,1,2,…,T}，
+ * <b>每页都读到，但第一页读两遍</b>。症状是 {@code total}/{@code succeeded} 比实际文章数
+ * 多出恰好一页（topic 侧无害：同一篇的重复记录值相同，压实后仍只有一条）。
+ * 本注释曾写"从 0 开始会漏掉第 PAGE_SIZE 篇之后的全部文章"——那对本类的守卫<b>不成立</b>
+ * （会漏最后一页的是<b>以总页数为上界</b>的循环，见 {@code IndexReconciler} / {@code ArticleIndexClient}）。</p>
+ *
+ * <p>终止也<b>不能</b>等"空页"：生产拦截器 {@code overflow=true} 在 {@code current > pages} 时会把
  * current 拨回 1（第一页），越界翻页永远返回非空页 → 死循环灌 topic（Task 6 实测 5 分钟 24040 条）。
  * 必须用"已到总页数"终止，且守卫要放在发送之后（放前面会漏掉最后一页的记录）。</p>
  */
