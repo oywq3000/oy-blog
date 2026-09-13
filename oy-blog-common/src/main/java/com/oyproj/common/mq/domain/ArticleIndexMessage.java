@@ -77,7 +77,7 @@ public class ArticleIndexMessage {
     private List<String> tags;
 
     /**
-     * 文章内容（Markdown原文，消费者侧做清洗）
+     * 文章内容（Markdown 清洗为纯文本后的结果，由生产端处理）
      */
     private String contentMd;
 
