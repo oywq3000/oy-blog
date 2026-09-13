@@ -3,13 +3,14 @@ package com.oyproj.scheduler;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.oyproj.common.mq.constants.ArticleMQConstant;
+import com.oyproj.common.mq.config.KafkaTopicConfig;
+import com.oyproj.common.mq.constants.MQOperation;
 import com.oyproj.common.mq.domain.ArticleIndexMessage;
 import com.oyproj.domain.entity.MqRetryLog;
 import com.oyproj.mapper.MqRetryLogMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -29,7 +30,7 @@ public class RetryMqScheduler {
     private static final int MAX_RETRY = 5;
 
     private final MqRetryLogMapper retryLogMapper;
-    private final RabbitTemplate rabbitTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
     @Scheduled(fixedDelayString = "${oy-blog.mq.retry-interval-ms:60000}",
@@ -55,12 +56,15 @@ public class RetryMqScheduler {
             try {
                 ArticleIndexMessage message = objectMapper.readValue(
                         retryLog.getMessageBody(), ArticleIndexMessage.class);
-                String routingKey = "ARTICLE_DELETE".equals(retryLog.getMessageType())
-                        ? ArticleMQConstant.ARTICLE_DELETE_ROUTING_KEY
-                        : ArticleMQConstant.ARTICLE_INDEX_ROUTING_KEY;
-
-                rabbitTemplate.convertAndSend(
-                        ArticleMQConstant.ARTICLE_INDEX_EXCHANGE, routingKey, message);
+                // 删除操作必须发 tombstone（value = null）。
+                // 落库时存的是带 operation=DELETE 的完整消息（message_body 存不了 null），
+                // 这里再转回 null —— 漏了这一步，重试路径就会漏发 tombstone，
+                // 结果"文章删了但 ES 里还在"。
+                // 双保险：body 里的 operation 若缺失/为 null，用 messageType 兜底判断。
+                boolean isDelete = "ARTICLE_DELETE".equals(retryLog.getMessageType())
+                        || MQOperation.DELETE.equals(message.getOperation());
+                kafkaTemplate.send(KafkaTopicConfig.TOPIC_ARTICLE_INDEX, message.getArticleId(),
+                        isDelete ? null : message);
 
                 // 标记成功
                 retryLogMapper.update(null, new LambdaUpdateWrapper<MqRetryLog>()
