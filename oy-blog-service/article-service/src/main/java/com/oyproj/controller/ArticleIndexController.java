@@ -18,9 +18,12 @@ import com.oyproj.dto.ArticleDao;
 import com.oyproj.dto.ArticleStatsDao;
 import com.oyproj.mapper.ArticleTagMapper;
 import com.oyproj.mapper.TagMapper;
+import com.oyproj.service.ArticleIndexControllerProvider;
+import com.oyproj.service.ArticleIndexSeedService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,7 +40,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-public class ArticleIndexController {
+public class ArticleIndexController implements ArticleIndexControllerProvider {
 
     private final ArticleDao articleDao;
     private final ArticleContentDao contentDao;
@@ -45,6 +48,7 @@ public class ArticleIndexController {
     private final UserClient userClient;
     private final ArticleTagMapper articleTagMapper;
     private final TagMapper tagMapper;
+    private final ArticleIndexSeedService seedService;
 
     /**
      * 分页返回已发布文章的索引快照数据
@@ -140,5 +144,25 @@ public class ArticleIndexController {
         int totalPages = (int) Math.ceil((double) total / pageSize);
         PageVo<List<ArticleIndexMessage>> pageVo = new PageVo<>(pageNum, pageSize, total, totalPages, messages);
         return Result.ok(pageVo);
+    }
+
+    /**
+     * {@link ArticleIndexControllerProvider} 的适配方法：纯委托给 {@link #getIndexSnapshot}，
+     * 让播种服务依赖极薄接口而不是 controller（可单测）。无 HTTP 映射，不新增对外路径。
+     */
+    @Override
+    public Result<PageVo<List<ArticleIndexMessage>>> snapshot(int pageNum, int pageSize) {
+        return getIndexSnapshot(pageNum, pageSize);
+    }
+
+    /**
+     * 把现有全量文章播种到 {@code article.index} 压实主题。
+     *
+     * <p>幂等，可重复调用。切换前必须先跑通并确认 {@code failed} 为空——
+     * 否则重放能力从一开始就是残缺的。</p>
+     */
+    @PostMapping("/internal/index/seed-topic")
+    public Result<ArticleIndexSeedService.SeedResult> seedIndexTopic() {
+        return Result.ok(seedService.seedIndexTopic());
     }
 }
