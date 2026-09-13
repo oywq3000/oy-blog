@@ -1,17 +1,13 @@
 package com.oyproj.common.mq.constants;
 
+/**
+ * MQ 常量。
+ *
+ * <p>索引链路的常量（{@code ARTICLE_INDEX_*} / {@code ARTICLE_DELETE_*}）随索引链路迁至 Kafka
+ * 已删除——Kafka 主题名见 {@code KafkaTopicConfig}（{@code TOPIC_ARTICLE_INDEX}）。
+ * 这里保留的仅剩审核链路（RabbitMQ）的常量。</p>
+ */
 public class ArticleMQConstant {
-    public static final String ARTICLE_INDEX_EXCHANGE = "article.index.exchange";
-    public static final String ARTICLE_INDEX_QUEUE = "article.index.queue";
-    public static final String ARTICLE_DELETE_QUEUE = "article.delete.queue";
-    public static final String ARTICLE_INDEX_ROUTING_KEY = "article.index";
-    public static final String ARTICLE_DELETE_ROUTING_KEY = "article.delete";
-
-    // 死信队列
-    public static final String ARTICLE_INDEX_DLX = "article.index.dlx";
-    public static final String ARTICLE_INDEX_DLQ = "article.index.dlq";
-    public static final String ARTICLE_INDEX_DLQ_ROUTING_KEY = "article.index.dlq";
-
     // 文章 AI 审核队列（异步审核）
     public static final String ARTICLE_MODERATION_EXCHANGE = "article.moderation.exchange";
     public static final String ARTICLE_MODERATION_QUEUE = "article.moderation.queue";
