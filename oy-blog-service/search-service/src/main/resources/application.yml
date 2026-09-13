@@ -9,27 +9,30 @@ spring:
     password: ${ES_PASSWORD:}
     # 禁止 Spring Data 自动创建/修改索引，mapping 手动管理（见 doc/es-mysql-sync-mechanism.md）
     auto-create-index: false
-  rabbitmq:
-    host: ${MQ_HOST:192.168.200.130}
-    port: 5672
-    username: guest
-    password: guest
-    virtual-host: /
-    # 开启消息确认
-    publisher-confirm-type: correlated
-    publisher-returns: true
-    template:
-      mandatory: true
-    listener:
-      simple:
-        # 消费失败后拒绝重新入队（进入DLQ），最多重试3次
-        retry:
-          enabled: true
-          max-attempts: 3
-          initial-interval: 1000
-          multiplier: 2
-          max-interval: 10000
-        default-requeue-rejected: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:192.168.200.130:9092}
+    consumer:
+      group-id: article-index
+      # earliest：新消费组首启会从 topic 头读起 —— 这正好是"重建索引"的语义，
+      # 切换当天能自动把播种进去的全量文章灌进 ES
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # ErrorHandlingDeserializer 包住 JsonDeserializer：毒消息不再从 poll() 抛出，
+      # 而是变成带 DeserializationException 头的记录，改走 @RetryableTopic 的重试→DLT 通道。
+      # 缺了这层，毒消息会反复重抛、位点永不前进、分区永久卡死。
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.value.default.type: com.oyproj.common.mq.domain.ArticleIndexMessage
+        spring.json.trusted.packages: com.oyproj.common.mq.domain
+    producer:
+      # @RetryableTopic 需要把失败记录转发到 retry topic，故消费端也需要生产者配置
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        # 关掉类型头：否则消费端会按全限定类名反序列化，跨模块/改包名即炸
+        # （与 spring.json.value.default.type 是一对，必须同时配）
+        spring.json.add.type.headers: false
 
 # ============ Logging Configuration ============
 logging:

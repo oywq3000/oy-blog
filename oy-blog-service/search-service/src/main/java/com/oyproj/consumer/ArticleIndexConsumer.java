@@ -1,19 +1,33 @@
 package com.oyproj.consumer;
 
 import com.oyproj.Repository.ArticleSearchRepository;
-import com.oyproj.common.mq.constants.ArticleMQConstant;
+import com.oyproj.common.mq.config.KafkaTopicConfig;
 import com.oyproj.common.mq.domain.ArticleIndexMessage;
 import com.oyproj.converter.ArticleDocumentConverter;
 import com.oyproj.domain.entity.ArticleDocument;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.AmqpRejectAndDontRequeueException;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.annotation.DltHandler;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Service;
 
 /**
- * 文章索引消费者服务
- * 消费失败的消息通过 RabbitMQ DLX 机制进入死信队列，不会丢失。
+ * 文章索引消费者（Kafka/Redpanda）。
+ *
+ * <p><b>失败必须重试</b>：ES 索引错了用户直接搜到，与热榜链路"吞异常照样 ack"的取舍相反。
+ * 重试交给 {@link RetryableTopic}——它自动建 retry topic 与 DLT，替代原先手工搭的
+ * 退避重试 + {@code article.index.dlq}；重试耗尽后记录到 DLT（原 {@code handleDeadLetter} 的等价物）。</p>
+ *
+ * <p><b>反序列化失败同样受保护</b>：{@code application.yml} 里 value 用
+ * {@code ErrorHandlingDeserializer} 包住 {@code JsonDeserializer}，毒消息被转成记录级异常
+ * 并同样走重试→DLT 通道。缺了它，毒消息会在 {@code poll()} 阶段反复重抛、位点永不前进、
+ * 分区被永久卡死（方案 A 已在另一条链路上用字节码验证过这个失败模式）。</p>
+ *
+ * <p><b>因此本模块刻意不声明全局 {@code CommonErrorHandler} bean</b>——那会覆盖
+ * {@code @RetryableTopic} 的错误处理，把重试静默关掉。</p>
  */
 @Slf4j
 @Service
@@ -23,54 +37,50 @@ public class ArticleIndexConsumer {
     private ArticleSearchRepository articleSearchRepository;
 
     /**
-     * 处理文章索引消息
+     * 处理文章索引消息。
+     *
+     * <p>用 {@link ConsumerRecord} 而非裸消息体：<b>tombstone 没有 body</b>，
+     * 文章 id 在消息 KEY 上（分区键 = articleId，同时也是压实主题的 key）。</p>
      */
-    @RabbitListener(queues = ArticleMQConstant.ARTICLE_INDEX_QUEUE)
-    public void handleArticleIndex(ArticleIndexMessage message) {
-        try {
-            log.info("收到文章索引消息，文章ID: {}, 操作类型: {}", message.getArticleId(), message.getOperation());
-            switch (message.getOperation()) {
-                case CREATE:
-                case UPDATE:
-                    indexArticle(message);
-                    break;
-                case DELETE:
-                    deleteArticleIndex(message.getArticleId());
-                    break;
-                default:
-                    log.warn("未知的操作类型: {}", message.getOperation());
-            }
-        } catch (AmqpRejectAndDontRequeueException e) {
-            throw e; // 直接抛出，让消息进入 DLQ
-        } catch (Exception e) {
-            log.error("处理文章索引消息失败，文章ID: {}, 错误: {}", message.getArticleId(), e.getMessage(), e);
-            throw new AmqpRejectAndDontRequeueException("文章索引失败，进入死信队列", e);
+    @KafkaListener(
+            topics = KafkaTopicConfig.TOPIC_ARTICLE_INDEX,
+            groupId = "${spring.kafka.consumer.group-id:article-index}")
+    @RetryableTopic(
+            attempts = "3",
+            backoff = @Backoff(delay = 1000, multiplier = 2.0, maxDelay = 10000))
+    public void handleArticleIndex(ConsumerRecord<String, ArticleIndexMessage> record) {
+        String keyArticleId = record.key();
+        ArticleIndexMessage message = record.value();
+
+        if (message == null) {
+            // tombstone：文章已删除。没有 body，id 只能来自 key。
+            log.info("收到索引 tombstone，文章ID: {}", keyArticleId);
+            deleteArticleIndex(keyArticleId);
+            return;
+        }
+
+        log.info("收到文章索引消息，文章ID: {}, 操作类型: {}", message.getArticleId(), message.getOperation());
+        switch (message.getOperation()) {
+            case CREATE:
+            case UPDATE:
+                indexArticle(message);
+                break;
+            case DELETE:
+                // 兼容：迁移期/异常路径下仍可能收到带内容的 DELETE 消息
+                deleteArticleIndex(keyArticleId != null ? keyArticleId : message.getArticleId());
+                break;
+            default:
+                log.warn("未知的操作类型: {}", message.getOperation());
         }
     }
 
     /**
-     * 处理文章删除消息
+     * 死信处理 —— 重试耗尽后记录，便于排查（原 RabbitMQ DLQ 监听器的等价物）
      */
-    @RabbitListener(queues = ArticleMQConstant.ARTICLE_DELETE_QUEUE)
-    public void handleArticleDelete(ArticleIndexMessage message) {
-        try {
-            log.info("收到文章删除消息，文章ID: {}", message.getArticleId());
-            deleteArticleIndex(message.getArticleId());
-        } catch (AmqpRejectAndDontRequeueException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("处理文章删除消息失败，文章ID: {}, 错误: {}", message.getArticleId(), e.getMessage(), e);
-            throw new AmqpRejectAndDontRequeueException("文章删除索引失败，进入死信队列", e);
-        }
-    }
-
-    /**
-     * 死信队列监听器 — 记录失败消息，便于排查
-     */
-    @RabbitListener(queues = ArticleMQConstant.ARTICLE_INDEX_DLQ)
-    public void handleDeadLetter(ArticleIndexMessage message) {
-        log.error("进入死信队列的消息，文章ID: {}, 操作类型: {}, 操作时间: {}",
-                message.getArticleId(), message.getOperation(), message.getOperationTime());
+    @DltHandler
+    public void handleDlt(ConsumerRecord<String, ArticleIndexMessage> record) {
+        log.error("索引消息进入死信主题（重试耗尽），文章ID: {}, partition: {}, offset: {}",
+                record.key(), record.partition(), record.offset());
     }
 
     /**
