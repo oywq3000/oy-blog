@@ -104,6 +104,23 @@ class RetryMqSchedulerTest {
     }
 
     @Test
+    @DisplayName("messageType 是 ARTICLE_INDEX、但 body.operation=DELETE → 仍发 tombstone")
+    void deleteRetry_byBodyOperation_whenMessageTypeIsNotDelete() {
+        // 这条钉的是 isDelete 那个 || 的**第二半**：所有"messageType=ARTICLE_DELETE"的用例
+        // 都会被第一半短路掉，只有这一条能让 MQOperation.DELETE.equals(...) 成为决定性操作数。
+        // 场景真实存在：messageType 是落库时的标签，body 才是权威内容；标签写错/漏写时
+        // 若这半句失效，重试会把"删除"当成"索引"发出去 → 文档被复活（且没有任何报错）。
+        when(retryLogMapper.selectList(any())).thenReturn(List.of(
+                pending("5", "ARTICLE_INDEX",
+                        "{\"operation\":\"DELETE\",\"articleId\":\"A1\","
+                                + "\"operationTime\":\"2026-09-13T10:00:00\"}")));
+
+        scheduler.retryFailedMessages();
+
+        verify(kafkaTemplate).send(eq("article.index"), eq("A1"), isNull());
+    }
+
+    @Test
     void sendFailure_incrementsRetryCount() {
         when(retryLogMapper.selectList(any())).thenReturn(List.of(
                 pending("4", "ARTICLE_INDEX",
