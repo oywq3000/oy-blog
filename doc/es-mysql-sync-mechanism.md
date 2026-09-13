@@ -73,9 +73,17 @@ oy-blog 使用 **Elasticsearch** 提供文章全文搜索能力，**MySQL** 作�
 6. 写入/删除 Elasticsearch 文档（_id = articleId）
 ```
 
-> Kafka 的 `send()` 是异步的，**发送失败不会在调用点抛出**；失败信号来自
-> `acks=all` 的确认回调与元数据获取异常（`max.block.ms: 100` 让异常路径快速失败），
-> 落库兜底见「容错机制」第 1/2 层。
+> Kafka 的 `send()` 是异步的，**只有"调用点失败"会在调用点抛出**（broker 不可达、元数据获取超时——
+> `max.block.ms: 100` 让这条路径快速失败）；它被 `ArticleMessageProducerImpl` 的 catch 接住并落库，
+> 见「容错机制」第 1/2 层。
+>
+> ⚠️ **边界（别高估第 1/2 层）**：入队<b>之后</b>才发生的失败——broker 侧拒绝、`acks=all` 的确认
+> 超时/失败——**不会**回到调用点：发布器没有注册任何"发送完成"回调，因此既不会触发 catch、
+> 也不会写 `mq_retry_log`。**这条路径只有第 4 层全量对账兜得住**（下一轮对账把该文章按库内状态
+> 写回/删除，30 分钟内收敛）。迁移前的 RabbitMQ 链路同样如此：那个被移除的 confirm 回调在 nack 时
+> 只打了一行 `System.err.println`，同样没有落库——"异步失败有落库兜底"在两种载体下都不成立。
+> 复现/观测手段：发布后查消费端是否收到对应记录、或直接看 ES 与库内是否一致（对账日志里有
+> "写入 N 篇 / 清理 M 篇僵尸文档"）。
 
 ### 消息格式
 
@@ -111,6 +119,13 @@ article.index        （3 分区 / 副本 1 / cleanup.policy=compact / 不设 re
     key   = articleId（同时是分区键：同篇保序 + 跨篇并行）
     value = ArticleIndexMessage 的 JSON，或 null（tombstone）
 ```
+
+> **"同篇保序"是分区键白送的，"跨篇并行"要显式配**：同一条 key 恒定落进同一个分区，而一个分区
+> 在同一时刻只被一个消费者线程消费 —— 所以顺序天然成立。但并行度来自
+> `spring.kafka.listener.concurrency: 3`（= 分区数）：**不配它，默认 1 个线程跑全部 3 个分区**，
+> 与迁移前的 RabbitMQ 全局串行完全等价（升级点落空且不报错）。该键由
+> `ArticleIndexListenerConcurrencyWiringTest` 钉住（本仓库吃过一次"配置键被静默忽略"：
+> `enable-idempotence` 写在顶层）。retry topic 只有 1 个分区，那两个链路仍是全局串行，属预期。
 
 `@RetryableTopic` 在消费失败时自动建的辅助 topic（1 分区 1 副本，无需人工维护）：
 
@@ -263,6 +278,29 @@ curl http://192.168.200.130:9200/articles/_count
 > 重放**只读 topic、只写 ES**：不动 MySQL，也不改 topic 本身。过程中**不要**执行
 > `rpk topic trim-prefix` 或任何 topic 配置变更（理由见下一节）。
 
+### ⏳ 待办：确认压实已收敛（2026-09-13 重放演练的遗留）
+
+2026-09-13 的首次重放把 24,100 条记录全部读了一遍，其中绝大多数是**播种洪水**（每篇被播了约
+1000 次）留下的同 key 旧版本。在压实把它们收敛掉之前，**每次重放都要多消费 ~24,000 条冗余记录**
+（生产实测单线程约 38 分钟；配好 `concurrency: 3` 后应显著变快）。
+
+```bash
+# 判据：同一 key 的多版本被压实收敛 → 分区记录数大幅下降、并稳定不再下降
+docker exec redpanda rpk topic describe article.index -p -X brokers=redpanda:29092
+#   HIGH-WATERMARK 不再增长 = 没有新写入；LOG-START-OFFSET 仍为 0 = 保留没在裁
+docker exec redpanda rpk topic consume article.index -p 1 -o 0 -n 5 -f "%o|%k\n" -X brokers=redpanda:29092
+```
+
+- **要等多久**：压实按**段**触发，而**活动段永远不参与压实**——段何时滚动由 `segment.ms` 决定
+  （本集群实测为默认 **1209600000 = 14 天**），且 `max.compaction.lag.ms` 实测为
+  `9223372036854`（≈ 无限，**不会**按时间强制压实）。这批记录写于 2026-09-13，
+  故**最快要等到 2026-09-27 前后**段滚动后才被真正清掉；期间 topic 上的读取量偏大属正常。
+- **期间由谁兜底**：`IndexReconciler` 每 30 分钟一轮——重放期间偶发多写/漏写的文档会被它拉回与
+  库内一致（2026-09-13 的幽灵文档就是这么自愈的，存活不到一个对账周期）。
+- ⚠️ **重放的忠实性不受影响**：陈旧版本只是被反复覆盖成同一个终态，`_id = articleId` 的 upsert
+  天然幂等。真正需要担心的只有"topic 里存在一条 key 与 body.articleId 不一致的记录"——消费端
+  现在会**拒绝并记日志**（走重试→DLT），不会再静默删错/复活文档。
+
 ---
 
 ## 运维须知：topic 的四个安全前提
@@ -341,6 +379,10 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.add.type.headers: false
+    listener:
+      # 跨篇并行（= 分区数 3）。不配则单线程跑全部分区，等价于迁移前的全局串行；
+      # 分区内有序仍然保持（同一条 key 只在同一个分区里）。
+      concurrency: 3
 
 oy-blog:
   sync:
