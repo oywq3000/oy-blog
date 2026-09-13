@@ -59,8 +59,9 @@ public class IndexReconciler {
         try {
             // 1. 分页拉取 article-service 全量已发布文章
             // 页号 1-based：article-service 把它直达 MyBatis-Plus 的 new Page<>(pageNum, size)，
-            // 而 MP 的 Page 是 1-based（IPage.offset(): current<=1 → 0）—— 从 0 开始会把
-            // 第 0、1 页读成同一页，下一页之后**再也翻不到**。
+            // 而 MP 的 Page 是 1-based（IPage.offset(): current<=1 → 0）—— 传 0 与传 1 命中同一页：
+            // 从 0 开始翻会重复第一页、此后页码整体错位一页，并在下方以总页数为上界时更早 break，
+            // **漏掉末尾那一页**（细节见守卫处的注释）。并非"再也翻不到后面的页"。
             int page = 1;
             while (true) {
                 Result<PageVo<List<ArticleIndexMessage>>> result =
@@ -91,8 +92,10 @@ public class IndexReconciler {
                 // 判断是否最后一页。**必须用页数上界终止，不能等"空页"**：pageNum 是 1-based
                 // （MP 的 Page 是 1-based），且拦截器 overflow=true 在 current > pages 时会把
                 // current 拨回 1（**第一页**）—— 越界翻页永远拿得到非空页，等空页会死循环。
-                // 用 0-based 起始 + `totalPages - 1` 守卫则更糟：第 0、1 页读成同一页后立刻 break，
-                // authoritativeIds 只装下最新一页 → >100 篇时最旧的文章会被当成僵尸**误删**。
+                // 用 0-based 起始 + `totalPages - 1` 守卫则更糟（修复前的实际写法）：第 0、1 页
+                // 读成同一页 ⇒ 同样的页数上界下**少读一页**，末尾那一页的文章没进 authoritativeIds
+                // → >100 篇（≥2 页）时最旧的那批被当成僵尸**误删**。注意它并非"只装下最新一页"，
+                // 而是重复第一页 + 漏掉最后一页（总页数正好为 2 时，两者恰好重合）。
                 PageVo<?> pageVo = result.getData();
                 Integer totalPages = pageVo.getTotalPages();
                 if (totalPages == null) {

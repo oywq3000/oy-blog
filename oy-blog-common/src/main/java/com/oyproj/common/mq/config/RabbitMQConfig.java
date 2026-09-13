@@ -40,8 +40,16 @@ public class RabbitMQConfig {
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setMessageConverter(jsonMessageConverter());
+        // 必须显式设 mandatory：本项目自定义了 RabbitTemplate bean，而 Boot 的
+        // RabbitAutoConfiguration#rabbitTemplate 是 @ConditionalOnMissingBean(RabbitOperations.class)，
+        // 被本 bean 顶掉 → application.yml 的 spring.rabbitmq.template.mandatory 根本到不了这里。
+        // 不设它，publisher-returns 虽开着，不可路由的消息也不会走 returnsCallback（静默丢弃）：
+        // RabbitTemplate 的 mandatoryExpression 默认是 FALSE，发送路径算出的 mandatory 恒为 false。
+        template.setMandatory(true);
         // 发布方确认与退回处理：都走 logback（stderr 的 println 进不了 ELK 管道）。
         // 该模板现在只被审核链路使用（索引链路已迁 Kafka），故这是审核消息的 nack/退回信号。
+        // 两者都实际可达：confirm 由 publisher-confirm-type: correlated 打开；returns 由上面的
+        // setMandatory(true) 打开（不可路由时 broker 会回 basic.return 触发本回调）。
         template.setConfirmCallback((correlationData, ack, cause) -> {
             if (!ack) {
                 log.warn("RabbitMQ 消息未被 broker 确认（nack）: {}", cause);
