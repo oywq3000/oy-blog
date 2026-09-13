@@ -55,11 +55,14 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       acks: all
-      # 幂等生产者：第 0 层兜底从"确认送达"升级为"确认送达 + 不重复"。
-      # 在 acks=all 且无冲突配置时这已是 Kafka 的默认值，显式写出来是把契约固定住 ——
-      # 将来有人动 acks 或重试参数时，这一行会在评审里被看见。
-      enable-idempotence: true
       properties:
+        # 幂等生产者：第 0 层兜底从"确认送达"升级为"确认送达 + 不重复"。
+        # 在 acks=all 且无冲突配置时这已是 Kafka 的默认值，显式写出来是把契约固定住 ——
+        # 将来有人动 acks 或重试参数时，这一行会在评审里被看见。
+        # 【必须写在 properties 里】KafkaProperties.Producer（Boot 3.4.11）没有 enableIdempotence
+        # 绑定目标，写成 spring.kafka.producer.enable-idempotence 会被静默忽略、成为空操作
+        # —— 与下面 max.block.ms 是同一条教训：只有 properties 透传才能进到 ProducerConfig。
+        enable.idempotence: true
         # 关掉类型头：否则消费端会按全限定类名反序列化，跨模块/改包名即炸
         spring.json.add.type.headers: false
         # 【必须有】send() 是在用户请求线程上同步调用的。Kafka 的 max.block.ms 默认 60000ms，
