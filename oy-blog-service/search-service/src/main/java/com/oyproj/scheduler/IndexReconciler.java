@@ -58,7 +58,10 @@ public class IndexReconciler {
 
         try {
             // 1. 分页拉取 article-service 全量已发布文章
-            int page = 0;
+            // 页号 1-based：article-service 把它直达 MyBatis-Plus 的 new Page<>(pageNum, size)，
+            // 而 MP 的 Page 是 1-based（IPage.offset(): current<=1 → 0）—— 从 0 开始会把
+            // 第 0、1 页读成同一页，下一页之后**再也翻不到**。
+            int page = 1;
             while (true) {
                 Result<PageVo<List<ArticleIndexMessage>>> result =
                         articleIndexClient.getIndexSnapshot(page, PAGE_SIZE);
@@ -85,9 +88,21 @@ public class IndexReconciler {
                 docs.forEach(d -> authoritativeIds.add(d.getId()));
                 log.info("对账进度: 已处理 {} 篇, 当前页 {} 篇", upserted, docs.size());
 
-                // 判断是否最后一页
+                // 判断是否最后一页。**必须用页数上界终止，不能等"空页"**：pageNum 是 1-based
+                // （MP 的 Page 是 1-based），且拦截器 overflow=true 在 current > pages 时会把
+                // current 拨回 1（**第一页**）—— 越界翻页永远拿得到非空页，等空页会死循环。
+                // 用 0-based 起始 + `totalPages - 1` 守卫则更糟：第 0、1 页读成同一页后立刻 break，
+                // authoritativeIds 只装下最新一页 → >100 篇时最旧的文章会被当成僵尸**误删**。
                 PageVo<?> pageVo = result.getData();
-                if (pageVo.getCurrentPage() >= (pageVo.getTotalPages() != null ? pageVo.getTotalPages() - 1 : 0)) {
+                Integer totalPages = pageVo.getTotalPages();
+                if (totalPages == null) {
+                    // 页数未知 ⇒ 无法确认是否已翻完 ⇒ 按"快照不完整"处理，禁止清理僵尸文档。
+                    // （authoritativeIds 可能是半截，拿它当权威集合会误删尚未翻到的文章。）
+                    log.error("快照未给出总页数, page: {}, 中止本轮对账（跳过僵尸文档清理）", page);
+                    snapshotComplete = false;
+                    break;
+                }
+                if (pageVo.getCurrentPage() >= totalPages) {
                     break;
                 }
                 page++;
