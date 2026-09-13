@@ -99,7 +99,7 @@ class ArticleIndexSeedServiceImplTest {
 
     @Test
     void seed_sendsEveryArticle_withArticleIdAsKey() {
-        stubPage(0, 2, List.of(msg("A1"), msg("A2")));
+        stubPage(1, 2, List.of(msg("A1"), msg("A2")));
         when(kafkaTemplate.send(any(), any(), any()))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
@@ -114,21 +114,22 @@ class ArticleIndexSeedServiceImplTest {
 
     @Test
     void seed_iteratesAllPages() {
-        stubPage(0, 150, List.of(msg("A1")));
-        stubPage(1, 150, List.of(msg("A2")));
+        // 页号 1-based：150 篇 / 每页 100 → 第 1、2 页
+        stubPage(1, 150, List.of(msg("A1")));
+        stubPage(2, 150, List.of(msg("A2")));
         when(kafkaTemplate.send(any(), any(), any()))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
         SeedResult result = service.seedIndexTopic();
 
         assertEquals(2, result.total());
-        verify(controllerProvider).snapshot(0, 100);
         verify(controllerProvider).snapshot(1, 100);
+        verify(controllerProvider).snapshot(2, 100);
     }
 
     @Test
     void seed_reportsFailedArticleIds_ratherThanPretendingSuccess() {
-        stubPage(0, 2, List.of(msg("A1"), msg("A2")));
+        stubPage(1, 2, List.of(msg("A1"), msg("A2")));
         when(kafkaTemplate.send(eq("article.index"), eq("A1"), any()))
                 .thenReturn(CompletableFuture.completedFuture(null));
         when(kafkaTemplate.send(eq("article.index"), eq("A2"), any()))
@@ -143,7 +144,7 @@ class ArticleIndexSeedServiceImplTest {
 
     @Test
     void seed_emptyArticleSet_returnsZeroes() {
-        stubPage(0, 0, List.of());
+        stubPage(1, 0, List.of());
 
         SeedResult result = service.seedIndexTopic();
 
@@ -153,11 +154,39 @@ class ArticleIndexSeedServiceImplTest {
     }
 
     @Test
+    void seed_nullSnapshot_endsQuietly() {
+        // provider 返回 null（真实场景：快照拉取失败）—— 必须结束而不是继续翻页
+        SeedResult result = service.seedIndexTopic();
+
+        assertEquals(0, result.total());
+        assertEquals(0, result.succeeded());
+        verify(kafkaTemplate, never()).send(any(), any(), any());
+    }
+
+    @Test
+    void seed_stopsAtLastPage_neverKeepsPaging() {
+        // totalPages == 1（文章数 ≤ 页大小，正是生产语料形态）。没有页数上界守卫时，
+        // 真实分页下越界翻页会被拦截器 overflow=true 弹回第一页 → 永远非空 → 死循环。
+        // 这里用"再翻就抛错"把死循环转成**可断言的失败**（否则测试只会挂起，等于没有判别力）。
+        lenient().when(controllerProvider.snapshot(anyInt(), anyInt()))
+                .thenThrow(new AssertionError("播种越过了最后一页 —— 页数上界守卫失效"));
+        stubPage(1, 2, List.of(msg("A1"), msg("A2")));
+        when(kafkaTemplate.send(any(), any(), any()))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        SeedResult result = service.seedIndexTopic();
+
+        assertEquals(2, result.total());
+        assertEquals(2, result.succeeded());
+        verify(controllerProvider, times(1)).snapshot(1, 100);
+    }
+
+    @Test
     void seed_totalChangingBetweenPages_warnsAboutPagingDrift() {
         // 第一页 150 篇；跑到第二页时库里的总数变成 149（期间有人删了一篇）→ offset 分页已漂移，
         // 可能有文章被整篇跳过。跳过既不在 succeeded 也不在 failedArticleIds 里，只能靠这个诊断。
-        stubPage(0, 150, List.of(msg("A1")));
-        stubPage(1, 149, List.of(msg("A2")));
+        stubPage(1, 150, List.of(msg("A1")));
+        stubPage(2, 149, List.of(msg("A2")));
         when(kafkaTemplate.send(any(), any(), any()))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
@@ -169,8 +198,8 @@ class ArticleIndexSeedServiceImplTest {
 
     @Test
     void seed_totalStableAcrossPages_noDriftWarning() {
-        stubPage(0, 150, List.of(msg("A1")));
-        stubPage(1, 150, List.of(msg("A2")));
+        stubPage(1, 150, List.of(msg("A1")));
+        stubPage(2, 150, List.of(msg("A2")));
         when(kafkaTemplate.send(any(), any(), any()))
                 .thenReturn(CompletableFuture.completedFuture(null));
 

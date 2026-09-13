@@ -24,6 +24,14 @@ import java.util.concurrent.TimeUnit;
  * 用户请求而设的<b>全局生产者配置</b>。播种时首次发送可能要等 metadata（&gt;100ms）会抛超时。
  * 逐条确认才能<b>如实报告哪些失败了</b>，而不是假装成功——播种没成功就切换，
  * 重放能力从一开始就是残缺的，而这一点不会有人立刻发现。</p>
+ *
+ * <p><b>分页约定（踩过坑）</b>：{@code getIndexSnapshot} 的 {@code pageNum} 直达 MyBatis-Plus 的
+ * {@code new Page<>(pageNum, size)}，而 MP 的 Page 是 <b>1-based</b>（{@code IPage.offset()}:
+ * {@code current <= 1 → 0}）—— 故本类从 <b>1</b> 开始翻页；从 0 开始会把第 0、1 页读成同一页，
+ * 从而漏掉第 {@code PAGE_SIZE} 篇之后的全部文章（而且 total/succeeded/failed 三个数字都看不出来）。
+ * 终止也<b>不能</b>等"空页"：生产拦截器 {@code overflow=true} 在 {@code current > pages} 时会把
+ * current 拨回 1（第一页），越界翻页永远返回非空页 → 死循环灌 topic（Task 6 实测 5 分钟 24040 条）。
+ * 必须用"已到总页数"终止，且守卫要放在发送之后（放前面会漏掉最后一页的记录）。</p>
  */
 @Slf4j
 @Service
@@ -54,7 +62,9 @@ public class ArticleIndexSeedServiceImpl implements ArticleIndexSeedService {
         List<String> failed = new ArrayList<>();
 
         Long firstPageTotal = null;
-        int pageNum = 0;
+        // 页号 1-based：getIndexSnapshot 的 pageNum 直达 MP 的 new Page<>(pageNum, size)，
+        // 而 MP 是 1-based（IPage.offset(): current<=1 → 0）—— 从 0 开始会把第 0、1 页读成同一页。
+        int pageNum = 1;
         while (true) {
             Result<PageVo<List<ArticleIndexMessage>>> result =
                     snapshotProvider.getObject().snapshot(pageNum, PAGE_SIZE);
@@ -95,6 +105,19 @@ public class ArticleIndexSeedServiceImpl implements ArticleIndexSeedService {
                     log.warn("播种：文章发送失败, articleId: {}", articleId, e);
                     failed.add(articleId);
                 }
+            }
+
+            // 页数上界守卫（思路与 IndexReconciler 一致；**必须放在发送之后**，放前面会漏掉最后一页）。
+            // 为什么不能靠"某页为空"终止：MP 的 Page 是 1-based，而拦截器 overflow=true（生产配置）
+            // 在 current > pages 时 handlerOverflow() 会把 current 拨回 1（**第一页**）——
+            // 越界翻页永远拿到非空页，循环不会结束（Task 6 实测：5 分钟灌了 24040 条）。
+            Integer totalPages = page.getTotalPages();
+            if (totalPages == null) {
+                log.warn("播种：第 {} 页未给出总页数，提前结束以免无限翻页", pageNum);
+                break;
+            }
+            if (page.getCurrentPage() >= totalPages) {
+                break;
             }
 
             pageNum++;
