@@ -52,6 +52,16 @@ public class ArticleIndexConsumer {
         String keyArticleId = record.key();
         ArticleIndexMessage message = record.value();
 
+        // 强校验：墓碑靠 key 删除、正文靠 body 索引，两者不一致会静默删错/复活文档。
+        // 生产上已实测到这种记录（一条 key 与 body.articleId 不匹配的探针消息）。
+        // 抛异常 → 走 @RetryableTopic 的重试→DLT 通道（可见，而不是静默）；持久不一致最终落到 DLT 留痕。
+        if (keyArticleId != null && message != null
+                && !keyArticleId.equals(message.getArticleId())) {
+            log.error("索引消息的 key 与消息体 articleId 不一致，拒绝处理：key={}, bodyArticleId={}, offset={}",
+                    keyArticleId, message.getArticleId(), record.offset());
+            throw new IllegalStateException("key/body articleId mismatch");
+        }
+
         if (message == null) {
             // tombstone：文章已删除。没有 body，id 只能来自 key。
             log.info("收到索引 tombstone，文章ID: {}", keyArticleId);

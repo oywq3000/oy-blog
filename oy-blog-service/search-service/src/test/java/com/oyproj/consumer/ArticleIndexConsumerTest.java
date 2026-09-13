@@ -74,6 +74,25 @@ class ArticleIndexConsumerTest {
     }
 
     @Test
+    @DisplayName("key 与 body.articleId 不一致 → 抛错（绝不静默删错/复活文档）")
+    void keyBodyMismatch_throwsInsteadOfSilentlyMisindexing() {
+        // 生产实测过这种记录：key = poison-b-verify，body.articleId = 另一篇文章。
+        // 若不拦，结论取决于走哪个分支——CREATE 会按 body 建出别的文档、
+        // tombstone 会按 key 删掉不相干的 id，两种都静默。
+        ArticleIndexMessage msg = new ArticleIndexMessage();
+        msg.setOperation(MQOperation.CREATE);
+        msg.setArticleId("B2");
+
+        IllegalStateException ex = org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalStateException.class, () -> consumer.handleArticleIndex(record("A1", msg)),
+                "key/body 不一致必须抛出（走 @RetryableTopic 重试→DLT），而不是被静默处理");
+
+        assertEquals("key/body articleId mismatch", ex.getMessage());
+        // 关键：既没有按 body 索引，也没有按 key 删除 —— 记录被整体拒绝
+        verifyNoInteractions(articleSearchRepository);
+    }
+
+    @Test
     void esFailure_propagates_soRetryableTopicCanRetry() {
         // 关键：索引失败必须抛出，不能吞掉 —— 索引链路靠重试，与热榜链路相反
         ArticleIndexMessage msg = new ArticleIndexMessage();
