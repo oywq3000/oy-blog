@@ -8,6 +8,10 @@ import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.service.ArticleIndexControllerProvider;
 import com.oyproj.service.ArticleIndexSeedService;
 import com.oyproj.service.ArticleIndexSeedService.SeedResult;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +21,8 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.util.List;
@@ -31,6 +37,7 @@ import static org.mockito.Mockito.*;
 class ArticleIndexSeedServiceImplTest {
 
     @Mock private ArticleIndexControllerProvider controllerProvider;
+    @Mock private ObjectProvider<ArticleIndexControllerProvider> snapshotProvider;
     @SuppressWarnings("unchecked")
     private final KafkaTemplate<String, Object> kafkaTemplate = mock(KafkaTemplate.class);
 
@@ -38,19 +45,41 @@ class ArticleIndexSeedServiceImplTest {
 
     private MockedStatic<I18nUtils> i18nMock;
 
+    private ListAppender<ILoggingEvent> logAppender;
+    private Logger seedLogger;
+
     @BeforeEach
     void setUp() {
         // Result.ok(data) 依赖 I18nUtils 静态 messageSource（单测无 Spring 上下文，否则 NPE）
         i18nMock = Mockito.mockStatic(I18nUtils.class);
         i18nMock.when(() -> I18nUtils.from(any(ResultCode.class))).thenReturn("success");
-        service = new ArticleIndexSeedServiceImpl(controllerProvider, kafkaTemplate);
+        // 生产里是 ObjectProvider 懒解析（避免 controller↔本 bean 构造器成环，见实现类 javadoc）
+        when(snapshotProvider.getObject()).thenReturn(controllerProvider);
+        service = new ArticleIndexSeedServiceImpl(snapshotProvider, kafkaTemplate);
+
+        seedLogger = (Logger) LoggerFactory.getLogger(ArticleIndexSeedServiceImpl.class);
+        logAppender = new ListAppender<>();
+        logAppender.start();
+        seedLogger.addAppender(logAppender);
     }
 
     @AfterEach
     void tearDown() {
+        if (seedLogger != null && logAppender != null) {
+            seedLogger.detachAppender(logAppender);
+            logAppender.stop();
+        }
         if (i18nMock != null) {
             i18nMock.close();
         }
+    }
+
+    /** 本测试期间实现类打出的 WARN 文案 */
+    private List<String> warnings() {
+        return logAppender.list.stream()
+                .filter(e -> e.getLevel() == Level.WARN)
+                .map(ILoggingEvent::getFormattedMessage)
+                .toList();
     }
 
     private static ArticleIndexMessage msg(String id) {
@@ -121,5 +150,33 @@ class ArticleIndexSeedServiceImplTest {
         assertEquals(0, result.total());
         assertEquals(0, result.succeeded());
         verify(kafkaTemplate, never()).send(any(), any(), any());
+    }
+
+    @Test
+    void seed_totalChangingBetweenPages_warnsAboutPagingDrift() {
+        // 第一页 150 篇；跑到第二页时库里的总数变成 149（期间有人删了一篇）→ offset 分页已漂移，
+        // 可能有文章被整篇跳过。跳过既不在 succeeded 也不在 failedArticleIds 里，只能靠这个诊断。
+        stubPage(0, 150, List.of(msg("A1")));
+        stubPage(1, 149, List.of(msg("A2")));
+        when(kafkaTemplate.send(any(), any(), any()))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        service.seedIndexTopic();
+
+        assertTrue(warnings().stream().anyMatch(m -> m.contains("文章总数发生变化")),
+                () -> "分页期间总数变化必须告警，实际 WARN 日志: " + warnings());
+    }
+
+    @Test
+    void seed_totalStableAcrossPages_noDriftWarning() {
+        stubPage(0, 150, List.of(msg("A1")));
+        stubPage(1, 150, List.of(msg("A2")));
+        when(kafkaTemplate.send(any(), any(), any()))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        service.seedIndexTopic();
+
+        assertTrue(warnings().stream().noneMatch(m -> m.contains("文章总数发生变化")),
+                () -> "总数未变时不应告警（避免狼来了），实际 WARN 日志: " + warnings());
     }
 }
