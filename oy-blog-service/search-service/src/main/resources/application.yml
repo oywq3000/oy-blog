@@ -43,7 +43,11 @@ spring:
       # 与 RabbitMQ 时代的全局串行等价（迁移的升级点之一落空）。
       # 注意：retry-1000/retry-2000 是 @RetryableTopic 按 TopicCreation 默认值建的 1 分区 topic，
       # 那两个容器会有 2 个空闲线程；重试链路上的记录本就是全局串行的，本次不动（改分区数要动 topic，属部署动作）。
-      concurrency: 3
+      # 可环境变量覆盖（KAFKA_LISTENER_CONCURRENCY，同 MODERATION_CONCURRENCY 的做法）：
+      # 每多一个消费线程就多一份拉取缓冲/反序列化开销，而本服务 mem_limit 只有 512m
+      # （2026-09-13 重放实测峰值 489.6MiB = 95.6%，没有余量）。写死在这里意味着调低它要重新打包，
+      # 部署期一旦发现内存吃紧就只能改 .env + 重启 —— 免重新打包。
+      concurrency: ${KAFKA_LISTENER_CONCURRENCY:3}
 
 # ============ Logging Configuration ============
 logging:
