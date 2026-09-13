@@ -22,9 +22,11 @@ public interface ArticleIndexClient {
      *
      * <p><b>页号是 1-based，必须从 1 开始。</b>article-service 侧把它直达 MyBatis-Plus 的
      * {@code new Page<>(pageNum, size)}，而 MP 的 {@code Page} 是 1-based
-     * （{@code IPage.offset()}: {@code current <= 1 → 0}）——传 0 与传 1 命中<b>同一页</b>，
-     * 从 0 开始翻会重复第 0、1 页并再也翻不到后面的页。唯一调用方
-     * {@code IndexReconciler} 已按 1-based 翻页（见 {@code MybatisPlusConfig} 的同类说明）。</p>
+     * （{@code IPage.offset()}: {@code current <= 1 → 0}）——传 0 与传 1 命中<b>同一页</b>：
+     * 从 0 开始翻会重复第一页，此后每次请求相对页码整体错位一页；若循环以总页数为上界，
+     * 会更早 break 而漏掉<b>末尾那一页</b>（对账器当初正是这样把末尾文章漏出权威集合、
+     * 当成僵尸误删）。唯一调用方 {@code IndexReconciler} 已按 1-based 翻页
+     * （见 {@code MybatisPlusConfig} 的同类说明）。</p>
      *
      * @param pageNum 页码，从 1 开始（1-based：MP 的 Page 是 1-based）
      * @param pageSize 每页大小
