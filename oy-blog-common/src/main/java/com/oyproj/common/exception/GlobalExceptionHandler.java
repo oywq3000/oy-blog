@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * 全局异常处理器
@@ -72,6 +73,25 @@ public class GlobalExceptionHandler {
     public Result handleException(Exception e) {
         log.error("Unhandled exception", e);
         return Result.error(ResultCode.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+     * 处理上传体积超限
+     * 之前落到下面的 Exception 兜底 → 500「服务器内部错误」，前端看不出是"文件太大"
+     * （线上专栏封面 1.755MB 撞 Spring 默认 1MB 上限时即如此）。
+     * 这是客户端传大了，属 400 而非 500；提示里带上服务端实际限制，复用 file.size.exceeded。
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e) {
+        long maxUploadSize = e.getMaxUploadSize();
+        log.warn("Upload size exceeded, limit={} bytes", maxUploadSize);
+        // 取不到限制值时退回笼统的 400，不要拼出"文件大小超出限制: 0MB"误导用户
+        if (maxUploadSize <= 0) {
+            return Result.error(ResultCode.BAD_REQUEST);
+        }
+        return Result.error(ResultCode.BAD_REQUEST.getErrCode(),
+                I18nUtils.t("file.size.exceeded", maxUploadSize / (1024 * 1024)));
     }
 
     /**

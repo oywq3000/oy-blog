@@ -2,6 +2,17 @@ server:
   port: 8091
 
 spring:
+  # 上传体积上限：不配的话吃 Spring 默认（max-file-size 1MB / max-request-size 10MB）。
+  # 2026-09-12 线上排查：专栏封面 1.755MB 被 MaxUploadSizeExceededException 拒成 500
+  # （该端点历史上 6 次上传 0 次成功）。前端已做降采样（封面 ≤1280px、正文图 ≤1600px，
+  # 约 100~250KB，见前端 src/utils/imageUpload.ts），这里放宽是给其它客户端
+  # （curl / 移动端 / 未刷新的旧前端）留余量兜底。超限由 GlobalExceptionHandler 映射为 400。
+  # 走占位符而非写死：服务器 jar 里烘焙配置，改 yml 要重新打包；调这两个值只需改 .env
+  # （deploy/docker-compose.env.example 有说明），与 DB_POOL_MAX / MODERATION_* 同一套路。
+  servlet:
+    multipart:
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:5MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:10MB}
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${MYSQL_HOST:192.168.200.130}:3306/oyblog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8&allowMultiQueries=true

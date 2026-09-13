@@ -54,3 +54,4 @@ __pycache__/
 # superpowers 工作流产物（不入库）
 .superpowers/
 docs/
+doc/blog
