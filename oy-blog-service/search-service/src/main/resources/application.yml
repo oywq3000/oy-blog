@@ -33,6 +33,17 @@ spring:
         # 关掉类型头：否则消费端会按全限定类名反序列化，跨模块/改包名即炸
         # （与 spring.json.value.default.type 是一对，必须同时配）
         spring.json.add.type.headers: false
+    listener:
+      # 跨篇并行（spec §2.3 把"同篇保序 + 跨篇并行"列为迁移的真实升级——不配这里它就只是文档）：
+      # 本模块只有 ArticleIndexConsumer 一个 @KafkaListener，所以这个值是服务级的。
+      # 为什么安全：topic 有 3 个分区，key(=articleId) 恒定落在同一个分区，
+      # 而一个分区在同一时刻只会被一个线程消费 → 同篇文章的记录顺序不变；
+      # 并发带来的只是"不同分区之间并行"，也就是"不同文章之间并行"。
+      # 不配的话：默认 concurrency=1，单个容器用一个线程跑全部 3 个分区，
+      # 与 RabbitMQ 时代的全局串行等价（迁移的升级点之一落空）。
+      # 注意：retry-1000/retry-2000 是 @RetryableTopic 按 TopicCreation 默认值建的 1 分区 topic，
+      # 那两个容器会有 2 个空闲线程；重试链路上的记录本就是全局串行的，本次不动（改分区数要动 topic，属部署动作）。
+      concurrency: 3
 
 # ============ Logging Configuration ============
 logging:
