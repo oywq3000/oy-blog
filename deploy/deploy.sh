@@ -51,12 +51,7 @@ SERVICES=(
   "oy-blog-service/agent-service|agent-service-1.0-SNAPSHOT.jar"
 )
 
-# 由 SERVICES 生成 tar 参数：-C 目录 文件名（每个 jar 从各自 target/ 打包）
-TAR_ARGS=()
-for entry in "${SERVICES[@]}"; do
-  IFS='|' read -r mod jar <<< "${entry}"
-  TAR_ARGS+=(-C "${REPO_ROOT}/${mod}/target" "${jar}")
-done
+# tar 参数在 [3/5] 里按需生成（增量：仅 md5 不一致的 jar 进打包）
 
 if [ "$ROLLBACK" = "1" ]; then
   echo "==> 回滚 jar（恢复上次构建快照并重建镜像）"
@@ -81,10 +76,37 @@ for entry in "${SERVICES[@]}"; do
   echo "   OK: ${jar}"
 done
 
-echo "==> [3/5] 上传 jar（tar-over-ssh）"
+echo "==> [3/5] 上传 jar（tar-over-ssh，增量: 本地与服务器 md5 一致则跳过）"
 # 红线: ./jar 是 compose build context，就地覆盖；先快照 jar.bak 供回滚
 "${SSH_BIN}" "$SSH_TARGET" "mkdir -p ${JAR_DIR}"
-REMOTE_SCRIPT=$(cat <<EOF
+
+# 服务器当前各 jar 的 md5（`md5sum *.jar` 缺文件时输出为空，视为需要上传）
+REMOTE_SUM=$("${SSH_BIN}" "$SSH_TARGET" "cd ${JAR_DIR} && md5sum *.jar 2>/dev/null" | sort || true)
+
+# 逐 jar 比对本地/远端 md5，收集确实变化的（--clean 强制全量，语义不变）
+CHANGED_TAR_ARGS=()
+for entry in "${SERVICES[@]}"; do
+  IFS='|' read -r mod jar <<< "${entry}"
+  if [ "$CLEAN" = "1" ]; then
+    echo "   上传: ${jar}   # --clean 强制全量"
+    CHANGED_TAR_ARGS+=(-C "${REPO_ROOT}/${mod}/target" "${jar}")
+    continue
+  fi
+  LOCAL_SUM=$(md5sum "${REPO_ROOT}/${mod}/target/${jar}" | awk '{print $1}')
+  # md5sum 有 "hash  name"（文本）和 "hash *name"（二进制）两种分隔，统一剥掉文件名前缀再比对
+  REMOTE_ONE=$(printf '%s\n' "$REMOTE_SUM" | awk -v f="$jar" '{n=$NF; sub(/^\*/,"",n); if (n==f) print $1}')
+  if [ "$LOCAL_SUM" != "$REMOTE_ONE" ]; then
+    echo "   将于: ${jar}（md5 不一致）"
+    CHANGED_TAR_ARGS+=(-C "${REPO_ROOT}/${mod}/target" "${jar}")
+  else
+    echo "   跳过: ${jar}（与服务器一致）"
+  fi
+done
+
+if [ "${#CHANGED_TAR_ARGS[@]}" -eq 0 ]; then
+  echo "   全部 ${#SERVICES[@]} 个 jar 与服务器一致，本次无需上传"
+else
+  REMOTE_SCRIPT=$(cat <<EOF
 set -e
 cd $REMOTE_DIR
 [ -d jar.bak ] && rm -rf jar.bak
@@ -93,7 +115,11 @@ if [ "$CLEAN" = "1" ]; then find jar -type f -delete; fi
 tar -xzf - -C jar
 EOF
 )
-tar -czf - "${TAR_ARGS[@]}" | "${SSH_BIN}" "$SSH_TARGET" "$REMOTE_SCRIPT"
+  # 只打变化的 jar 进管道。Windows 下把二进制管道喂给原生 ssh.exe 有假死风险，
+  # 增量让单次传输量小很多；若仍卡住，可改为 scp 传单个 tgz
+  tar -czf - "${CHANGED_TAR_ARGS[@]}" | "${SSH_BIN}" "$SSH_TARGET" "$REMOTE_SCRIPT"
+  echo "   已上传 $(( ${#CHANGED_TAR_ARGS[@]} / 2 )) 个 jar"
+fi
 
 echo "==> [4/5] 同步配置文件"
 

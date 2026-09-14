@@ -23,6 +23,9 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- 可复现构建：jar 内条目时间戳固定，同一份源码构建产物字节完全一致，
+         部署脚本才可按 md5 判断"哪个 jar 真变了"只增量上传 -->
+    <project.build.outputTimestamp>2026-09-14T00:00:00Z</project.build.outputTimestamp>
     <java.version>21</java.version>
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
