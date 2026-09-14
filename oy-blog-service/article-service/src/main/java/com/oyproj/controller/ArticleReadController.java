@@ -123,16 +123,21 @@ public class ArticleReadController {
      *
      * @param pageNum  页码（从 1 开始）
      * @param pageSize 每页条数
+     * @param period   榜单周期：7d=近7天（周榜）/ 30d=近30天（月榜）/ 90d=近90天（季榜）
      * @return 分页的文章列表
      */
     @GetMapping("/published/hot")
-    @Operation(summary = "按热度分页查询已发布文章列表", description = "按 views*1 + likes*2 + comments*5 + favorites*3 加权评分降序分页返回（权重可在配置调整）")
+    @Operation(summary = "按热度分页查询已发布文章列表",
+            description = "按 views*1 + likes*2 + comments*5 + favorites*3 加权评分降序分页返回"
+                    + "（period 支持 7d/30d/90d，Redis 窗口榜为空或页超窗口时回退为全时段加权总榜）")
     public Result<PageVo<List<ArticleInfoVo>>> listPublishedByHot(
             @Parameter(description = "页码（从 1 开始）", example = "1")
             @RequestParam(defaultValue = "1") int pageNum,
             @Parameter(description = "每页条数", example = "10")
-            @RequestParam(defaultValue = "10") int pageSize) {
-        return biz.listPublishedByHot(pageNum, pageSize);
+            @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "榜单周期：7d / 30d / 90d", example = "7d")
+            @RequestParam(defaultValue = "7d") String period) {
+        return biz.listPublishedByHot(pageNum, pageSize, period);
     }
 
     /**

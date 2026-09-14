@@ -65,9 +65,10 @@ public interface ArticleReadBizService {
      *
      * @param pageNum  页码（1-based）
      * @param pageSize 每页大小
+     * @param period   榜单周期：7d / 30d / 90d（见 {@link com.oyproj.service.HotRankService} 常量）
      * @return 分页的文章列表
      */
-    Result<PageVo<List<ArticleInfoVo>>> listPublishedByHot(int pageNum, int pageSize);
+    Result<PageVo<List<ArticleInfoVo>>> listPublishedByHot(int pageNum, int pageSize, String period);
 
     /**
      * 按趋势分页查询已发布文章列表（正在暴涨的）

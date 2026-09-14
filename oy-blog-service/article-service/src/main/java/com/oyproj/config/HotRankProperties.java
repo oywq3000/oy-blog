@@ -15,6 +15,6 @@ public class HotRankProperties {
     /** Redis 榜保留的最大条数；请求页超出此窗口时回退 MySQL */
     private int windowSize = 200;
 
-    /** 日桶保留天数（比窗口多 1 天，保证合并时 7 天数据都在） */
-    private int retentionDays = 8;
+    /** 日桶保留天数（需 ≥ 最大窗口 90 天，否则凑不齐季榜数据） */
+    private int retentionDays = 91;
 }

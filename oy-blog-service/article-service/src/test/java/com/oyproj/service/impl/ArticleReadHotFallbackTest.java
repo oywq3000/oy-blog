@@ -74,7 +74,7 @@ class ArticleReadHotFallbackTest {
         when(hotRankService.topArticleIds(any(), anyInt())).thenReturn(Collections.emptyList());
         when(articleDao.countPublished()).thenReturn(0L);
 
-        Result<PageVo<List<ArticleInfoVo>>> result = service.listPublishedByHot(1, 10);
+        Result<PageVo<List<ArticleInfoVo>>> result = service.listPublishedByHot(1, 10, "7d");
 
         assertTrue(result.getIsSuccess());
         verify(articleMapper, never()).selectHotPage(anyInt(), anyInt(), anyLong(), anyLong(), anyLong(), anyLong());
@@ -84,7 +84,7 @@ class ArticleReadHotFallbackTest {
     void pageBeyondWindow_fallsBackToMysql() {
         when(articleDao.countPublished()).thenReturn(0L);
 
-        service.listPublishedByHot(100, 10);   // 100 * 10 = 1000 > window 200
+        service.listPublishedByHot(100, 10, "7d");   // 100 * 10 = 1000 > window 200
 
         verify(hotRankService, never()).topArticleIds(any(), anyInt());
     }
@@ -99,7 +99,7 @@ class ArticleReadHotFallbackTest {
         when(articleStatsDao.listByArticleIds(anyList())).thenReturn(Collections.emptyList());
         when(articleTagDao.listTagNamesByArticleIds(anyList())).thenReturn(Collections.emptyMap());
 
-        Result<PageVo<List<ArticleInfoVo>>> result = service.listPublishedByHot(1, 10);
+        Result<PageVo<List<ArticleInfoVo>>> result = service.listPublishedByHot(1, 10, "7d");
 
         List<ArticleInfoVo> data = result.getData().getData();
         assertEquals(2, data.size());
@@ -120,7 +120,7 @@ class ArticleReadHotFallbackTest {
         when(articleStatsDao.listByArticleIds(anyList())).thenReturn(Collections.emptyList());
         when(articleTagDao.listTagNamesByArticleIds(anyList())).thenReturn(Collections.emptyMap());
 
-        Result<PageVo<List<ArticleInfoVo>>> result = service.listPublishedByHot(1, 10);
+        Result<PageVo<List<ArticleInfoVo>>> result = service.listPublishedByHot(1, 10, "7d");
 
         assertTrue(result.getIsSuccess());
         assertEquals(1, result.getData().getData().size());
@@ -133,7 +133,7 @@ class ArticleReadHotFallbackTest {
         // 若窗口判断用 int 相乘，翻负后"看似在窗口内"，负 offset 会一路带进 subList → 500。
         when(articleDao.countPublished()).thenReturn(0L);
 
-        Result<PageVo<List<ArticleInfoVo>>> result = service.listPublishedByHot(1073741825, 2);
+        Result<PageVo<List<ArticleInfoVo>>> result = service.listPublishedByHot(1073741825, 2, "7d");
 
         assertTrue(result.getIsSuccess());
         verify(hotRankService, never()).topArticleIds(any(), anyInt());
@@ -147,5 +147,35 @@ class ArticleReadHotFallbackTest {
         service.listPublishedByTrend(1, 10);
 
         verify(hotRankService).topArticleIds("hot:article:trend", 200);
+    }
+
+    @Test
+    void hotPeriod30d_readsMonthKey() {
+        when(hotRankService.topArticleIds("hot:article:30d", 200)).thenReturn(Collections.emptyList());
+        when(articleDao.countPublished()).thenReturn(0L);
+
+        service.listPublishedByHot(1, 10, "30d");
+
+        verify(hotRankService).topArticleIds("hot:article:30d", 200);
+    }
+
+    @Test
+    void hotPeriod90d_readsQuarterKey() {
+        when(hotRankService.topArticleIds("hot:article:90d", 200)).thenReturn(Collections.emptyList());
+        when(articleDao.countPublished()).thenReturn(0L);
+
+        service.listPublishedByHot(1, 10, "90d");
+
+        verify(hotRankService).topArticleIds("hot:article:90d", 200);
+    }
+
+    @Test
+    void hotPeriodUnknown_fallsBackToWeekKey() {
+        when(hotRankService.topArticleIds("hot:article:7d", 200)).thenReturn(Collections.emptyList());
+        when(articleDao.countPublished()).thenReturn(0L);
+
+        service.listPublishedByHot(1, 10, "bogus");
+
+        verify(hotRankService).topArticleIds("hot:article:7d", 200);
     }
 }

@@ -104,20 +104,31 @@ class HotRankServiceImplTest {
     }
 
     /**
-     * 期望的 7 个日桶 key，从「今天」往前推：{@code [today, today-1, ..., today-6]}。
+     * 期望的 N 个日桶 key，从「今天」往前推：{@code [today, today-1, ..., today-(n-1)]}。
      *
-     * <p>必须逐项断言全量，不能只查 {@code size==7} 和 {@code keys[0]}：那样只钉住了
-     * 下标 0，1~6 是自由的。把 {@code today.minusDays(i)} 写成 {@code plusDays(i)}
-     * （窗口指向未来）时两个断言都还是绿的，而 7 天榜会静默变空、接口静默回退
+     * <p>必须逐项断言全量，不能只查 {@code size==N} 和 {@code keys[0]}：那样只钉住了
+     * 下标 0，其余是自由的。把 {@code today.minusDays(i)} 写成 {@code plusDays(i)}
+     * （窗口指向未来）时断言还是绿的，而榜单会静默变空、接口静默回退
      * MySQL 全时段榜 —— 没有任何报错。</p>
      */
-    private static List<String> expectedDayKeys() {
+    private static List<String> expectedDayKeys(int n) {
         LocalDate today = LocalDate.now();
-        List<String> keys = new ArrayList<>(7);
-        for (int i = 0; i < 7; i++) {
+        List<String> keys = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
             keys.add("hot:article:" + today.minusDays(i).format(DateTimeFormatter.BASIC_ISO_DATE));
         }
         return keys;
+    }
+
+    private static List<String> expectedDayKeys() {
+        return expectedDayKeys(7);
+    }
+
+    /** 全 1 权重数组（月榜/季榜等权相加用） */
+    private static int[] ones(int n) {
+        int[] w = new int[n];
+        java.util.Arrays.fill(w, 1);
+        return w;
     }
 
     @Test
@@ -147,6 +158,32 @@ class HotRankServiceImplTest {
         // 权重是按位置跟 key 对齐的：18 必须落在今天、-1 落在过去 6 天，
         // 所以这里的全量 key 断言同时保护了权重的对齐关系
         assertEquals(expectedDayKeys(), keysCaptor.getValue());
+    }
+
+    @Test
+    void recompute_month_uses30DaysEqualWeights() {
+        service.recompute();
+
+        ArgumentCaptor<List<String>> keysCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<int[]> weightsCaptor = ArgumentCaptor.forClass(int[].class);
+        verify(commonCache).zUnionStore(eq(HotRankServiceImpl.KEY_MONTH),
+                keysCaptor.capture(), weightsCaptor.capture());
+
+        assertArrayEquals(ones(30), weightsCaptor.getValue());
+        assertEquals(expectedDayKeys(30), keysCaptor.getValue());
+    }
+
+    @Test
+    void recompute_quarter_uses90DaysEqualWeights() {
+        service.recompute();
+
+        ArgumentCaptor<List<String>> keysCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<int[]> weightsCaptor = ArgumentCaptor.forClass(int[].class);
+        verify(commonCache).zUnionStore(eq(HotRankServiceImpl.KEY_QUARTER),
+                keysCaptor.capture(), weightsCaptor.capture());
+
+        assertArrayEquals(ones(90), weightsCaptor.getValue());
+        assertEquals(expectedDayKeys(90), keysCaptor.getValue());
     }
 
     @Test

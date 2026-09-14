@@ -139,7 +139,7 @@ oy-blog:
     # ============ 热榜配置 ============
     hot-rank:
       window-size: 200        # Redis 榜保留条数；请求页超出此窗口时回退 MySQL
-      retention-days: 8       # 日桶保留天数
+      retention-days: 91      # 日桶保留天数（需 ≥ 90 天，否则凑不齐季榜数据）
     # ============ 文章 AI 审核配置 ============
     moderation:
       enabled: true                 # 审核总开关

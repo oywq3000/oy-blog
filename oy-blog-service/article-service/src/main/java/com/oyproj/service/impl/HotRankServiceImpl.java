@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -29,10 +30,23 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class HotRankServiceImpl implements HotRankService {
 
-    /** 近 7 天榜 */
+    /** 近 7 天榜（周榜） */
     public static final String KEY_SEVEN_DAY = "hot:article:7d";
+    /** 近 30 天榜（月榜） */
+    public static final String KEY_MONTH = "hot:article:30d";
+    /** 近 90 天榜（季榜） */
+    public static final String KEY_QUARTER = "hot:article:90d";
     /** 趋势榜（正在暴涨的） */
     public static final String KEY_TREND = "hot:article:trend";
+
+    /** period 参数 → 榜单 Redis key（未知/空 → 近 7 天榜） */
+    public static String rankKeyForPeriod(String period) {
+        return switch (period == null ? PERIOD_WEEK : period) {
+            case PERIOD_MONTH -> KEY_MONTH;
+            case PERIOD_QUARTER -> KEY_QUARTER;
+            default -> KEY_SEVEN_DAY;
+        };
+    }
 
     private static final String DAY_KEY_PREFIX = "hot:article:";
     private static final DateTimeFormatter DAY_FORMAT = DateTimeFormatter.BASIC_ISO_DATE;
@@ -69,15 +83,20 @@ public class HotRankServiceImpl implements HotRankService {
 
     @Override
     public void recompute() {
-        List<String> days = recentDayKeys();
-
         // 近 7 天榜：7 个日桶等权相加
-        commonCache.zUnionStore(KEY_SEVEN_DAY, days, new int[]{1, 1, 1, 1, 1, 1, 1});
+        List<String> week = recentDayKeys(WINDOW_DAYS);
+        commonCache.zUnionStore(KEY_SEVEN_DAY, week, ones(WINDOW_DAYS));
 
         // 趋势榜：18 × 今天 − 前 6 天之和
         // 数学上等于 6 × (3 × 今天 − 前6天均值)。排行榜只看相对大小，系数不影响名次，
         // 而 ZUNIONSTORE 不支持除法，所以用这个等价形式。
-        commonCache.zUnionStore(KEY_TREND, days, new int[]{18, -1, -1, -1, -1, -1, -1});
+        commonCache.zUnionStore(KEY_TREND, week, new int[]{18, -1, -1, -1, -1, -1, -1});
+
+        // 月榜：近 30 天日桶等权相加
+        commonCache.zUnionStore(KEY_MONTH, recentDayKeys(30), ones(30));
+
+        // 季榜：近 90 天日桶等权相加
+        commonCache.zUnionStore(KEY_QUARTER, recentDayKeys(90), ones(90));
     }
 
     @Override
@@ -107,11 +126,11 @@ public class HotRankServiceImpl implements HotRankService {
         }
     }
 
-    /** 最近 7 天的日桶 key，今天在最前（权重顺序与之对应） */
-    private List<String> recentDayKeys() {
+    /** 最近 N 天的日桶 key，今天在最前（权重顺序与之对应） */
+    private List<String> recentDayKeys(int days) {
         LocalDate today = LocalDate.now();
-        List<String> keys = new ArrayList<>(WINDOW_DAYS);
-        for (int i = 0; i < WINDOW_DAYS; i++) {
+        List<String> keys = new ArrayList<>(days);
+        for (int i = 0; i < days; i++) {
             keys.add(dayKey(today.minusDays(i)));
         }
         return keys;
@@ -119,5 +138,12 @@ public class HotRankServiceImpl implements HotRankService {
 
     private String dayKey(LocalDate day) {
         return DAY_KEY_PREFIX + day.format(DAY_FORMAT);
+    }
+
+    /** 全 1 权重数组（等权相加用） */
+    private static int[] ones(int n) {
+        int[] w = new int[n];
+        Arrays.fill(w, 1);
+        return w;
     }
 }

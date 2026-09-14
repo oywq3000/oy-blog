@@ -169,8 +169,8 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
      * 按热度分页查询已发布文章（优先读 Redis 近 7 天榜，读不到回退 MySQL 全时段总榜）。
      */
     @Override
-    public Result<PageVo<List<ArticleInfoVo>>> listPublishedByHot(int pageNum, int pageSize) {
-        return listPublishedByRank(HotRankServiceImpl.KEY_SEVEN_DAY, pageNum, pageSize);
+    public Result<PageVo<List<ArticleInfoVo>>> listPublishedByHot(int pageNum, int pageSize, String period) {
+        return listPublishedByRank(HotRankServiceImpl.rankKeyForPeriod(period), pageNum, pageSize);
     }
 
     /**
