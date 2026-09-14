@@ -3,20 +3,22 @@
 <mapper namespace="com.oyproj.mapper.TagMapper">
 
     <!--
-        常用标签文章数统计
+        热门标签统计（官方 + 用户自创）
         口径：只统计 status='published' 且未软删(deleted_at IS NULL) 的文章；
-        过滤条件放 LEFT JOIN 的 ON 中 + COUNT(CASE WHEN)，保证 0 文章的标签也保留
+        过滤条件放 LEFT JOIN 的 ON 中 + COUNT(CASE WHEN)，保证 0 文章的标签也保留；
+        is_common 随行返回，前端按官方(is_common=1)优先、自创(0)其次分列展示
     -->
     <select id="listCommonTagStats" resultType="com.oyproj.domain.vo.TagStatVo">
         SELECT t.id   AS id,
                t.name AS name,
+               t.is_common AS is_common,
                COUNT(CASE WHEN a.id IS NOT NULL THEN 1 END) AS article_count
         FROM tag t
         LEFT JOIN article_tag at ON at.tag_id = t.id
         LEFT JOIN article a ON a.id = at.article_id
              AND a.status = 'published' AND a.deleted_at IS NULL
-        WHERE t.is_common = 1
-        GROUP BY t.id, t.name
-        ORDER BY article_count DESC, t.name ASC
+        GROUP BY t.id, t.name, t.is_common
+        ORDER BY t.is_common DESC, article_count DESC, t.name ASC
+        LIMIT 100
     </select>
 </mapper>
