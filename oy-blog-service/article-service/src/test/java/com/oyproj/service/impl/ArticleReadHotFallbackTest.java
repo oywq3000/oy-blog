@@ -6,6 +6,7 @@ import com.oyproj.common.service.CommonCache;
 import com.oyproj.common.utils.I18nUtils;
 import com.oyproj.config.HotRankProperties;
 import com.oyproj.config.HotWeightProperties;
+import com.oyproj.config.RecommendProperties;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.domain.vo.ArticleInfoVo;
 import com.oyproj.dto.*;
@@ -13,6 +14,7 @@ import com.oyproj.mapper.ArticleMapper;
 import com.oyproj.mapper.ArticleSeriesItemMapper;
 import com.oyproj.mapper.ArticleSeriesMapper;
 import com.oyproj.service.HotRankService;
+import com.oyproj.service.RecommendationBizService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -49,6 +51,8 @@ class ArticleReadHotFallbackTest {
     @Mock private HotRankService hotRankService;
     @Mock private HotRankProperties hotRankProperties;
     @Mock private CommonCache<Object> commonCache;
+    @Mock private RecommendationBizService recommendationBizService;
+    @Mock private RecommendProperties recommendProperties;
 
     private ArticleReadBizServiceImpl service;
 
@@ -65,7 +69,7 @@ class ArticleReadHotFallbackTest {
         service = spy(new ArticleReadBizServiceImpl(
                 articleDao, contentDao, chapterDao, viewDao, tagDao, articleTagDao, articleStatsDao, userClient,
                 hotWeightProperties, articleMapper, seriesMapper, seriesItemMapper,
-                hotRankService, hotRankProperties, commonCache));
+                hotRankService, hotRankProperties, commonCache, recommendationBizService, recommendProperties));
         lenient().when(hotRankProperties.getWindowSize()).thenReturn(200);
     }
 

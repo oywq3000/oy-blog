@@ -160,6 +160,23 @@ public class ArticleReadController {
     }
 
     /**
+     * 猜你喜欢（个性化推荐）
+     *
+     * @param pageNum  页码（从 1 开始）
+     * @param pageSize 每页条数
+     * @return 分页的推荐文章列表
+     */
+    @GetMapping("/recommend")
+    @Operation(summary = "猜你喜欢（个性化推荐）", description = "按用户/游客标签画像推荐相似文章；画像空或Redis不可用时回退热榜")
+    public Result<PageVo<List<ArticleInfoVo>>> listRecommend(
+            @Parameter(description = "页码（从 1 开始）", example = "1")
+            @RequestParam(defaultValue = "1") int pageNum,
+            @Parameter(description = "每页条数", example = "10")
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return biz.recommend(pageNum, pageSize);
+    }
+
+    /**
      * 获取全库文章数据统计
      *
      * @return 已发布文章总数、阅读量总和、点赞数总和、标签总数

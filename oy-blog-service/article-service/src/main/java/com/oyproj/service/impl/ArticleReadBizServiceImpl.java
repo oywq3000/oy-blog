@@ -5,13 +5,16 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.oyproj.api.user.client.UserClient;
 import com.oyproj.base.ArticleBaseBizService;
 import com.oyproj.common.base.Result;
+import com.oyproj.common.RecommendKeys;
 import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.exception.NotFoundException;
 import com.oyproj.common.service.CommonCache;
 import com.oyproj.common.utils.I18nUtils;
+import com.oyproj.common.constant.CachePrefix;
 import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.config.HotRankProperties;
 import com.oyproj.config.HotWeightProperties;
+import com.oyproj.config.RecommendProperties;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.domain.entity.ArticleLog;
 import com.oyproj.domain.entity.ArticleSeries;
@@ -33,12 +36,14 @@ import com.oyproj.mapper.ArticleSeriesItemMapper;
 import com.oyproj.mapper.ArticleSeriesMapper;
 import com.oyproj.service.ArticleReadBizService;
 import com.oyproj.service.HotRankService;
+import com.oyproj.service.RecommendationBizService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -75,6 +80,8 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     @NotNull private final HotRankService hotRankService;
     @NotNull private final HotRankProperties hotRankProperties;
     @NotNull private final CommonCache<Object> commonCache;
+    @NotNull private final RecommendationBizService recommendationBizService;
+    @NotNull private final RecommendProperties recommendProperties;
 
     /**
      * 根据slug查询文章
@@ -182,6 +189,33 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     }
 
     /**
+     * 猜你喜欢（个性化推荐）：按用户/游客标签画像推荐相似文章。
+     * 结果缓存命中直接复用 id 列表；画像为空（冷启动）或无身份时回退热榜链路。
+     */
+    @Override
+    public Result<PageVo<List<ArticleInfoVo>>> recommend(int pageNum, int pageSize) {
+        int[] p = normalizePage(pageNum, pageSize);
+        String actorId = getUserId();
+        if (actorId == null) {
+            return listPublishedByHot(p[0], p[1], "7d");   // 理论不出现：网关恒注入身份头
+        }
+        boolean guest = actorId.startsWith(CachePrefix.GUEST_ID.getPrefix());
+        String cacheKey = guest ? RecommendKeys.resultGuest(actorId) : RecommendKeys.resultUser(actorId);
+        String cached = commonCache.getString(cacheKey);
+        if (cached != null && !cached.isBlank()) {
+            List<String> ids = Arrays.stream(cached.split(","))
+                    .filter(s -> !s.isBlank()).toList();
+            return Result.ok(buildRankedPage(ids, p[0], p[1]));
+        }
+        List<String> ids = recommendationBizService.recommendArticleIds(actorId, guest);
+        if (ids.isEmpty()) {
+            return listPublishedByHot(p[0], p[1], "7d");   // 冷启动回退热榜链路
+        }
+        commonCache.put(cacheKey, String.join(",", ids), recommendProperties.getResultCacheTtlSeconds());
+        return Result.ok(buildRankedPage(ids, p[0], p[1]));
+    }
+
+    /**
      * 榜单读取通用路径：Redis 有数据且请求页在窗口内就走 Redis，否则回退 MySQL。
      */
     private Result<PageVo<List<ArticleInfoVo>>> listPublishedByRank(String rankKey, int pageNum, int pageSize) {
@@ -209,12 +243,23 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         if (rankedIds.isEmpty()) {
             return null;   // 冷水启动尚无榜数据，或 Redis 不可用
         }
+        return buildRankedPage(rankedIds, pageNum, pageSize);
+    }
 
+    /**
+     * 排序 id 列表 → 分页 VO（按榜序装载/过滤/分页/组装）。
+     * <p>热榜链路（buildRankPageFromRedis）与个性化推荐（recommend）复用同一段排序页组装：
+     * 过滤已发布未软删 → 按榜序重排 → subList 分页 → enrich → PageVo。</p>
+     *
+     * @param rankedIds 已排好序的文章 id 列表（调用方负责排序语义）
+     * @return null 表示"该页无有效文章"（返回空列表由调用方决定降级）
+     */
+    private PageVo<List<ArticleInfoVo>> buildRankedPage(List<String> rankedIds, int pageNum, int pageSize) {
         Map<String, Article> byId = articleDao.listByIds(rankedIds).stream()
                 .filter(a -> "published".equals(a.getStatus()) && a.getDeletedAt() == null)
                 .collect(Collectors.toMap(Article::getId, Function.identity(), (a, b) -> a));
 
-        // listByIds 不保证顺序，且榜单里可能残留已下架/删除的文章 —— 按榜序重排并剔除
+        // listByIds 不保证顺序，且排序列表里可能残留已下架/删除的文章 —— 按榜序重排并剔除
         List<Article> ordered = rankedIds.stream()
                 .map(byId::get)
                 .filter(Objects::nonNull)

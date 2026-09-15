@@ -76,6 +76,16 @@ public interface ArticleReadBizService {
     Result<PageVo<List<ArticleInfoVo>>> listPublishedByTrend(int pageNum, int pageSize);
 
     /**
+     * 猜你喜欢（个性化推荐）：按用户/游客标签画像推荐相似文章。
+     * 画像为空（冷启动）或结果缓存不可用时回退热榜链路；无登录身份时也回退热榜。
+     *
+     * @param pageNum  页码（1-based）
+     * @param pageSize 每页大小
+     * @return 分页的推荐文章列表
+     */
+    Result<PageVo<List<ArticleInfoVo>>> recommend(int pageNum, int pageSize);
+
+    /**
      * 查询用户浏览历史
      *
      * @return 文章列表
