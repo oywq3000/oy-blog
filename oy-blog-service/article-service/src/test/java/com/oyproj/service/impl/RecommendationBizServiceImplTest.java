@@ -71,18 +71,34 @@ class RecommendationBizServiceImplTest {
         when(commonCache.reverseRangeWithScores("rec:profile:user:u1", 0, 29)).thenReturn(Set.of(tuple("t1", 10d), tuple("t2", 5d)));
         when(articleTagDao.listByTagIds(anyList())).thenReturn(List.of(
                 ArticleTag.builder().articleId("a1").tagId("t1").build(),
+                ArticleTag.builder().articleId("a1").tagId("t2").build(),
                 ArticleTag.builder().articleId("a2").tagId("t1").build(),
-                ArticleTag.builder().articleId("a2").tagId("t2").build(),
-                ArticleTag.builder().articleId("a3").tagId("t1").build()));
-        when(articleDao.listByIds(List.of("a1", "a2", "a3"))).thenReturn(List.of(
-                article("a1"), article("a2"), article("a3")));
-        when(viewDao.listHistoryArticleIds("u1")).thenReturn(List.of("a1"));       // a1 已读排除
+                ArticleTag.builder().articleId("a3").tagId("t1").build(),
+                ArticleTag.builder().articleId("a4").tagId("t1").build()));
+        when(articleDao.listByIds(List.of("a1", "a2", "a3", "a4"))).thenReturn(List.of(
+                article("a1"), article("a2"), article("a3"), article("a4")));
+        when(viewDao.listHistoryArticleIds("u1")).thenReturn(List.of("a4"));       // a4 已读排除
         when(likeDao.listLikedArticleIds("u1")).thenReturn(List.of());
         when(favoriteDao.listFavoritedArticleIds("u1")).thenReturn(List.of());
         when(articleStatsDao.listByArticleIds(anyList())).thenReturn(List.of(
-                stats("a2", 100L), stats("a3", 50L)));
+                stats("a1", 1L), stats("a2", 100L), stats("a3", 50L)));
         List<String> ids = svc.recommendArticleIds("u1", false);
-        assertEquals(List.of("a2", "a3"), ids);   // a2=15分(100views) > a3=10分(50views)
+        // 分数不同 → 分数决定：a1(15分) 排最前；a2 与 a3 同分(=10分，都只命中 t1) → 阅读量降序：a2(100) > a3(50)；a4 已读被排除
+        assertEquals(List.of("a1", "a2", "a3"), ids);
+    }
+
+    @Test
+    void allCandidatesConsumed_returnsEmpty_andSkipsStats() {
+        when(commonCache.reverseRangeWithScores("rec:profile:user:u8", 0, 29)).thenReturn(Set.of(tuple("t1", 7d)));
+        when(articleTagDao.listByTagIds(List.of("t1"))).thenReturn(List.of(
+                ArticleTag.builder().articleId("a9").tagId("t1").build(),
+                ArticleTag.builder().articleId("a10").tagId("t1").build()));
+        when(articleDao.listByIds(List.of("a9", "a10"))).thenReturn(List.of(article("a9"), article("a10")));
+        when(viewDao.listHistoryArticleIds("u8")).thenReturn(List.of("a9"));     // a9 已读
+        when(likeDao.listLikedArticleIds("u8")).thenReturn(List.of("a10"));      // a10 已赞
+        when(favoriteDao.listFavoritedArticleIds("u8")).thenReturn(List.of());
+        assertTrue(svc.recommendArticleIds("u8", false).isEmpty());
+        verifyNoInteractions(articleStatsDao);   // 全被消费 → 短路，不查阅读量
     }
 
     @Test

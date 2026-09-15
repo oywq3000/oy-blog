@@ -88,6 +88,9 @@ public class RecommendationBizServiceImpl implements RecommendationBizService {
                 score.merge(articleId, w, Double::sum);
             }
         }
+        if (score.isEmpty()) {
+            return List.of();   // 候选全部被消费 → 空=冷启动，Task6 据此回退热榜
+        }
         Map<String, Integer> views = loadViews(score.keySet());
         Comparator<Map.Entry<String, Double>> byScore =
                 Map.Entry.<String, Double>comparingByValue().reversed();
