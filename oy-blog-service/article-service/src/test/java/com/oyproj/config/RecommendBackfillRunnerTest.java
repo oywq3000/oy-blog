@@ -88,4 +88,11 @@ class RecommendBackfillRunnerTest {
         verify(commonCache, never()).zAdd(argThat(s -> s.startsWith("rec:profile:guest:")), anyLong(), anyString());
         verify(commonCache, never()).remove("rec:profile:guest:" + CachePrefix.GUEST_ID.getPrefix() + "g0");
     }
+
+    /** Redis/DB 抖动时 run() 内部失败不向外抛：装饰功能哲学，绝不阻塞应用启动 */
+    @Test
+    void internalFailure_doesNotPropagate() {
+        when(viewMapper.selectList(any())).thenThrow(new RuntimeException("db down"));
+        assertDoesNotThrow(() -> runner.run(null));
+    }
 }

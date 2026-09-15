@@ -51,6 +51,16 @@ public class RecommendBackfillRunner implements ApplicationRunner {
             log.info("推荐画像 backfill 未开启（oyblog.recommend.backfill-enabled=false），跳过");
             return;
         }
+        try {
+            doBackfill();
+        } catch (Exception e) {
+            // 装饰功能哲学：backfill 是启动期的一次性增强，绝不让中间件抖动把应用启动打崩。
+            // 语义"全量重建（先删后建）"，本次失败即"未完成"，下次重启可重跑恢复。
+            log.error("推荐画像 backfill 中断，可重跑恢复（先删后建语义）：本次失败未完成，下次重启将重跑", e);
+        }
+    }
+
+    private void doBackfill() {
         long t0 = System.currentTimeMillis();
         // user -> (article -> 权重和；同文章多行为相加)
         Map<String, Map<String, Long>> userArticleWeight = new HashMap<>();
