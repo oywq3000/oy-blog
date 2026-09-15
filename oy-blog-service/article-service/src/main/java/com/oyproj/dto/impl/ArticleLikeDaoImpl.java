@@ -9,6 +9,8 @@ import com.oyproj.mapper.ArticleLikeMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * @description 文章点赞数据访问实现
  */
@@ -71,6 +73,19 @@ public class ArticleLikeDaoImpl extends ServiceImpl<ArticleLikeMapper, ArticleLi
     public long likeCount(String articleId) {
         return baseMapper.selectCount(new LambdaQueryWrapper<ArticleLike>()
                 .eq(ArticleLike::getArticleId, articleId));
+    }
+
+    /**
+     * 查询用户点赞过的文章ID列表（去重）
+     *
+     * @param userId 用户ID
+     * @return 文章ID列表
+     */
+    @Override
+    public List<String> listLikedArticleIds(String userId) {
+        return baseMapper.selectList(new LambdaQueryWrapper<ArticleLike>()
+                        .eq(ArticleLike::getUserId, userId))
+                .stream().map(ArticleLike::getArticleId).distinct().toList();
     }
 }
 

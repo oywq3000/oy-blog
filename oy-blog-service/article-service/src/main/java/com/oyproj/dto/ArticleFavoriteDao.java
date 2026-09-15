@@ -53,5 +53,13 @@ public interface ArticleFavoriteDao extends IService<ArticleFavorite> {
      * @return 收藏记录列表
      */
     List<ArticleFavorite> listFavorites(String userId, Page<ArticleFavorite> page);
+
+    /**
+     * 查询用户收藏过的文章ID列表（去重）
+     *
+     * @param userId 用户ID
+     * @return 文章ID列表
+     */
+    List<String> listFavoritedArticleIds(String userId);
 }
 

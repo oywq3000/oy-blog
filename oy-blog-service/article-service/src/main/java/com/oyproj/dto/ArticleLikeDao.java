@@ -3,6 +3,8 @@ package com.oyproj.dto;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.oyproj.domain.entity.ArticleLike;
 
+import java.util.List;
+
 /**
  * @description 文章点赞数据访问接口
  */
@@ -40,5 +42,13 @@ public interface ArticleLikeDao extends IService<ArticleLike> {
      * @return 点赞数量
      */
     long likeCount(String articleId);
+
+    /**
+     * 查询用户点赞过的文章ID列表（去重）
+     *
+     * @param userId 用户ID
+     * @return 文章ID列表
+     */
+    List<String> listLikedArticleIds(String userId);
 }
 

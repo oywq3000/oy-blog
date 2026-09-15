@@ -92,5 +92,18 @@ public class ArticleFavoriteDaoImpl extends ServiceImpl<ArticleFavoriteMapper, A
                 .orderByDesc(ArticleFavorite::getCreatedAt))
                 .getRecords();
     }
+
+    /**
+     * 查询用户收藏过的文章ID列表（去重）
+     *
+     * @param userId 用户ID
+     * @return 文章ID列表
+     */
+    @Override
+    public List<String> listFavoritedArticleIds(String userId) {
+        return baseMapper.selectList(new LambdaQueryWrapper<ArticleFavorite>()
+                        .eq(ArticleFavorite::getUserId, userId))
+                .stream().map(ArticleFavorite::getArticleId).distinct().toList();
+    }
 }
 
