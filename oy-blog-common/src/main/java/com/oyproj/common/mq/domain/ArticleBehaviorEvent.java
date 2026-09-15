@@ -30,7 +30,7 @@ public class ArticleBehaviorEvent {
     /** 文章 id */
     private String articleId;
 
-    /** 用户 id；游客浏览为 null */
+    /** 用户 id；游客为其 GUEST_ID（网关注入，非 null） */
     private String userId;
 
     /** 事件发生时间，ISO-8601 带时区偏移，如 2026-09-12T20:15:30.123+08:00 */
