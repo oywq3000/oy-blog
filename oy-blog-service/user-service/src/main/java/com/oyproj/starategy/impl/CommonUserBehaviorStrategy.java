@@ -8,6 +8,7 @@ import com.oyproj.dao.UserDao;
 import com.oyproj.domain.entity.User;
 import com.oyproj.domain.vo.UserVo;
 import com.oyproj.starategy.UserBehaviorStrategy;
+import com.oyproj.util.UserSkillsJson;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -48,6 +49,7 @@ public class CommonUserBehaviorStrategy extends UserBizBase implements UserBehav
                 .avatarUrl(user.getAvatarUrl())
                 .emailVerified(Integer.valueOf(1).equals(user.getEmailVerified()))
                 .createdAt(user.getCreatedAt())
+                .skills(UserSkillsJson.parse(user.getSkills()))
                 .build();
         try{
             String ipAddress = ipParseApi.parseIpAddress(user.getLastLoginIp()).getRegion();

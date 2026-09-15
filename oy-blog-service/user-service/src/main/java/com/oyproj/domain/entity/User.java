@@ -44,6 +44,11 @@ public class User {
     private String bio;
 
     /**
+     * 用户技能，JSON 数组字符串（如 ["Vue.js","Spring Boot"]），数组顺序即摆放顺序；空技能为 "[]" 而非 NULL
+     */
+    private String skills;
+
+    /**
      * 状态 0：禁用 1：启用
      */
     private Integer status;

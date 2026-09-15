@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 用户视图对象
@@ -84,5 +85,11 @@ public class UserVo {
      */
     @Schema(description = "用户创建时间", example = "2025-12-01T12:00:00")
     private LocalDateTime createdAt;
+
+    /**
+     * 技能列表（按摆放顺序），无技能为空列表
+     */
+    @Schema(description = "技能列表")
+    private List<String> skills;
 
 }

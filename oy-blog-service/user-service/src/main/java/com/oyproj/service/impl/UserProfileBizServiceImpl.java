@@ -17,6 +17,7 @@ import com.oyproj.domain.vo.UserVo;
 import com.oyproj.service.UserProfileBizService;
 import com.oyproj.starategy.UserBehaviorStrategy;
 import com.oyproj.starategy.factory.UserBehaviorStrategyFactory;
+import com.oyproj.util.UserSkillsJson;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 
@@ -68,6 +69,10 @@ public class UserProfileBizServiceImpl extends UserBizBase implements UserProfil
         user.setUsername(updateProfileDto.getUsername());
         user.setAvatarUrl(updateProfileDto.getAvatarUrl());
         user.setBio(updateProfileDto.getBio());
+        if (updateProfileDto.getSkills() != null) {
+            // null=未提供不动该列；空列表=清空，必须写 "[]"（updateById 会跳过 null 字段）
+            user.setSkills(UserSkillsJson.toJson(updateProfileDto.getSkills()));
+        }
         return userDao.updateById(user)?Result.ok():Result.error();
     }
 
@@ -107,6 +112,7 @@ public class UserProfileBizServiceImpl extends UserBizBase implements UserProfil
         userPublicVo.setAvatar(user.getAvatarUrl());
         userPublicVo.setBio(user.getBio());
         userPublicVo.setCreatedAt(user.getCreatedAt());
+        userPublicVo.setSkills(UserSkillsJson.parse(user.getSkills()));
         Result<UserArticleStatDto> userStats = articleControllerClient.getUserStats(userId);
         if(userStats.getIsSuccess()&&userStats.getData()!=null){
             userPublicVo.setArticleCount(userStats.getData().getArticleCount());
