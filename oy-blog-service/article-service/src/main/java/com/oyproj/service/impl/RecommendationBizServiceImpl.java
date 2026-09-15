@@ -2,6 +2,7 @@ package com.oyproj.service.impl;
 
 import com.oyproj.common.RecommendKeys;
 import com.oyproj.common.service.CommonCache;
+import com.oyproj.common.util.FaultLogThrottle;
 import com.oyproj.config.RecommendProperties;
 import com.oyproj.domain.entity.Article;
 import com.oyproj.domain.entity.ArticleStats;
@@ -14,6 +15,7 @@ import com.oyproj.dto.ArticleStatsDao;
 import com.oyproj.dto.ArticleTagDao;
 import com.oyproj.service.RecommendationBizService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
  * 画像 top 标签 → 候选文章（published、非已消费）→ Σ 命中标签画像权重 排序，
  * 同分按阅读量降序。返回空列表表示冷启动，调用方回退热榜。
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RecommendationBizServiceImpl implements RecommendationBizService {
@@ -45,8 +48,27 @@ public class RecommendationBizServiceImpl implements RecommendationBizService {
     private final ArticleFavoriteDao favoriteDao;
     private final RecommendProperties props;
 
+    /** 故障日志限流：Redis 挂掉时每个推荐请求都撞到这里，不限流则一次故障就是一场日志风暴 */
+    private final FaultLogThrottle engineFailureLog = new FaultLogThrottle();
+
+    /**
+     * 引擎入口：任何失败（Redis 画像/consumed 读、DB 查询）都按"空 = 冷启动"处理，
+     * 调用方据此回退热榜 —— spec「Redis 不可用 → 一律回退热榜，接口永不报错」。
+     */
     @Override
     public List<String> recommendArticleIds(String actorId, boolean guest) {
+        try {
+            return recommendArticleIdsInternal(actorId, guest);
+        } catch (Exception e) {
+            if (engineFailureLog.allow()) {
+                log.warn("推荐引擎失败，按冷启动回退热榜（本窗口已抑制 {} 条同类故障）, actorId: {}",
+                        engineFailureLog.drainSuppressed(), actorId, e);
+            }
+            return List.of();
+        }
+    }
+
+    private List<String> recommendArticleIdsInternal(String actorId, boolean guest) {
         String profileKey = guest
                 ? RecommendKeys.profileGuest(actorId)
                 : RecommendKeys.profileUser(actorId);

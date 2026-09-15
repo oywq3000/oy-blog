@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.ZSetOperations;
 
 import java.util.List;
@@ -125,6 +126,30 @@ class RecommendationBizServiceImplTest {
         when(articleDao.listByIds(List.of("draftA"))).thenReturn(List.of(Article.builder()
                 .id("draftA").status("draft").deletedAt(null).build()));
         assertTrue(svc.recommendArticleIds("u7", false).isEmpty());
+    }
+
+    /** Redis 真故障：读画像 top 标签抛异常 → 引擎按冷启动返回空，不抛 500（调用方回退热榜） */
+    @Test
+    void redisDown_profileRead_returnsEmpty_noThrow() {
+        when(commonCache.reverseRangeWithScores("rec:profile:user:u1", 0, 29))
+                .thenThrow(new RedisConnectionFailureException("redis down"));
+        assertTrue(svc.recommendArticleIds("u1", false).isEmpty());
+        verifyNoInteractions(articleTagDao);
+    }
+
+    /** Redis 真故障：游客读 consumed 抛异常 → 同样空=冷启动，不抛 500 */
+    @Test
+    void redisDown_guestConsumedRead_returnsEmpty_noThrow() {
+        String gid = CachePrefix.GUEST_ID.getPrefix() + "xyz";
+        when(commonCache.reverseRangeWithScores("rec:profile:guest:" + gid, 0, 29))
+                .thenReturn(Set.of(tuple("t1", 8d)));
+        when(articleTagDao.listByTagIds(List.of("t1"))).thenReturn(List.of(
+                ArticleTag.builder().articleId("a5").tagId("t1").build()));
+        when(articleDao.listByIds(List.of("a5"))).thenReturn(List.of(article("a5")));
+        when(commonCache.reverseRangeWithScores("rec:consumed:guest:" + gid, 0, 499))
+                .thenThrow(new RedisConnectionFailureException("redis down"));
+        assertTrue(svc.recommendArticleIds(gid, true).isEmpty());
+        verify(articleTagDao).listByTagIds(List.of("t1"));
     }
 
     private Article article(String id) {

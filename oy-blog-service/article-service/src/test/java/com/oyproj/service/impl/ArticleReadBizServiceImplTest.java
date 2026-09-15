@@ -41,6 +41,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.MessageSource;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -801,5 +802,38 @@ class ArticleReadBizServiceImplTest {
 
         assertTrue(r.getIsSuccess());
         assertTrue(r.getData().getData().isEmpty());
+    }
+
+    /** 引擎抛异常被读端兜住 → 回退热榜成功（Redis 抖动漏网时接口也不 500） */
+    @Test
+    void recommend_engineThrows_fallsBackToHot() {
+        setLoginUser("u1");
+        when(recommendationBizService.recommendArticleIds("u1", false))
+                .thenThrow(new RedisConnectionFailureException("redis down"));
+
+        Result<PageVo<List<ArticleInfoVo>>> r = service.recommend(1, 10);
+
+        assertTrue(r.getIsSuccess());
+        assertTrue(r.getData().getData().isEmpty());   // 回退热榜 → MySQL 空
+        verify(commonCache, never()).put(anyString(), anyString(), anyLong());
+    }
+
+    /** 结果缓存写失败降级：本次照常返回推荐结果，不 500 */
+    @Test
+    void recommend_engineHit_cacheWriteFails_stillReturns() {
+        setLoginUser("u1");
+        when(recommendProperties.getResultCacheTtlSeconds()).thenReturn(600L);
+        when(recommendationBizService.recommendArticleIds("u1", false)).thenReturn(List.of("a1"));
+        when(articleDao.listByIds(List.of("a1"))).thenReturn(List.of(published("a1")));
+        when(articleStatsDao.listByArticleIds(List.of("a1"))).thenReturn(List.of());
+        when(articleTagDao.listTagNamesByArticleIds(List.of("a1"))).thenReturn(Map.of());
+        doThrow(new RedisConnectionFailureException("redis down"))
+                .when(commonCache).put("rec:result:user:u1", "a1", 600L);
+
+        Result<PageVo<List<ArticleInfoVo>>> r = service.recommend(1, 10);
+
+        assertTrue(r.getIsSuccess());
+        assertEquals(1, r.getData().getData().size());
+        assertEquals("a1", r.getData().getData().get(0).getId());
     }
 }

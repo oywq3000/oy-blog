@@ -10,6 +10,7 @@ import com.oyproj.common.domain.dto.UserDTO;
 import com.oyproj.common.exception.NotFoundException;
 import com.oyproj.common.service.CommonCache;
 import com.oyproj.common.utils.I18nUtils;
+import com.oyproj.common.util.FaultLogThrottle;
 import com.oyproj.common.constant.CachePrefix;
 import com.oyproj.common.domain.vo.PageVo;
 import com.oyproj.config.HotRankProperties;
@@ -82,6 +83,10 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
     @NotNull private final CommonCache<Object> commonCache;
     @NotNull private final RecommendationBizService recommendationBizService;
     @NotNull private final RecommendProperties recommendProperties;
+    /** 故障日志限流：推荐引擎异常时每个请求都撞进来（Redis 挂掉场景），不限流则一次故障就是一场日志风暴 */
+    private final FaultLogThrottle recommendEngineFailureLog = new FaultLogThrottle();
+    /** 故障日志限流：结果缓存写失败（读端降级路径） */
+    private final FaultLogThrottle recommendCacheWriteFailureLog = new FaultLogThrottle();
 
     /**
      * 根据slug查询文章
@@ -207,11 +212,29 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
                     .filter(s -> !s.isBlank()).toList();
             return Result.ok(emptySafePage(buildRankedPage(ids, p[0], p[1]), p[0], p[1]));
         }
-        List<String> ids = recommendationBizService.recommendArticleIds(actorId, guest);
+        List<String> ids;
+        try {
+            ids = recommendationBizService.recommendArticleIds(actorId, guest);
+        } catch (Exception e) {
+            // 引擎抛异常（如 Redis 抖动漏网）也按冷启动兜底回退热榜，接口永不报错
+            if (recommendEngineFailureLog.allow()) {
+                log.warn("推荐引擎异常，回退热榜（本窗口已抑制 {} 条同类故障）, actorId: {}",
+                        recommendEngineFailureLog.drainSuppressed(), actorId, e);
+            }
+            ids = List.of();
+        }
         if (ids.isEmpty()) {
             return listPublishedByHot(p[0], p[1], "7d");   // 冷启动回退热榜链路
         }
-        commonCache.put(cacheKey, String.join(",", ids), recommendProperties.getResultCacheTtlSeconds());
+        try {
+            commonCache.put(cacheKey, String.join(",", ids), recommendProperties.getResultCacheTtlSeconds());
+        } catch (Exception e) {
+            // 写结果缓存失败降级：本次照常返回推荐结果，不 500
+            if (recommendCacheWriteFailureLog.allow()) {
+                log.warn("推荐结果缓存写失败，本次照常返回（本窗口已抑制 {} 条同类故障）, cacheKey: {}",
+                        recommendCacheWriteFailureLog.drainSuppressed(), cacheKey, e);
+            }
+        }
         return Result.ok(emptySafePage(buildRankedPage(ids, p[0], p[1]), p[0], p[1]));
     }
 
