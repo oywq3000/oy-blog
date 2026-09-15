@@ -205,14 +205,22 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
         if (cached != null && !cached.isBlank()) {
             List<String> ids = Arrays.stream(cached.split(","))
                     .filter(s -> !s.isBlank()).toList();
-            return Result.ok(buildRankedPage(ids, p[0], p[1]));
+            return Result.ok(emptySafePage(buildRankedPage(ids, p[0], p[1]), p[0], p[1]));
         }
         List<String> ids = recommendationBizService.recommendArticleIds(actorId, guest);
         if (ids.isEmpty()) {
             return listPublishedByHot(p[0], p[1], "7d");   // 冷启动回退热榜链路
         }
         commonCache.put(cacheKey, String.join(",", ids), recommendProperties.getResultCacheTtlSeconds());
-        return Result.ok(buildRankedPage(ids, p[0], p[1]));
+        return Result.ok(emptySafePage(buildRankedPage(ids, p[0], p[1]), p[0], p[1]));
+    }
+
+    /**
+     * recommend 分页兜底：buildRankedPage 对"请求页超出排序列表"返回 null，
+     * 直接 Result.ok(null) 会让 data 为 null —— 转成空页（total=0,totalPages=0）。
+     */
+    private PageVo<List<ArticleInfoVo>> emptySafePage(PageVo<List<ArticleInfoVo>> page, int pageNum, int pageSize) {
+        return page != null ? page : buildPageVo(pageNum, pageSize, 0L, Collections.emptyList());
     }
 
     /**
@@ -265,13 +273,16 @@ public class ArticleReadBizServiceImpl extends ArticleBaseBizService implements 
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        int from = (pageNum - 1) * pageSize;
+        // 长整型运算防 int 溢出：normalizePage 只兜 pageNum 下界，公开端点可传 1073741825，
+        // int 乘法翻负会骗过 from 判断，把负 offset 带进 subList 抛 IllegalArgumentException（500）。
+        long from = (long) (pageNum - 1) * pageSize;
         if (from >= ordered.size()) {
             return null;
         }
-        int to = Math.min(from + pageSize, ordered.size());
+        int fromI = (int) from;
+        int to = (int) Math.min(from + pageSize, ordered.size());
 
-        List<ArticleInfoVo> voList = copyList(ordered.subList(from, to), ArticleInfoVo.class);
+        List<ArticleInfoVo> voList = copyList(ordered.subList(fromI, to), ArticleInfoVo.class);
         enrichWithStats(voList);
         enrichWithAuthorInfo(voList);
         enrichWithTags(voList);

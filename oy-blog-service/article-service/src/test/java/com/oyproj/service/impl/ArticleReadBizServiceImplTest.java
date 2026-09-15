@@ -776,4 +776,30 @@ class ArticleReadBizServiceImplTest {
         assertEquals(1, r.getData().getData().size());
         verify(commonCache).put("rec:result:user:u1", "a1", 600L);
     }
+
+    /** 极端 pageNum × pageSize 溢出：from 用 long 计算，优雅落到空页而非 subList 抛异常 */
+    @Test
+    void recommend_overflowingPageNum_returnsEmptyNoThrow() {
+        setLoginUser("u1");
+        when(commonCache.getString("rec:result:user:u1")).thenReturn("a1,a2");
+        when(articleDao.listByIds(anyList())).thenReturn(List.of(published("a1"), published("a2")));
+
+        Result<PageVo<List<ArticleInfoVo>>> r = service.recommend(1073741825, 10);
+
+        assertTrue(r.getIsSuccess());
+        assertTrue(r.getData().getData().isEmpty());
+    }
+
+    /** 深页越界（第 2 页超出仅 2 条的推荐列表）：返回空页而非 Result.ok(null) */
+    @Test
+    void recommend_pageBeyondRankedList_returnsEmptyPage() {
+        setLoginUser("u1");
+        when(commonCache.getString("rec:result:user:u1")).thenReturn("a1,a2");
+        when(articleDao.listByIds(anyList())).thenReturn(List.of(published("a1"), published("a2")));
+
+        Result<PageVo<List<ArticleInfoVo>>> r = service.recommend(2, 10);
+
+        assertTrue(r.getIsSuccess());
+        assertTrue(r.getData().getData().isEmpty());
+    }
 }
