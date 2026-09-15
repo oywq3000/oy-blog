@@ -55,4 +55,36 @@ public class ArticleTagDaoImpl extends ServiceImpl<ArticleTagMapper, ArticleTag>
         }
         return tagMap;
     }
+
+    @Override
+    public List<String> listTagIdsByArticleIds(List<String> articleIds) {
+        if (articleIds == null || articleIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return baseMapper.selectList(new LambdaQueryWrapper<ArticleTag>()
+                        .in(ArticleTag::getArticleId, articleIds))
+                .stream().map(ArticleTag::getTagId).distinct().toList();
+    }
+
+    @Override
+    public List<ArticleTag> listByTagIds(List<String> tagIds) {
+        if (tagIds == null || tagIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return baseMapper.selectList(new LambdaQueryWrapper<ArticleTag>()
+                .in(ArticleTag::getTagId, tagIds));
+    }
+
+    @Override
+    public Map<String, List<String>> listTagIdMapByArticleIds(List<String> articleIds) {
+        if (articleIds == null || articleIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, List<String>> map = new HashMap<>();
+        for (ArticleTag rel : baseMapper.selectList(new LambdaQueryWrapper<ArticleTag>()
+                .in(ArticleTag::getArticleId, articleIds))) {
+            map.computeIfAbsent(rel.getArticleId(), k -> new ArrayList<>()).add(rel.getTagId());
+        }
+        return map;
+    }
 }

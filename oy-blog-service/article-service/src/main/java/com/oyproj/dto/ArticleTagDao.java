@@ -19,4 +19,28 @@ public interface ArticleTagDao extends IService<ArticleTag> {
      * @return articleId -> 标签名列表（保持 article_tag 行顺序）
      */
     Map<String, List<String>> listTagNamesByArticleIds(List<String> articleIds);
+
+    /**
+     * 批量查询文章的标签ID（去重）
+     *
+     * @param articleIds 文章ID列表
+     * @return 去重后的 tag_id 列表
+     */
+    List<String> listTagIdsByArticleIds(List<String> articleIds);
+
+    /**
+     * 批量查询标签的关联行
+     *
+     * @param tagIds 标签ID列表
+     * @return tag_id IN 的 article_tag 关联行
+     */
+    List<ArticleTag> listByTagIds(List<String> tagIds);
+
+    /**
+     * 批量查询文章的标签ID映射
+     *
+     * @param articleIds 文章ID列表
+     * @return articleId -> tag_id 列表
+     */
+    Map<String, List<String>> listTagIdMapByArticleIds(List<String> articleIds);
 }
