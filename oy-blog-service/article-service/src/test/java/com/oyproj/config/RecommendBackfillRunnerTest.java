@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -81,8 +82,9 @@ class RecommendBackfillRunnerTest {
 
         runner.run(null);
 
-        verify(commonCache).remove("rec:profile:user:u1");           // 先删后建：幂等
-        verify(commonCache).zAdd("rec:profile:user:u1", 3L, "t1");   // view×1 + like×2 = 3
+        InOrder inOrder = inOrder(commonCache);
+        inOrder.verify(commonCache).remove("rec:profile:user:u1");           // 先删后建：幂等（顺序钉死）
+        inOrder.verify(commonCache).zAdd("rec:profile:user:u1", 3L, "t1");   // view×1 + like×2 = 3
         verify(commonCache, never()).zAdd(argThat(s -> s.startsWith("rec:profile:guest:")), anyLong(), anyString());
         verify(commonCache, never()).remove("rec:profile:guest:" + CachePrefix.GUEST_ID.getPrefix() + "g0");
     }
