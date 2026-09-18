@@ -13,8 +13,10 @@ import reactor.core.Disposable;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -61,11 +63,13 @@ public class PythonSseClient {
      */
     public Disposable streamChat(Map<String, Object> payload, StreamListener listener) {
         StreamParser parser = new StreamParser(listener);
-        // text/event-stream 无匹配的 StringDecoder，用 DataBuffer 裸字节流解码，
-        // CharsetDecoder 保持状态以正确处理跨 chunk 被截断的多字节字符
-        CharsetDecoder decoder = StandardCharsets.UTF_8.newDecoder()
-                .onMalformedInput(CodingErrorAction.REPLACE)
-                .onUnmappableCharacter(CodingErrorAction.REPLACE);
+        // text/event-stream 无匹配的 StringDecoder，用 DataBuffer 裸字节流解码。
+        // 注意：不能用 CharsetDecoder.decode(ByteBuffer) 便捷方法——它等价于
+        // decode(in, out, true) 且调用后 reset 状态，网络把多字节字符切成两块时
+        // 每块都会把半个字符当作 malformed 替换成 U+FFFD（正是本次修复的乱码根因）。
+        // 正确姿势：三参 decode(in, out, endOfInput=false) 保持状态，并把解码完后
+        // 仍留在输入里未消费的半个字符字节拼到下一块，流末尾另做一次 flush。
+        Utf8StreamDecoder decoder = new Utf8StreamDecoder();
         return pythonWebClient.post()
                 .uri("/chat/stream")
                 .bodyValue(payload)
@@ -74,9 +78,10 @@ public class PythonSseClient {
                 .subscribe(
                         buffer -> {
                             try {
-                                CharBuffer out = decoder.decode(buffer.toByteBuffer());
-                                if (out.hasRemaining()) {
-                                    parser.feed(out.toString());
+                                ByteBuffer in = buffer.toByteBuffer();
+                                String out = decoder.decode(in);
+                                if (!out.isEmpty()) {
+                                    parser.feed(out);
                                 }
                             } catch (Exception e) {
                                 // 解码失败（REPLACE 策略下几乎不会发生）：跳过该 chunk
@@ -89,7 +94,11 @@ public class PythonSseClient {
                             log.warn("python chat stream failed: {}", err.getMessage());
                             listener.onError(503, "AI 服务暂不可用，请稍后重试");
                         },
-                        parser::streamEnded
+                        () -> {
+                            // 所有 chunk 之后：把可能残留在解码器里的尾部半个字符 flush 出来
+                            parser.feed(decoder.finish());
+                            parser.streamEnded();
+                        }
                 );
     }
 
@@ -183,6 +192,74 @@ public class PythonSseClient {
             } catch (Exception e) {
                 log.warn("unparseable sse frame: {}", frame);
             }
+        }
+    }
+
+    /**
+     * 有状态的 UTF-8 流式解码器：正确处理被网络切成两半的多字节字符。
+     *
+     * 坑：CharsetDecoder 便捷方法 {@code decode(ByteBuffer)} 等价于
+     * {@code decode(in, out, true)} 且每次调用后 reset —— 一个 3 字节汉字被
+     * TCP/WebClient 切成两半时，前一半会被当作 malformed 替换成 U+FFFD（乱码）。
+     * 本类采用三参 {@code decode(in, out, false)} 保持解码状态，解码后把输入里
+     * 未消费的尾部字节（半个字符）缓存起来拼进下一块；流结束再用
+     * {@code endOfInput=true} flush 收尾。
+     *
+     * 与 WebClient SSE 定位一致：仅当 Python 上游用标准 JSON（ensure_ascii=False）
+     * 输出纯 UTF-8 时有效；非 UTF-8 字节仍按 REPLACE 策略替换成 U+FFFD。
+     */
+    static class Utf8StreamDecoder {
+
+        private final CharsetDecoder decoder = StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPLACE)
+                .onUnmappableCharacter(CodingErrorAction.REPLACE);
+        private final CharBuffer out = CharBuffer.allocate(4096);
+        /** 上一块解码后未消费的半个字符字节（可能为 0 长度） */
+        private byte[] leftover = new byte[0];
+
+        /** 解码一块原始字节，返回这次能安全输出的完整字符（不含半截多字节字符） */
+        String decode(ByteBuffer in) {
+            // 合并上次的半个字符 + 本次块
+            byte[] merged;
+            int carryLen = leftover.length;
+            int thisLen = in.remaining();
+            merged = new byte[carryLen + thisLen];
+            if (carryLen > 0) {
+                System.arraycopy(leftover, 0, merged, 0, carryLen);
+            }
+            in.get(merged, carryLen, thisLen);
+            ByteBuffer buf = ByteBuffer.wrap(merged);
+
+            StringBuilder sb = new StringBuilder(Math.max(16, merged.length));
+            CoderResult result;
+            do {
+                out.clear();
+                result = decoder.decode(buf, out, false);
+                out.flip();
+                sb.append(out);
+            } while (result == CoderResult.OVERFLOW);
+
+            // 把可能留在输入里未消费的尾部（半个字符）缓存到下一块
+            if (buf.hasRemaining()) {
+                leftover = Arrays.copyOfRange(merged, merged.length - buf.remaining(), merged.length);
+            } else {
+                leftover = new byte[0];
+            }
+            return sb.toString();
+        }
+
+        /** 流结束 flush：把残留在输入里的尾部半个字符一并解出（endOfInput=true） */
+        String finish() {
+            if (leftover.length == 0) {
+                return "";
+            }
+            ByteBuffer tail = ByteBuffer.wrap(leftover);
+            out.clear();
+            decoder.decode(tail, out, true);
+            out.flip();
+            // 正常流结束不会有未消费尾部；若真有（上游字节确实被切断），
+            // endOfInput=true 下 REPLACE 策略兜底成 U+FFFD，属数据自身损坏。
+            return out.toString();
         }
     }
 }

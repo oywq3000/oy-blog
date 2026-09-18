@@ -3,6 +3,7 @@
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/doc/sql/article_log.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/doc/sql/mq_retry_log.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/doc/sql/user_skills_migration.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/oy-blog-service/user-service/src/main/resources/com/oyproj/dao/UserStatDao.xml" dialect="GenericSQL" />
   </component>
 </project>

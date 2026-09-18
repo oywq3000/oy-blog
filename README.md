@@ -12,6 +12,7 @@
   <img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat-square&logo=mysql&logoColor=white" alt="MySQL">
   <img src="https://img.shields.io/badge/Redis-DC382D?style=flat-square&logo=redis&logoColor=white" alt="Redis">
   <img src="https://img.shields.io/badge/RabbitMQ-FF6600?style=flat-square&logo=rabbitmq&logoColor=white" alt="RabbitMQ">
+  <img src="https://img.shields.io/badge/Kafka%20%28Redpanda%29-000000?style=flat-square&logo=apachekafka&logoColor=white" alt="Kafka (Redpanda)">
   <img src="https://img.shields.io/badge/Elasticsearch-8.17-005571?style=flat-square&logo=elasticsearch&logoColor=white" alt="Elasticsearch">
 </p>
 
@@ -19,9 +20,9 @@
 
 ## 项目介绍
 
-**OY Blog Server** 是 OY Blog 的后端部分，基于 **Spring Boot 3.4 + Spring Cloud 微服务架构**开发，采用 Maven 多模块组织。系统以 **API 网关**为统一入口，按业务拆分为 用户、文章、AI 对话、文件、搜索、管理 六个微服务，配合 MySQL、Redis、RabbitMQ、Elasticsearch、MinIO 等中间件，为前端提供认证、内容、互动、搜索、管理的一站式能力。
+**OY Blog Server** 是 OY Blog 的后端部分，基于 **Spring Boot 3.4 + Spring Cloud 微服务架构**开发，采用 Maven 多模块组织。系统以 **API 网关**为统一入口，按业务拆分为 用户、文章、AI 对话、文件、搜索、管理 六个微服务，配合 MySQL、Redis、Elasticsearch、Kafka（Redpanda）、RabbitMQ、MinIO 等中间件，为前端提供认证、内容、互动、搜索、管理的一站式能力。
 
-除常规的博客功能（文章、评论、搜索、标签、系列）外，后端还实现了 **AI 对话代理**（SSE 流式输出、深度思考、会话管理）、**内容审核流程**（文章 / 评论双线审核 + 管理端聚合）、**异步索引同步**（RabbitMQ 消息 + 定时对账）等进阶能力，并通过 Nacos 注册发现、Sentinel 熔断、统一日志与异常体系保障服务稳定性。
+除常规的博客功能（文章、评论、搜索、标签、系列）外，后端还实现了 **AI 对话代理**（SSE 流式输出、深度思考、会话管理）、**内容审核流程**（文章 / 评论双线 AI 审核 + 管理端聚合）、**异步索引同步**（Kafka 压实主题 + 定时对账，可重放重建）、**热榜与个性化推荐**（行为事件流 + Redis 榜单 / 画像）、**专栏管理**（作者创作 + 文章归属）等进阶能力，并通过 Nacos 注册发现、Sentinel 熔断、ELK 日志与统一异常体系保障服务稳定性。
 
 ---
 
@@ -50,8 +51,8 @@
             <ul>
                 <li><b>注册登录</b>: 邮箱验证码 + 图形验证码、密码找回</li>
                 <li><b>角色权限</b>: READER / GUEST / ADMIN 三级角色（RBAC）</li>
-                <li><b>用户资料</b>: 昵称、头像、简介维护</li>
-                <li><b>公开主页</b>: 用户公开信息页 + 阅读历史</li>
+                <li><b>用户资料</b>: 昵称、头像、简介、技能维护（公开主页展示）</li>
+                <li><b>公开主页</b>: 用户公开信息页 + 技能 + 阅读历史</li>
                 <li><b>行为策略</b>: 策略模式区分普通用户与游客行为</li>
             </ul>
         </td>
@@ -65,9 +66,10 @@
             <ul>
                 <li><b>文章管理</b>: 草稿 / 发布 / 下架全生命周期 + 修订历史</li>
                 <li><b>Markdown 渲染</b>: flexmark 服务端渲染（代码高亮 / 图表）</li>
-                <li><b>内容组织</b>: 标签 / 系列 / 章节三级组织体系</li>
+                <li><b>内容组织</b>: 标签 / 系列 / 章节三级组织体系（热门标签官方预置 / 用户自创）</li>
                 <li><b>封面图片</b>: 文章封面与正文图片上传</li>
-                <li><b>审核流程</b>: 提交审核 → 通过 / 拒绝（原因回显）</li>
+                <li><b>专栏管理</b>: 归属作者 / 封面上传 / 创作端收录排序，文章详情反查所属专栏（≤3）</li>
+                <li><b>审核流程</b>: 提交审核 → AI 并发审核（两段短路事务）→ 通过 / 拒绝（原因回显）</li>
             </ul>
         </td>
         <td>
@@ -106,8 +108,8 @@
             </h3>
             <ul>
                 <li><b>全文搜索</b>: Elasticsearch 文章检索 + 高亮</li>
-                <li><b>异步索引</b>: RabbitMQ 消息驱动索引增删改</li>
-                <li><b>数据对账</b>: 定时任务全量对账 + MQ 失败重试补偿</li>
+                <li><b>异步索引</b>: Kafka 压实主题驱动索引增删改（重放即重建索引）</li>
+                <li><b>数据对账</b>: 定时任务全量对账 + Kafka 失败重试补偿</li>
                 <li><b>对象存储</b>: MinIO 统一文件上传（模板方法 + 策略模式）</li>
             </ul>
         </td>
@@ -132,10 +134,38 @@
             </h3>
             <ul>
                 <li><b>统一响应</b>: Result 统一结构 + 全局异常处理 + 国际化</li>
-                <li><b>日志体系</b>: @Log AOP 操作日志 + Logback 分级归档</li>
+                <li><b>可观测性</b>: ELK 日志体系（单行 JSON + Filebeat + Kibana）+ @Log AOP 操作日志</li>
                 <li><b>服务治理</b>: Nacos 注册 / 配置、Sentinel 熔断、Feign 调用</li>
                 <li><b>数据访问</b>: MyBatis Plus 分页拦截器 + XML 自定义 SQL</li>
                 <li><b>文档沉淀</b>: SpringDoc OpenAPI、doc/ 技术文档、SQL 迁移脚本</li>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <h3>
+                <img src="https://api.iconify.design/mdi:fire.svg?color=%23000000" width="20" height="20" valign="middle">
+                热门与推荐
+            </h3>
+            <ul>
+                <li><b>热榜</b>: 浏览 / 点赞 / 收藏 / 评论行为事件流 → Redis 日桶加权聚合，日榜 / 7 天榜 / 月榜 / 季榜</li>
+                <li><b>趋势榜</b>: 今日加权 ×18 − 前 6 天均值，捕捉突爆文章</li>
+                <li><b>猜你喜欢</b>: 标签画像（Redis ZSet）相似内容打分推荐，登录 / 游客通吃</li>
+                <li><b>冷启动自愈</b>: 画像空 / Redis 故障自动回退热榜 MySQL 总榜，接口永不 500</li>
+                <li><b>可重放</b>: 清日桶 + 重置消费组位点即可完整重建榜单</li>
+            </ul>
+        </td>
+        <td>
+            <h3>
+                <img src="https://api.iconify.design/mdi:swap-horizontal-bold.svg?color=%23000000" width="20" height="20" valign="middle">
+                异步消息链路
+            </h3>
+            <ul>
+                <li><b>双 MQ 分工</b>: Kafka（Redpanda）承载事件流，RabbitMQ 保留任务队列</li>
+                <li><b>行为事件流</b>: browse / like / favorite / comment → <code>article.behavior</code>，热榜与推荐画像共用</li>
+                <li><b>索引同步</b>: Kafka 压实主题 <code>article.index</code>（文章最新快照 + tombstone 删除），重放 / 播种即重建索引</li>
+                <li><b>失败兜底</b>: 重试落库 + 定时重发 + @RetryableTopic + 30 分钟对账清僵尸文档</li>
+                <li><b>审核任务</b>: 走 RabbitMQ，利用 TTL + DLX 延迟重试阶梯（消息语义决定载体）</li>
             </ul>
         </td>
     </tr>
@@ -175,6 +205,7 @@
                 <li><b>ORM</b>: MyBatis Plus 3.5.7</li>
                 <li><b>Database</b>: MySQL 8.0</li>
                 <li><b>Cache</b>: Redis (Lettuce)</li>
+                <li><b>Stream</b>: Redpanda（Kafka API 兼容，spring-kafka）</li>
                 <li><b>MQ</b>: RabbitMQ (Spring AMQP)</li>
                 <li><b>Search</b>: Elasticsearch 8.17.10</li>
                 <li><b>Storage</b>: MinIO 8.5.7</li>
@@ -186,7 +217,7 @@
                 <li><b>RPC</b>: OpenFeign + LoadBalancer</li>
                 <li><b>Render</b>: Flexmark（服务端 Markdown 渲染）</li>
                 <li><b>Doc</b>: SpringDoc OpenAPI (Swagger UI)</li>
-                <li><b>Log</b>: Logback + 自定义日志框架</li>
+                <li><b>Log</b>: Logback JSON + Filebeat + Kibana（ELK）</li>
                 <li><b>Deploy</b>: Docker Compose + 一键部署脚本</li>
             </ul>
         </td>
@@ -205,21 +236,24 @@
   ▼
 oy-blog-gateway (8080) ── JWT 统一认证 · 白名单放行 · 前缀路由 · 游客 Cookie
   │  lb://{service}（Nacos 服务发现）
-  ├─ user-service    (8093)  登录注册 / 用户资料 / 公开主页
-  ├─ article-service (8091)  文章 / 评论 / 点赞收藏 / 统计 ──► RabbitMQ 索引消息
+  ├─ user-service    (8093)  登录注册 / 用户资料·技能 / 公开主页
+  ├─ article-service (8091)  文章 / 评论 / 专栏 / 点赞收藏 / 热榜·推荐
+  │                        └─► Kafka: article.behavior（行为事件） / article.index（索引快照）
   ├─ agent-service   (8095)  AI 对话（SSE）────────► Python Agent (8001, 内网直连)
   ├─ file-service    (8097)  图片上传 ──────────────► MinIO
-  ├─ search-service  (8099)  ES 全文搜索 ◄── RabbitMQ 索引消息
-  └─ admin-service   (8096)  管理端 BFF（审核 / 用户 / 统计）
+  ├─ search-service  (8099)  ES 全文搜索 ◄── Kafka 压实主题 article.index
+  └─ admin-service   (8096)  管理端 BFF（审核 / 专栏 / 用户 / 统计）
 
-同步调用: OpenFeign + Sentinel 熔断        异步链路: RabbitMQ（失败重试 + 定时对账）
-注册与配置: Nacos                           基础设施: MySQL / Redis / RabbitMQ / Elasticsearch / MinIO
+同步调用: OpenFeign + Sentinel 熔断        事件流: Kafka/Redpanda（行为事件 + 压实主题索引同步，可重放）
+任务队列: RabbitMQ（AI 审核 TTL 延迟重试）  基础设施: MySQL / Redis / Elasticsearch / Redpanda / RabbitMQ / MinIO
+日志可观测: ELK（Logback JSON + Filebeat + Kibana）   注册与配置: Nacos
 ```
 
 * 身份认证采用 **JWT**（Access Token + Refresh Token 自动续期），网关统一校验后注入 `x-user-id` 等身份头；未登录请求自动降级为**游客**（GUEST_ID Cookie）
 * 语言切换通过请求头 `lang: zh | en` 透传后端（响应信息国际化）
 * AI 对话走 **SSE**（`/api/agent-service/chat/stream`），网关侧已按路由放宽响应超时、Nginx 侧关闭缓冲以确保流式输出
-* 服务间同步调用走 **OpenFeign**（Sentinel 熔断兜底）；文章发布 / 修改通过 **RabbitMQ** 异步通知 search-service 维护 ES 索引
+* 服务间同步调用走 **OpenFeign**（Sentinel 熔断兜底）；文章发布 / 修改通过 **Kafka** 压实主题 `article.index` 异步通知 search-service 维护 ES 索引（重放 / 播种端点即可完整重建索引）；浏览 / 点赞 / 收藏等行为经 **Kafka** `article.behavior` 驱动热榜与推荐画像
+* **AI 审核**、**评论审核**等任务继续走 **RabbitMQ**（TTL + DLX 延迟重试阶梯）——消息语义决定载体
 
 ---
 
@@ -261,13 +295,13 @@ docker run --rm -v /home/oy/app/oyblogdeploy/oyblog-back/filebeat.yml:/f:ro ubun
 | **oy-blog-gateway**      | **API 网关**统一入口，端口 8080               | `filter/AuthenticationFilter`(全局认证), `utils/GuestUtil`(游客 Cookie), `properties/AuthProperties`(白名单) |
 | **oy-blog-service/service-api** | **服务契约**Feign 接口集中定义                | `api/user` / `api/article` / `api/file` 客户端, `config/FeignConfig`                                        |
 | **user-service**         | **用户服务** (8093)                             | 登录注册 / 邮箱验证 / 资料维护, `starategy/`(用户行为策略), `dao/`(XML 统计查询)                             |
-| **article-service**      | **文章服务** (8091)                             | 文章 / 评论 / 点赞 / 收藏 / 标签 / 系列, `MarkdownRenderer`(服务端渲染), MQ 生产者, `scheduler/`(卡审扫描/消息重试) |
+| **article-service**      | **文章服务** (8091)                             | 文章 / 评论 / 专栏 / 点赞收藏 / 标签 / 系列, `MarkdownRenderer`(服务端渲染), Kafka 事件收发, `consumer/`(行为 / 推荐画像 / 审核), `scheduler/`(热榜合成 / 卡审扫描 / 消息重试) |
 | **agent-service**        | **AI 对话服务** (8095)                          | SSE 流式对话, 会话管理, 点赞点踩反馈, 对接 Python Agent                                                        |
 | **file-service**         | **文件服务** (8097)                             | 上传抽象基类 + `service/impl/strategy/`(MinIO 存储策略)                                                      |
-| **search-service**       | **搜索服务** (8099)                             | ES 搜索 + 高亮, RabbitMQ 消费者, `IndexReconciler`(索引对账)                                                 |
-| **admin-service**        | **管理端 BFF** (8096)                           | 审核聚合, 用户管理 / 封禁, 统计仪表盘                                                                         |
+| **search-service**       | **搜索服务** (8099)                             | ES 搜索 + 高亮, Kafka 压实主题消费者, `IndexReconciler`(索引对账)                                              |
+| **admin-service**        | **管理端 BFF** (8096)                           | 审核聚合, 专栏管理, 用户管理 / 封禁, 统计仪表盘                                                                 |
 | **deploy**               | **部署层**生产部署脚本与配置                    | `deploy.sh`(一键部署), `docker-compose.yml`, `docker/Dockerfile`, `docker-compose.env.example`               |
-| **doc** / **docs** | **文档**技术方案与机制设计                      | 框架总结 / 部署手册 / 各机制设计文档, `doc/sql/`(数据库迁移脚本，需按顺序执行)                                |
+| **doc** / **docs** | **文档**技术方案与机制设计                      | 框架总结 / 部署手册 / 机制文档（审核 / 热榜 / 个性化推荐 / ES-Kafka 索引同步 / ELK 日志）, `doc/sql/`(数据库迁移脚本，需按顺序执行) |
 | **scripts**              | **辅助脚本**联调与测试工具                      | `agent_stub.py`(Python Agent 联调桩), 文章上传脚本                                                           |
 
 ---
@@ -278,7 +312,7 @@ docker run --rm -v /home/oy/app/oyblogdeploy/oyblog-back/filebeat.yml:/f:ro ubun
 
 * **JDK**: 21（必需，系统默认 JDK 20 会报"不支持发行版本 21"，注意 `JAVA_HOME` 指向 21）
 * **Maven**: 3.8+
-* **基础设施**: MySQL 8 / Redis / RabbitMQ / Elasticsearch / MinIO，并先启动 **Nacos** 注册中心（所有地址统一通过 `.env` 的 `*_HOST` 占位符注入，见 [.env.example](.env.example)）
+* **基础设施**: MySQL 8 / Redis / RabbitMQ / Elasticsearch / MinIO / **Redpanda（Kafka）**，并先启动 **Nacos** 注册中心（所有地址统一通过 `.env` 的 `*_HOST` 占位符注入，Kafka 引导地址用 `KAFKA_BOOTSTRAP`，见 [.env.example](.env.example)）
 * **（可选）AI 对话联调**: Python 3.10+，`pip install fastapi uvicorn`
 
 ### 安装步骤
